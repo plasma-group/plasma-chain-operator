@@ -1,6 +1,5 @@
 const Web3 = require('web3')
 const web3 = new Web3('ws://localhost:8546')
-const BigNumber = require('bignumber.js')
 
 // Generate a bunch of private keys
 const privateKeys = []
@@ -18,16 +17,16 @@ console.log(accounts)
 const sampleTr = {
   sender: accounts[0].address,
   recipient: accounts[1].address,
-  type: BigNumber('0'),
-  start: BigNumber('10'),
-  offset: BigNumber('1'),
-  block: BigNumber('0')
+  type: new web3.utils.BN('0'),
+  start: new web3.utils.BN('10'),
+  offset: new web3.utils.BN('1'),
+  block: new web3.utils.BN('0')
 }
 
 const sig = {
-  v: BigNumber('0'),
-  r: BigNumber('0'),
-  s: BigNumber('0')
+  v: new web3.utils.BN('0'),
+  r: new web3.utils.BN('0'),
+  s: new web3.utils.BN('0')
 }
 
 const tx = {
