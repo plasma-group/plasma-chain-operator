@@ -1,10 +1,11 @@
 /* eslint-env mocha */
 
-var chai = require('chai')
-var chaiHttp = require('chai-http')
-var app = require('../app')
+const chai = require('chai')
+const chaiHttp = require('chai-http')
+const app = require('../app')
+const testTx = require('./mock-transactions.js')
 
-var expect = chai.expect
+const expect = chai.expect
 
 chai.use(chaiHttp)
 
@@ -13,11 +14,7 @@ describe('App', function () {
     it('responds with status 200', function (done) {
       chai.request(app)
         .post('/add-transaction')
-        .send({
-          '_method': 'put',
-          'password': '123',
-          'confirmPassword': '123'
-        })
+        .send(testTx)
         .end((err, res) => {
           console.log(err)
           expect(res).to.have.status(200)

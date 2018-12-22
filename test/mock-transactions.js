@@ -11,7 +11,6 @@ const accounts = []
 for (const privateKey of privateKeys) {
   accounts.push(web3.eth.accounts.privateKeyToAccount(privateKey))
 }
-console.log(accounts)
 
 // Generate a sample transaction
 const sampleTr = {
@@ -34,4 +33,4 @@ const tx = {
   signatures: [sig]
 }
 
-console.log(tx)
+module.exports = tx
