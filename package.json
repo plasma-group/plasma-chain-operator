@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node app.js",
     "clean": "rm -rf db",
+    "interactive": "node",
     "test": "mocha"
   },
   "repository": {
