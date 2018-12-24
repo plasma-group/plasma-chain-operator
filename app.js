@@ -1,6 +1,6 @@
 const levelup = require('levelup')
 const leveldown = require('leveldown')
-const State = require('./state.js')
+const State = require('./state.js').State
 const constants = require('./constants.js')
 const web3 = require('./eth.js')
 const BN = web3.utils.BN

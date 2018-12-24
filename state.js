@@ -54,7 +54,7 @@ class State {
     // Create a lock on the account and token type
     this.lock[recipient] = true
     this.lock[type] = true
-    console.log('new deposit!', recipient, type, amount)
+    console.log('New deposit:', recipient, type, amount)
     // Get total deposits for this token type
     let totalDeposits = new BN(0)
     try {
@@ -84,4 +84,9 @@ class State {
   }
 }
 
-module.exports = State
+module.exports = {
+  State,
+  getAddressToTokenKey,
+  getTokenToTxKey,
+  getTotalDepositsKey
+}
