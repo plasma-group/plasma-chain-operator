@@ -31,7 +31,7 @@ let state = null
 
 async function startup () {
   const db = levelup(leveldown('./db'))
-  state = new State(db)
+  state = new State(db, './db/tx_log/')
   await state.init()
   // Begin listening for connections
   app.listen(port, () => console.log(`Operator listening on port ${port}!`))
