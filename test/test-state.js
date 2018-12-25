@@ -10,6 +10,7 @@ const BN = web3.utils.BN
 const State = require('../state.js')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
+const tSerializer = require('../transaction-serialization.js')
 
 const expect = chai.expect
 
@@ -86,8 +87,19 @@ describe('State', function () {
       // Increment the blocknumber
       await state.startNewBlock()
       expect(state.blocknumber).to.deep.equal(new BN(1))
-      console.log('TOTAL ETH::::')
-      console.log(totalEthDeposits)
+    })
+  })
+  describe('addTransaction', () => {
+    it('should be correct', async () => {
+      const tr1 = new tSerializer.SimpleSerializableElement([accounts[0].address, accounts[2].address, 1, 2, 3, 4], tSerializer.schemas.TransferRecord)
+      const tr2 = new tSerializer.SimpleSerializableElement([accounts[1].address, accounts[2].address, 2, 3, 4, 5], tSerializer.schemas.TransferRecord)
+      const sig1 = new tSerializer.SimpleSerializableElement([12345, 56789, 901234], tSerializer.schemas.Signature)
+      const sig2 = new tSerializer.SimpleSerializableElement([12346, 56790, 901235], tSerializer.schemas.Signature)
+      const trList = new tSerializer.SimpleSerializableList([tr1, tr2], tSerializer.schemas.TransferRecord)
+      const sigList = new tSerializer.SimpleSerializableList([sig1, sig2], tSerializer.schemas.Signature)
+      console.log('Encodings:')
+      console.log(Buffer.from(trList.encode()))
+      console.log(Buffer.from(sigList.encode()))
     })
   })
 })
