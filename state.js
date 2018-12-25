@@ -53,6 +53,9 @@ class State {
   }
 
   async startNewBlock () {
+    if (this.lock.all === true) {
+      throw new Error('Attempting to start a new block when a global lock is already active')
+    }
     // Start a global lock as we increment the block number. Note that we will have to wait until all other locks are released
     this.lock.all = true
     // Wait until all other locks are released
@@ -71,21 +74,18 @@ class State {
     delete this.lock.all
   }
 
-  async acquireLocks (keywords) {
-    let counter = 0
+  attemptAcquireLocks (keywords) {
     keywords.push('all')
-    while (keywords.some((val) => { return this.lock.hasOwnProperty(val) })) {
+    if (keywords.some((val) => { return this.lock.hasOwnProperty(val) })) {
+      // Failed to acquire locks
       console.log('Locked! Waiting to release')
-      await timeout(Math.random() * 10 + 2)
-      counter++
-      if (counter > 100) {
-        throw new Error('Lock timed out! Look into why this is')
-      }
+      return false
     }
     // Acquire locks
     for (let i = 0; i < keywords.length - 1; i++) {
       this.lock[keywords[i]] = true
     }
+    return true
   }
 
   releaseLocks (keywords) {
@@ -95,7 +95,10 @@ class State {
   }
 
   async addDeposit (recipient, type, amount) {
-    await this.acquireLocks([recipient, type])
+    while (!this.attemptAcquireLocks([recipient, type])) {
+      // Wait before attempting again
+      await timeout(Math.random() * 10 + 2)
+    }
     console.log('New deposit:', recipient, type, amount)
     // Get total deposits for this token type
     let totalDeposits = new BN(0)
@@ -126,7 +129,8 @@ class State {
   }
 
   async addTransaction (trList) {
-    //
+    // Check that all ranges have not been touched this block
+    // Check that there are no locks on these ranges or accounts
   }
 }
 
