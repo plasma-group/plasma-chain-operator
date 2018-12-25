@@ -89,6 +89,24 @@ describe('State', function () {
       expect(state.blocknumber).to.deep.equal(new BN(1))
     })
   })
+
+  describe('getAffectedRanges', () => {
+    it('should be correct', async () => {
+      const addr0 = Buffer.from(web3.utils.hexToBytes(accounts[0].address))
+      const ethType = new BN(0)
+      // const tokenType = new BN(1)
+      const depositAmount = new BN(10)
+      // Add a deposit
+      await state.addDeposit(addr0, ethType, depositAmount)
+      // Now add a bunch of conflicting deposits. This will trigger a bunch of locks
+      for (let i = 0; i < 20; i++) {
+        await state.addDeposit(addr0, ethType, depositAmount)
+      }
+      const test = await state.getAffectedRanges(new BN(5), new BN(19))
+      console.log(test)
+    })
+  })
+
   describe('addTransaction', () => {
     it('should be correct', async () => {
       const tr1 = new tSerializer.SimpleSerializableElement([accounts[0].address, accounts[2].address, 1, 2, 3, 4], tSerializer.schemas.TransferRecord)

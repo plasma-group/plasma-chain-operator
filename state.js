@@ -1,11 +1,31 @@
 const fs = require('fs-extra')
-const BN = require('./eth.js').utils.BN
+const web3 = require('./eth.js')
+const BN = web3.utils.BN
+const tSerializer = require('./transaction-serialization.js')
 
 const START_BYTE_SIZE = require('./constants.js').START_BYTE_SIZE
 const TYPE_BYTE_SIZE = require('./constants.js').TYPE_BYTE_SIZE
 const BLOCKNUMBER_BYTE_SIZE = require('./constants.js').BLOCKNUMBER_BYTE_SIZE
+const DEPOSIT_SENDER = '0x0000000000000000000000000000000000000000'
 
+// ************* HELPER FUNCTIONS ************* //
 const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
+// Promisify the it.next(cb) function
+function itNext (it) {
+  return new Promise((resolve, reject) => {
+    it.next((err, key, value) => {
+      if (err) {
+        reject(err)
+      }
+      resolve({key, value})
+    })
+  })
+}
+
+function getDepositRecord (owner, type, start, offset, blocknumber) {
+  const tr = new tSerializer.SimpleSerializableElement([DEPOSIT_SENDER, owner, type, start, offset, blocknumber], tSerializer.schemas.TransferRecord)
+  return tr.encode()
+}
 
 function getAddressToTokenKey (address, type, start) {
   const buffers = [address,
@@ -101,23 +121,24 @@ class State {
     }
     console.log('New deposit:', recipient, type, amount)
     // Get total deposits for this token type
-    let totalDeposits = new BN(0)
+    let oldTotalDeposits = new BN(0)
     try {
       const tdBuffer = await this.db.get(getTotalDepositsKey(type))
-      totalDeposits = new BN(tdBuffer)
+      oldTotalDeposits = new BN(tdBuffer)
     } catch (err) {
       if (err.notFound) {
         console.log('No total deposits found for type ', type, '! Starting from 0.')
       } else { throw err }
     }
-    console.log('Total deposits:', totalDeposits)
+    console.log('Old total deposits:', oldTotalDeposits)
     // Put the updated totalDeposits and owned token ranges
-    const newTotalDeposits = totalDeposits.add(amount)
+    const newTotalDeposits = oldTotalDeposits.add(amount)
+    const depositRecord = getDepositRecord(web3.utils.bytesToHex(recipient), type, oldTotalDeposits, amount.sub(new BN(1)), this.blocknumber)
     try {
       // Put the new owned token range and the new total deposits
       const ops = [
-        { type: 'put', key: getAddressToTokenKey(recipient, type, totalDeposits), value: Buffer.from([1]) },
-        { type: 'put', key: getTokenToTxKey(type, totalDeposits), value: this.blocknumber.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE) },
+        { type: 'put', key: getAddressToTokenKey(recipient, type, oldTotalDeposits), value: Buffer.from([1]) },
+        { type: 'put', key: getTokenToTxKey(type, newTotalDeposits.sub(new BN(1))), value: Buffer.from(depositRecord) },
         { type: 'put', key: getTotalDepositsKey(type), value: newTotalDeposits.toArrayLike(Buffer, 'big', TYPE_BYTE_SIZE) }
       ]
       await this.db.batch(ops)
@@ -131,6 +152,20 @@ class State {
   async addTransaction (trList) {
     // Check that all ranges have not been touched this block
     // Check that there are no locks on these ranges or accounts
+  }
+
+  async getAffectedRanges (start, end) {
+    const it = this.db.iterator({
+      gt: getTokenToTxKey(new BN(0), new BN(5))
+    })
+    const affectedRanges = []
+    let result = await itNext(it)
+    affectedRanges.push(result)
+    while (new BN(result.key).lt(end)) {
+      result = await itNext(it)
+      affectedRanges.push(result)
+    }
+    return affectedRanges
   }
 }
 
