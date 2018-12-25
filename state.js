@@ -71,15 +71,31 @@ class State {
     delete this.lock.all
   }
 
-  async addDeposit (recipient, type, amount) {
-    // Check if there is a lock on this token type or recipient
-    while (this.lock.hasOwnProperty('all') || this.lock.hasOwnProperty(recipient) || this.lock.hasOwnProperty(type)) {
+  async acquireLocks (keywords) {
+    let counter = 0
+    keywords.push('all')
+    while (keywords.some((val) => { return this.lock.hasOwnProperty(val) })) {
       console.log('Locked! Waiting to release')
       await timeout(Math.random() * 10 + 2)
+      counter++
+      if (counter > 100) {
+        throw new Error('Lock timed out! Look into why this is')
+      }
     }
-    // Create a lock on the account and token type
-    this.lock[recipient] = true
-    this.lock[type] = true
+    // Acquire locks
+    for (let i = 0; i < keywords.length - 1; i++) {
+      this.lock[keywords[i]] = true
+    }
+  }
+
+  releaseLocks (keywords) {
+    for (const keyword of keywords) {
+      delete this.lock[keyword]
+    }
+  }
+
+  async addDeposit (recipient, type, amount) {
+    await this.acquireLocks([recipient, type])
     console.log('New deposit:', recipient, type, amount)
     // Get total deposits for this token type
     let totalDeposits = new BN(0)
@@ -105,9 +121,12 @@ class State {
     } catch (err) {
       throw err
     }
-    delete this.lock[recipient]
-    delete this.lock[type]
+    this.releaseLocks([recipient, type])
     return newTotalDeposits
+  }
+
+  async addTransaction (trList) {
+    //
   }
 }
 
