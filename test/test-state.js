@@ -119,7 +119,22 @@ describe('State', function () {
       expect(result).to.equal(false)
     })
 
-    it('should be correct', async () => {
+    it('should return false if the transfer ranges overlap', async () => {
+      const ethType = new BN(0)
+      const depositAmount = new BN(10)
+      // Add deposits for us to later send
+      await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
+      // Start a new block
+      await state.startNewBlock()
+      // Create some transfer records & trList
+      const tr1 = new tSerializer.SimpleSerializableElement([accounts[0].address, accounts[1].address, ethType, 0, 7, 1], tSerializer.schemas.TransferRecord)
+      const tr2 = new tSerializer.SimpleSerializableElement([accounts[0].address, accounts[1].address, ethType, 3, 3, 1], tSerializer.schemas.TransferRecord)
+      const trList = new tSerializer.SimpleSerializableList([tr1, tr2], tSerializer.schemas.TransferRecord)
+      const result = await state.addTransaction(trList)
+      expect(result).to.equal(false)
+    })
+
+    it('should handle multisends', async () => {
       const ethType = new BN(0)
       const depositAmount = new BN(10)
       // Add deposits for us to later send

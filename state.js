@@ -185,12 +185,18 @@ class State {
     // For all affected ranges, check:
     //    1) All affected ranges have not been touched this block
     //    2) All affected ranges are owned by the correct sender
-    //    3) TODO: None of the transfer records overlap
-    for (const tr of trList) {
+    //    3) None of the transfer records overlap
+    for (const [i, tr] of trList.entries()) {
       if (!tr.block.eq(this.blocknumber)) { return false } // Make sure every transfer record is intended for this block
       for (const ar of tr.affectedRanges) {
         if (tr.sender.toLowerCase() !== ar.decoded.recipient.toLowerCase() || ar.decoded.block.eq(this.blocknumber)) {
           this.releaseLocks(senders)
+          return false
+        }
+      }
+      // Check that none of the other transfer records overlap
+      for (let j = 0; j < trList.length; j++) {
+        if (j !== i && !(trList[j].start > tr.start.add(tr.offset) || tr.start > trList[j].start.add(trList[j].offset))) {
           return false
         }
       }
