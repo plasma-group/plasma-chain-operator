@@ -51,6 +51,7 @@ describe('State', function () {
       expect(totalEthDeposits).to.deep.equal(new BN(10).toArrayLike(Buffer, 'big', constants.TYPE_BYTE_SIZE))
     })
   })
+
   describe('startNewBlock', () => {
     it('increments the current blocknumber', async () => {
       const addr0 = Buffer.from(web3.utils.hexToBytes(accounts[0].address))
@@ -66,7 +67,6 @@ describe('State', function () {
       await state.startNewBlock()
       expect(state.blocknumber).to.deep.equal(new BN(1))
     })
-
     it('should lock deposits while changing blocknumber', async () => {
       const addr0 = Buffer.from(web3.utils.hexToBytes(accounts[0].address))
       const ethType = new BN(0)
@@ -102,22 +102,27 @@ describe('State', function () {
       for (let i = 0; i < 20; i++) {
         await state.addDeposit(addr0, ethType, depositAmount)
       }
-      const test = await state.getAffectedRanges(new BN(5), new BN(19))
+      const test = await state.getAffectedRanges(new BN(0), new BN(5), new BN(19))
       console.log(test)
     })
   })
 
   describe('addTransaction', () => {
     it('should be correct', async () => {
-      const tr1 = new tSerializer.SimpleSerializableElement([accounts[0].address, accounts[2].address, 1, 2, 3, 4], tSerializer.schemas.TransferRecord)
-      const tr2 = new tSerializer.SimpleSerializableElement([accounts[1].address, accounts[2].address, 2, 3, 4, 5], tSerializer.schemas.TransferRecord)
-      const sig1 = new tSerializer.SimpleSerializableElement([12345, 56789, 901234], tSerializer.schemas.Signature)
-      const sig2 = new tSerializer.SimpleSerializableElement([12346, 56790, 901235], tSerializer.schemas.Signature)
-      const trList = new tSerializer.SimpleSerializableList([tr1, tr2], tSerializer.schemas.TransferRecord)
-      const sigList = new tSerializer.SimpleSerializableList([sig1, sig2], tSerializer.schemas.Signature)
-      console.log('Encodings:')
-      console.log(Buffer.from(trList.encode()))
-      console.log(Buffer.from(sigList.encode()))
+      const ethType = new BN(1)
+      const depositAmount = new BN(10)
+      // Add deposits for us to later send
+      await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
+      await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
+      await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[1].address)), ethType, depositAmount)
+      // Start a new block
+      await state.startNewBlock()
+      // Create a transfer record & trList
+      const tr1 = new tSerializer.SimpleSerializableElement([accounts[0].address, accounts[1].address, 1, 0, 11, 4], tSerializer.schemas.TransferRecord)
+      const trList = new tSerializer.SimpleSerializableList([tr1], tSerializer.schemas.TransferRecord)
+      console.log(trList)
+      const result = await state.addTransaction(trList)
+      expect(result).to.equal(true)
     })
   })
 })
