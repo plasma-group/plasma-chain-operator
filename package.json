@@ -7,8 +7,8 @@
     "start": "node app.js",
     "clean": "rm -rf db",
     "interactive": "node",
-    "test": "mocha --exit",
-    "test-debug": "mocha debug"
+    "test": "mocha  --timeout 15000 --exit",
+    "test-debug": "mocha debug --timeout 15000"
   },
   "repository": {
     "type": "git",
