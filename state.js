@@ -34,9 +34,9 @@ function itEnd (it) {
   })
 }
 
-function getDepositRecord (owner, type, start, offset, blocknumber) {
-  const tr = new tSerializer.SimpleSerializableElement([DEPOSIT_SENDER, owner, type, start, offset, blocknumber], tSerializer.schemas.TransferRecord)
-  return tr.encode()
+function getDepositRecord (owner, type, start, end, blocknumber) {
+  const tr = new tSerializer.SimpleSerializableElement([DEPOSIT_SENDER, owner, type, start, end, blocknumber], tSerializer.schemas.TransferRecord)
+  return tr
 }
 
 function getAddressToTokenKey (address, type, end) {
@@ -130,7 +130,6 @@ class State {
       // Wait before attempting again
       await timeout(Math.random() * 10 + 2)
     }
-    console.log('New deposit:', recipient, type, amount)
     // Get total deposits for this token type
     let oldTotalDeposits = new BN(0)
     try {
@@ -141,15 +140,14 @@ class State {
         console.log('No total deposits found for type ', type, '! Starting from 0.')
       } else { throw err }
     }
-    console.log('Old total deposits:', oldTotalDeposits)
     // Put the updated totalDeposits and owned token ranges
     const newTotalDeposits = oldTotalDeposits.add(amount)
-    const depositRecord = getDepositRecord(web3.utils.bytesToHex(recipient), type, oldTotalDeposits, amount.sub(new BN(1)), this.blocknumber)
+    const depositRecord = getDepositRecord(web3.utils.bytesToHex(recipient), type, oldTotalDeposits, newTotalDeposits.sub(new BN(1)), this.blocknumber)
     try {
       // Put the new owned token range and the new total deposits
       const ops = [
-        { type: 'put', key: getAddressToTokenKey(recipient, type, newTotalDeposits.sub(new BN(1))), value: Buffer.from([1]) },
-        { type: 'put', key: getTokenToTxKey(type, newTotalDeposits.sub(new BN(1))), value: Buffer.from(depositRecord) },
+        { type: 'put', key: getAddressToTokenKey(recipient, type, depositRecord.end), value: Buffer.from([1]) },
+        { type: 'put', key: getTokenToTxKey(type, depositRecord.end), value: Buffer.from(depositRecord.encode()) },
         { type: 'put', key: getTotalDepositsKey(type), value: newTotalDeposits.toArrayLike(Buffer, 'big', TYPE_BYTE_SIZE) }
       ]
       await this.db.batch(ops)
@@ -173,7 +171,7 @@ class State {
     }
     // Get all of the affectedRanges for each transfer record
     for (const [i, tr] of trList.entries()) {
-      const af = await this.getAffectedRanges(tr.type, tr.start, tr.start.add(tr.offset))
+      const af = await this.getAffectedRanges(tr.type, tr.start, tr.end)
       if (af.length === 0) { // If there are no affected ranges then this transfer must be invalid
         return false
       }
@@ -196,7 +194,7 @@ class State {
       }
       // Check that none of the other transfer records overlap
       for (let j = 0; j < trList.length; j++) {
-        if (j !== i && !(trList[j].start > tr.start.add(tr.offset) || tr.start > trList[j].start.add(trList[j].offset))) {
+        if (j !== i && !(trList[j].start > tr.end || tr.start > trList[j].end)) {
           return false
         }
       }
@@ -224,31 +222,22 @@ class State {
     if (!ar.start.eq(tr.start)) {
       // Reduce the first affected range's end position. Eg: ##### becomes ###$$
       const arRecipient = Buffer.from(web3.utils.hexToBytes(ar.recipient))
-      const arEnd = ar.start.add(ar.offset)
-      // Store the old offset. This is because we want to created an updated entry without losing the original affected range
-      const oldOffset = ar.offset
-      // Get the encoding with the updated offset
-      ar.offset = tr.start.sub(new BN(1)).sub(ar.start) // Update the offset of our entry
-      const newEncoding = ar.encode()
-      // Reset the old offset -- Note this is ugly code. TODO: Clean it up!
-      ar.offset = oldOffset
-      dbBatch.push({ type: 'put', key: getTokenToTxKey(tr.type, tr.start.sub(new BN(1))), value: Buffer.from(newEncoding) })
-      dbBatch.push({ type: 'put', key: getAddressToTokenKey(arRecipient, ar.type, arEnd), value: Buffer.from([1]) })
+      ar.end = tr.start.sub(new BN(1))
+      dbBatch.push({ type: 'put', key: getTokenToTxKey(ar.type, ar.end), value: Buffer.from(ar.encode()) })
+      dbBatch.push({ type: 'put', key: getAddressToTokenKey(arRecipient, ar.type, ar.end), value: Buffer.from([1]) })
     }
     ar = affectedRanges[affectedRanges.length - 1].decoded
-    const trEnd = tr.start.add(tr.offset)
-    const arEnd = ar.start.add(ar.offset)
-    if (!arEnd.eq(trEnd)) {
+    if (!ar.end.eq(tr.end)) {
       // Increase the last affected range's start position. Eg: ##### becomes $$###
       const arRecipient = Buffer.from(web3.utils.hexToBytes(ar.recipient))
-      ar.start = trEnd.add(new BN(1))
+      ar.start = tr.end.add(new BN(1))
       dbBatch.push({ type: 'put', key: affectedRanges[affectedRanges.length - 1].key, value: Buffer.from(ar.encode()) })
-      dbBatch.push({ type: 'put', key: getAddressToTokenKey(arRecipient, ar.type, arEnd), value: Buffer.from([1]) })
+      dbBatch.push({ type: 'put', key: getAddressToTokenKey(arRecipient, ar.type, ar.end), value: Buffer.from([1]) })
     }
     // Add our new transfer record
     const trRecipient = Buffer.from(web3.utils.hexToBytes(tr.recipient))
-    dbBatch.push({ type: 'put', key: getTokenToTxKey(tr.type, trEnd), value: Buffer.from(tr.encode()) })
-    dbBatch.push({ type: 'put', key: getAddressToTokenKey(trRecipient, tr.type, trEnd), value: Buffer.from([1]) })
+    dbBatch.push({ type: 'put', key: getTokenToTxKey(tr.type, tr.end), value: Buffer.from(tr.encode()) })
+    dbBatch.push({ type: 'put', key: getAddressToTokenKey(trRecipient, tr.type, tr.end), value: Buffer.from([1]) })
     // And finally apply the batch operations
     return dbBatch
   }

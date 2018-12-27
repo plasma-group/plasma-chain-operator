@@ -205,7 +205,7 @@ var schemas = {
       ['recipient', web3.utils.isAddress, encodeAddress],
       ['type', isIntExpressibleInBytes(4), intToNBytes(4)],
       ['start', isIntExpressibleInBytes(12), intToNBytes(12)],
-      ['offset', isIntExpressibleInBytes(12), intToNBytes(12)],
+      ['end', isIntExpressibleInBytes(12), intToNBytes(12)],
       ['block', isIntExpressibleInBytes(32), intToNBytes(32)]
     ]
   },
