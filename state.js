@@ -158,11 +158,24 @@ class State {
     return newTotalDeposits
   }
 
+  isValidTransfer (tr) {
+    if (tr.start.gt(tr.end)) {
+      return false
+    }
+    // TODO: Check if address & other fields are well formatted
+    return true
+  }
+
   async addTransaction (trList) {
     // Acquire lock on all of the transfer record senders
     trList = trList.elements
     const senders = []
     for (const tr of trList) {
+      // Verify that the transfer is correctly formatted
+      if (!this.isValidTransfer(tr)) {
+        this.releaseLocks(senders)
+        return false
+      }
       senders.push(tr.sender)
     }
     while (!this.attemptAcquireLocks(senders)) {
@@ -173,6 +186,7 @@ class State {
     for (const [i, tr] of trList.entries()) {
       const af = await this.getAffectedRanges(tr.type, tr.start, tr.end)
       if (af.length === 0) { // If there are no affected ranges then this transfer must be invalid
+        this.releaseLocks(senders)
         return false
       }
       for (let i = 0; i < af.length; i++) {
@@ -195,6 +209,7 @@ class State {
       // Check that none of the other transfer records overlap
       for (let j = 0; j < trList.length; j++) {
         if (j !== i && !(trList[j].start > tr.end || tr.start > trList[j].end)) {
+          this.releaseLocks(senders)
           return false
         }
       }
