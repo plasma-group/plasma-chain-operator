@@ -187,6 +187,7 @@ class State {
     //    2) All affected ranges are owned by the correct sender
     //    3) TODO: None of the transfer records overlap
     for (const tr of trList) {
+      if (!tr.block.eq(this.blocknumber)) { return false } // Make sure every transfer record is intended for this block
       for (const ar of tr.affectedRanges) {
         if (tr.sender.toLowerCase() !== ar.decoded.recipient.toLowerCase() || ar.decoded.block.eq(this.blocknumber)) {
           this.releaseLocks(senders)
@@ -200,8 +201,6 @@ class State {
       dbBatch = dbBatch.concat(this.getTransferBatchOps(tr, tr.affectedRanges))
     }
     await this.db.batch(dbBatch)
-    // Check the last range to see if we need to shorten it
-    // TODO: Actually update the state to include this transaction
     this.releaseLocks(senders)
     return true
   }

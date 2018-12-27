@@ -19,7 +19,7 @@ chai.use(chaiHttp)
 describe('State', function () {
   let db
   let state
-  beforeEach(async () => {
+  const startNewDB = async () => {
     db = levelup(leveldown('./test-db/' + +new Date()))
     // Create a new tx-log dir for this test
     const txLogDirectory = './test-db/' + +new Date() + '-tx-log/'
@@ -27,7 +27,8 @@ describe('State', function () {
     // Create state object
     state = new State.State(db, txLogDirectory)
     await state.init()
-  })
+  }
+  beforeEach(startNewDB)
 
   describe('addDeposit', () => {
     it('increments total deposits by the deposit amount', async () => {
@@ -108,19 +109,30 @@ describe('State', function () {
   })
 
   describe('addTransaction', () => {
+    it('should return false if the block already contains a deposit or transfer for the range', async () => {
+      // Add deposits for us to later send
+      await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), new BN(0), new BN(10))
+      // Create a transfer record which touches the same range which we just deposited
+      const tr1 = new tSerializer.SimpleSerializableElement([accounts[0].address, accounts[1].address, 1, 0, 11, 1], tSerializer.schemas.TransferRecord)
+      const trList = new tSerializer.SimpleSerializableList([tr1], tSerializer.schemas.TransferRecord)
+      const result = await state.addTransaction(trList)
+      expect(result).to.equal(false)
+    })
+
     it('should be correct', async () => {
-      const ethType = new BN(1)
+      const ethType = new BN(0)
       const depositAmount = new BN(10)
       // Add deposits for us to later send
       await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
       await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
       await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[1].address)), ethType, depositAmount)
+      await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[1].address)), ethType, depositAmount)
       // Start a new block
       await state.startNewBlock()
-      // Create a transfer record & trList
-      const tr1 = new tSerializer.SimpleSerializableElement([accounts[0].address, accounts[1].address, 1, 0, 11, 4], tSerializer.schemas.TransferRecord)
-      const trList = new tSerializer.SimpleSerializableList([tr1], tSerializer.schemas.TransferRecord)
-      console.log(trList)
+      // Create some transfer records & trList
+      const tr1 = new tSerializer.SimpleSerializableElement([accounts[0].address, accounts[1].address, ethType, 0, 11, 1], tSerializer.schemas.TransferRecord)
+      const tr2 = new tSerializer.SimpleSerializableElement([accounts[1].address, accounts[0].address, ethType, 35, 4, 1], tSerializer.schemas.TransferRecord)
+      const trList = new tSerializer.SimpleSerializableList([tr1, tr2], tSerializer.schemas.TransferRecord)
       const result = await state.addTransaction(trList)
       expect(result).to.equal(true)
     })
