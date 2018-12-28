@@ -152,4 +152,18 @@ describe('State', function () {
       expect(result).to.equal(true)
     })
   })
+
+  describe('getOwnedRanges', () => {
+    it('should return the proper number of ranges', async () => {
+      // TODO: Actually test the results
+      const ethType = new BN(0)
+      const depositAmount = new BN(10)
+      // Add 100 deposits of value 10 from 100 different accounts
+      for (let i = 0; i < 5; i++) {
+        await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
+      }
+      const ownedRanges = await state.getOwnedRanges(accounts[0].address)
+      expect(ownedRanges.length).to.equal(5)
+    })
+  })
 })

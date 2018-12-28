@@ -258,6 +258,7 @@ class State {
   }
 
   async getAffectedRanges (type, start, end) {
+    // TODO: Handle results which are undefined
     const it = this.db.iterator({
       gt: getTokenToTxKey(new BN(type), new BN(start))
     })
@@ -265,6 +266,7 @@ class State {
     let result = await itNext(it)
     const typeBuffer = type.toArrayLike(Buffer, 'big', TYPE_BYTE_SIZE)
     if (Buffer.compare(typeBuffer, result.key.slice(0, 4)) !== 0) {
+      await itEnd(it)
       return []
     }
     affectedRanges.push(result)
@@ -274,6 +276,27 @@ class State {
     }
     await itEnd(it)
     return affectedRanges
+  }
+
+  async getOwnedRanges (address) {
+    while (!this.attemptAcquireLocks([address])) {
+      // Wait before attempting again
+      await timeout(Math.random() * 10 + 2)
+    }
+    // Get the ranges
+    const addressBuffer = Buffer.from(web3.utils.hexToBytes(address))
+    const it = this.db.iterator({
+      gt: getAddressToTokenKey(addressBuffer, new BN(0), new BN(0))
+    })
+    const ownedRanges = []
+    let result = await itNext(it)
+    while (result.key && Buffer.compare(addressBuffer, result.key.slice(0, 20)) === 0) {
+      ownedRanges.push(result)
+      result = await itNext(it)
+    }
+    await itEnd(it)
+    this.releaseLocks([address])
+    return ownedRanges
   }
 }
 
