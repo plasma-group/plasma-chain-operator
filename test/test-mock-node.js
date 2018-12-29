@@ -28,7 +28,7 @@ describe('MockNode', function () {
   }
   beforeEach(startNewDB)
 
-  describe.only('addDeposit', () => {
+  describe('addDeposit', () => {
     it('should work', async () => {
       const depositType = new BN(1)
       const depositAmount = new BN(10)

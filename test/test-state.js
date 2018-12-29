@@ -16,6 +16,19 @@ const expect = chai.expect
 
 chai.use(chaiHttp)
 
+function makeTx (rawTrs, rawSigs) {
+  const trs = []
+  const sigs = []
+  for (let i = 0; i < rawTrs.length; i++) {
+    trs.push(new tSerializer.SimpleSerializableElement(rawTrs[i], tSerializer.schemas.TransferRecord))
+    sigs.push(new tSerializer.SimpleSerializableElement(rawSigs[i], tSerializer.schemas.Signature))
+  }
+  const trList = new tSerializer.SimpleSerializableList(trs, tSerializer.schemas.TransferRecord)
+  const sigList = new tSerializer.SimpleSerializableList(sigs, tSerializer.schemas.Signature)
+  const tx = new tSerializer.Transaction(trList, sigList)
+  return tx
+}
+
 describe('State', function () {
   let db
   let state
@@ -78,7 +91,7 @@ describe('State', function () {
       // Now add a bunch of conflicting deposits. This will trigger a bunch of locks
       for (let i = 0; i < 20; i++) {
         state.addDeposit(addr0, ethType, depositAmount).then((res) => {
-          console.log('Added deposit. New total deposits: ', res)
+          console.log('Added deposit')
         })
       }
       let totalEthDeposits = await db.get(State.getTotalDepositsKey(ethType))
@@ -113,10 +126,11 @@ describe('State', function () {
       // Add deposits for us to later send
       await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), new BN(0), new BN(10))
       // Create a transfer record which touches the same range which we just deposited
-      const tr1 = new tSerializer.SimpleSerializableElement([accounts[0].address, accounts[1].address, 1, 0, 11, 1], tSerializer.schemas.TransferRecord)
-      const trList = new tSerializer.SimpleSerializableList([tr1], tSerializer.schemas.TransferRecord)
-      const result = await state.addTransaction(trList)
-      expect(result).to.equal(false)
+      const tx = makeTx([[accounts[0].address, accounts[1].address, 1, 0, 12, 1]], [[0, 0, 0]])
+      try {
+        await state.addTransaction(tx)
+        throw new Error('Expect to fail')
+      } catch (err) {}
     })
 
     it('should return false if the transfer ranges overlap', async () => {
@@ -127,11 +141,17 @@ describe('State', function () {
       // Start a new block
       await state.startNewBlock()
       // Create some transfer records & trList
-      const tr1 = new tSerializer.SimpleSerializableElement([accounts[0].address, accounts[1].address, ethType, 0, 7, 1], tSerializer.schemas.TransferRecord)
-      const tr2 = new tSerializer.SimpleSerializableElement([accounts[0].address, accounts[1].address, ethType, 3, 6, 1], tSerializer.schemas.TransferRecord)
-      const trList = new tSerializer.SimpleSerializableList([tr1, tr2], tSerializer.schemas.TransferRecord)
-      const result = await state.addTransaction(trList)
-      expect(result).to.equal(false)
+      const tx = makeTx([
+        [accounts[0].address, accounts[1].address, ethType, 0, 8, 1],
+        [accounts[0].address, accounts[1].address, ethType, 3, 7, 1]
+      ], [
+        [0, 0, 0], [0, 0, 0]
+      ])
+      try {
+        await state.addTransaction(tx)
+        throw new Error('This should have failed!')
+      } catch (err) {
+      }
     })
 
     it('should handle multisends', async () => {
@@ -145,10 +165,13 @@ describe('State', function () {
       // Start a new block
       await state.startNewBlock()
       // Create some transfer records & trList
-      const tr1 = new tSerializer.SimpleSerializableElement([accounts[0].address, accounts[1].address, ethType, 0, 11, 1], tSerializer.schemas.TransferRecord)
-      const tr2 = new tSerializer.SimpleSerializableElement([accounts[1].address, accounts[0].address, ethType, 35, 39, 1], tSerializer.schemas.TransferRecord)
-      const trList = new tSerializer.SimpleSerializableList([tr1, tr2], tSerializer.schemas.TransferRecord)
-      const result = await state.addTransaction(trList)
+      const tx = makeTx([
+        [accounts[0].address, accounts[1].address, ethType, 0, 12, 1],
+        [accounts[1].address, accounts[0].address, ethType, 35, 40, 1]
+      ], [
+        [0, 0, 0], [0, 0, 0]
+      ])
+      const result = await state.addTransaction(tx)
       expect(result).to.equal(true)
     })
   })

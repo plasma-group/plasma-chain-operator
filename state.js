@@ -2,6 +2,7 @@ const fs = require('fs-extra')
 const web3 = require('./eth.js')
 const BN = web3.utils.BN
 const tSerializer = require('./transaction-serialization.js')
+const log = require('debug')('info:state')
 
 const START_BYTE_SIZE = require('./constants.js').START_BYTE_SIZE
 const TYPE_BYTE_SIZE = require('./constants.js').TYPE_BYTE_SIZE
@@ -72,10 +73,10 @@ class State {
     try {
       const blocknumberBuff = await this.db.get('blocknumber')
       this.blocknumber = new BN(blocknumberBuff)
-      console.log('Blocknumber found! Starting at: ' + this.blocknumber)
+      log('Blocknumber found! Starting at: ' + this.blocknumber)
     } catch (err) {
       if (err.notFound) {
-        console.log('No blocknumber found! Starting from block 0.')
+        log('No blocknumber found! Starting from block 0.')
         this.blocknumber = new BN(0)
         await this.db.put(Buffer.from('blocknumber'), this.blocknumber.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE))
       } else { throw err }
@@ -92,7 +93,7 @@ class State {
     this.lock.all = true
     // Wait until all other locks are released
     while (Object.keys(this.lock).length !== 1) {
-      console.log('Waiting to acquire global lock')
+      log('Waiting to acquire global lock')
       await timeout(Math.random() * 10 + 2)
     }
     // Everything should be locked now that we have a `lock.all` activated. Time to increment the blocknumber
@@ -104,7 +105,7 @@ class State {
     this.writeStream = fs.createWriteStream(this.tmpTxLogFile, { flags: 'a' })
     // Release our lock
     delete this.lock.all
-    // console.log('#### Block #', this.blocknumber.toString())
+    log('#### Block #', this.blocknumber.toString())
   }
 
   attemptAcquireLocks (keywords) {
@@ -138,12 +139,12 @@ class State {
       oldTotalDeposits = new BN(tdBuffer)
     } catch (err) {
       if (err.notFound) {
-        console.log('No total deposits found for type ', type, '! Starting from 0.')
+        log('No total deposits found for type ', type, '! Starting from 0.')
       } else { throw err }
     }
     // Put the updated totalDeposits and owned token ranges
     const newTotalDeposits = oldTotalDeposits.add(amount)
-    const depositRecord = getDepositRecord(web3.utils.bytesToHex(recipient), type, oldTotalDeposits, newTotalDeposits.sub(new BN(1)), this.blocknumber)
+    const depositRecord = getDepositRecord(web3.utils.bytesToHex(recipient), type, oldTotalDeposits, newTotalDeposits, this.blocknumber)
     try {
       // Put the new owned token range and the new total deposits
       const ops = [
@@ -188,7 +189,7 @@ class State {
       const af = await this.getAffectedRanges(tr.type, tr.start, tr.end)
       if (af.length === 0) { // If there are no affected ranges then this transfer must be invalid
         this.releaseLocks(senders)
-        throw new Error('No affected ranges! We do not have a record for this range...')
+        throw new Error('No affected ranges!')
       }
       for (let i = 0; i < af.length; i++) {
         af[i].decoded = tSerializer.decodeElement(af[i].value, tSerializer.schemas.TransferRecord)
@@ -209,7 +210,7 @@ class State {
       }
       // Check that none of the other transfer records overlap
       for (let j = 0; j < trList.length; j++) {
-        if (j !== i && !(trList[j].start > tr.end || tr.start > trList[j].end)) {
+        if (j !== i && trList[j].start.lt(tr.end) && trList[j].end.gt(tr.start)) {
           this.releaseLocks(senders)
           throw new Error('Transfer record ranges overlap!')
         }
@@ -239,7 +240,7 @@ class State {
     if (!ar.start.eq(tr.start)) {
       // Reduce the first affected range's end position. Eg: ##### becomes ###$$
       const arRecipient = Buffer.from(web3.utils.hexToBytes(ar.recipient))
-      ar.end = tr.start.sub(new BN(1))
+      ar.end = tr.start
       dbBatch.push({ type: 'put', key: getTokenToTxKey(ar.type, ar.end), value: Buffer.from(ar.encode()) })
       dbBatch.push({ type: 'put', key: getAddressToTokenKey(arRecipient, ar.type, ar.end), value: Buffer.from([1]) })
     }
@@ -247,7 +248,7 @@ class State {
     if (!ar.end.eq(tr.end)) {
       // Increase the last affected range's start position. Eg: ##### becomes $$###
       const arRecipient = Buffer.from(web3.utils.hexToBytes(ar.recipient))
-      ar.start = tr.end.add(new BN(1))
+      ar.start = tr.end
       dbBatch.push({ type: 'put', key: affectedRanges[affectedRanges.length - 1].key, value: Buffer.from(ar.encode()) })
       dbBatch.push({ type: 'put', key: getAddressToTokenKey(arRecipient, ar.type, ar.end), value: Buffer.from([1]) })
     }

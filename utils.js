@@ -1,6 +1,5 @@
 const START_BYTE_SIZE = require('./constants.js').START_BYTE_SIZE
 const TYPE_BYTE_SIZE = require('./constants.js').TYPE_BYTE_SIZE
-const BN = require('./eth.js').utils.BN
 const _ = require('lodash')
 
 function addRange (rangeList, start, end, numSize) {
@@ -9,14 +8,16 @@ function addRange (rangeList, start, end, numSize) {
     numSize = 16
   }
   // Find leftRange (a range which ends at the start of our tx) and right_range (a range which starts at the end of our tx)
-  let leftRange
-  let rightRange
+  let leftRange, rightRange
   let insertionPoint = _.sortedIndexBy(rangeList, start, (n) => n.toString(16, numSize))
-  // let insertionPoint = _.sortedIndex  (rangeList, start)
-  if (insertionPoint > 0 && rangeList[insertionPoint - 1].eq(start.sub(new BN(1)))) {
+  // If the insertion point found an end poisition equal to our start, change it to the next index (find insertion on the right side)
+  if (insertionPoint > 0 && insertionPoint < rangeList.length && insertionPoint % 2 === 1 && rangeList[insertionPoint].eq(start)) {
+    insertionPoint++
+  }
+  if (insertionPoint > 0 && rangeList[insertionPoint - 1].eq(start)) {
     leftRange = insertionPoint - 2
   }
-  if (insertionPoint < rangeList.length && rangeList[insertionPoint].eq(end.add(new BN(1)))) {
+  if (insertionPoint < rangeList.length && rangeList[insertionPoint].eq(end)) {
     rightRange = insertionPoint
   }
   // Set the start and end of our new range based on the deleted ranges
@@ -61,12 +62,12 @@ function subtractRange (rangeList, start, end) {
   if (!arStart.eq(start)) {
     // # rangeList += [arStart, start - 1]
     rangeList.splice(affectedRange, 0, arStart)
-    rangeList.splice(affectedRange + 1, 0, start.sub(new BN(1)))
+    rangeList.splice(affectedRange + 1, 0, start)
     affectedRange += 2
   }
   if (!arEnd.eq(end)) {
     // # rangeList += [end + 1, arEnd]
-    rangeList.splice(affectedRange, 0, end.add(new BN(1)))
+    rangeList.splice(affectedRange, 0, end)
     rangeList.splice(affectedRange + 1, 0, arEnd)
   }
   return true
