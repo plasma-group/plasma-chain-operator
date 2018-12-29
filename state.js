@@ -101,9 +101,10 @@ class State {
     // Start a new tx log
     this.writeStream.end()
     await fs.rename(this.tmpTxLogFile, this.txLogDirectory + +new Date())
+    this.writeStream = fs.createWriteStream(this.tmpTxLogFile, { flags: 'a' })
     // Release our lock
-    console.log('Releasing global lock')
     delete this.lock.all
+    // console.log('#### Block #', this.blocknumber.toString())
   }
 
   attemptAcquireLocks (keywords) {
@@ -166,15 +167,15 @@ class State {
     return true
   }
 
-  async addTransaction (trList) {
+  async addTransaction (tx) {
     // Acquire lock on all of the transfer record senders
-    trList = trList.elements
+    let trList = tx.transferRecords.elements
     const senders = []
     for (const tr of trList) {
       // Verify that the transfer is correctly formatted
       if (!this.isValidTransfer(tr)) {
         this.releaseLocks(senders)
-        return false
+        throw new Error('Invalid transfer message contents!')
       }
       senders.push(tr.sender)
     }
@@ -187,7 +188,7 @@ class State {
       const af = await this.getAffectedRanges(tr.type, tr.start, tr.end)
       if (af.length === 0) { // If there are no affected ranges then this transfer must be invalid
         this.releaseLocks(senders)
-        return false
+        throw new Error('No affected ranges! We do not have a record for this range...')
       }
       for (let i = 0; i < af.length; i++) {
         af[i].decoded = tSerializer.decodeElement(af[i].value, tSerializer.schemas.TransferRecord)
@@ -199,18 +200,18 @@ class State {
     //    2) All affected ranges are owned by the correct sender
     //    3) None of the transfer records overlap
     for (const [i, tr] of trList.entries()) {
-      if (!tr.block.eq(this.blocknumber)) { return false } // Make sure every transfer record is intended for this block
+      if (!tr.block.eq(this.blocknumber)) { throw new Error('Transfer record blocknumber mismatch!') } // Make sure every transfer record is intended for this block
       for (const ar of tr.affectedRanges) {
         if (tr.sender.toLowerCase() !== ar.decoded.recipient.toLowerCase() || ar.decoded.block.eq(this.blocknumber)) {
           this.releaseLocks(senders)
-          return false
+          throw new Error('Affected range check failed! Looks like a recipient or blocknumber error!')
         }
       }
       // Check that none of the other transfer records overlap
       for (let j = 0; j < trList.length; j++) {
         if (j !== i && !(trList[j].start > tr.end || tr.start > trList[j].end)) {
           this.releaseLocks(senders)
-          return false
+          throw new Error('Transfer record ranges overlap!')
         }
       }
     }
@@ -220,6 +221,7 @@ class State {
       dbBatch = dbBatch.concat(this.getTransferBatchOps(tr, tr.affectedRanges))
     }
     await this.db.batch(dbBatch)
+    this.writeStream.write(Buffer.from(tx.encode()))
     this.releaseLocks(senders)
     return true
   }
