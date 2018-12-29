@@ -11,6 +11,7 @@ const DEPOSIT_SENDER = '0x0000000000000000000000000000000000000000'
 
 // ************* HELPER FUNCTIONS ************* //
 const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
+const timeoutAmt = 0
 // Promisify the it.next(cb) function
 function itNext (it) {
   return new Promise((resolve, reject) => {
@@ -94,7 +95,7 @@ class State {
     // Wait until all other locks are released
     while (Object.keys(this.lock).length !== 1) {
       log('Waiting to acquire global lock')
-      await timeout(Math.random() * 10 + 2)
+      await timeout(timeoutAmt)
     }
     // Everything should be locked now that we have a `lock.all` activated. Time to increment the blocknumber
     this.blocknumber = this.blocknumber.add(new BN(1))
@@ -128,9 +129,9 @@ class State {
   }
 
   async addDeposit (recipient, type, amount) {
-    while (!this.attemptAcquireLocks([recipient, type])) {
+    while (!this.attemptAcquireLocks([type])) {
       // Wait before attempting again
-      await timeout(Math.random() * 10 + 2)
+      await timeout(timeoutAmt)
     }
     // Get total deposits for this token type
     let oldTotalDeposits = new BN(0)
@@ -182,7 +183,7 @@ class State {
     }
     while (!this.attemptAcquireLocks(senders)) {
       // Wait before attempting again
-      await timeout(Math.random() * 10 + 2)
+      await timeout(timeoutAmt)
     }
     // Get all of the affectedRanges for each transfer record
     for (const [i, tr] of trList.entries()) {
@@ -284,7 +285,7 @@ class State {
   async getOwnedRanges (address) {
     while (!this.attemptAcquireLocks([address])) {
       // Wait before attempting again
-      await timeout(Math.random() * 10 + 2)
+      await timeout(timeoutAmt)
     }
     // Get the ranges
     const addressBuffer = Buffer.from(web3.utils.hexToBytes(address))

@@ -54,7 +54,7 @@ function subtractRange (rangeList, start, end) {
     }
   }
   if (affectedRange === undefined) {
-    return false
+    throw new Error('No affected range found! Must be an invalid subtraction')
   }
   // Remove the effected range
   rangeList.splice(affectedRange, 2)
@@ -70,7 +70,6 @@ function subtractRange (rangeList, start, end) {
     rangeList.splice(affectedRange, 0, end)
     rangeList.splice(affectedRange + 1, 0, arEnd)
   }
-  return true
 }
 
 function getTokenId (type, start) {

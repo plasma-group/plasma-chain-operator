@@ -3,6 +3,7 @@ const BN = web3.utils.BN
 const utils = require('../utils.js')
 const TYPE_BYTE_SIZE = require('../constants.js').TYPE_BYTE_SIZE
 const tSerializer = require('../transaction-serialization.js')
+const log = require('debug')('info:node')
 
 class MockNode {
   constructor (state, account, peerList) {
@@ -28,18 +29,32 @@ class MockNode {
     utils.addRange(this.ranges, start, end)
   }
 
+  getRandomSubrange (startBound, endBound) {
+    const totalSize = endBound.sub(startBound).toNumber()
+    const startOffset = Math.floor(Math.random() * totalSize)
+    const endOffset = Math.floor(Math.random() * (totalSize - startOffset))
+    const start = startBound.add(new BN(startOffset))
+    const end = endBound.sub(new BN(endOffset))
+    return [start, end]
+  }
+
   async sendRandomTransaction () {
     if (this.ranges.length === 0) {
-      // console.log('got no money to send!')
+      log('got no money to send!')
       return
     }
     let startIndex = Math.floor(Math.random() * (this.ranges.length / 2))
     startIndex -= startIndex % 2
-    const startId = this.ranges[startIndex]
-    const endId = this.ranges[startIndex + 1]
-    const type = new BN(startId.toArrayLike(Buffer, 'big', 16).slice(0, TYPE_BYTE_SIZE))
-    const start = new BN(startId.toArrayLike(Buffer, 'big', 16).slice(TYPE_BYTE_SIZE))
-    const end = new BN(endId.toArrayLike(Buffer, 'big', 16).slice(TYPE_BYTE_SIZE))
+    const startBoundId = this.ranges[startIndex]
+    const endBoundId = this.ranges[startIndex + 1]
+    // Come up with a random range within some bounds
+    const startBound = new BN(startBoundId.toArrayLike(Buffer, 'big', 16).slice(TYPE_BYTE_SIZE))
+    const endBound = new BN(endBoundId.toArrayLike(Buffer, 'big', 16).slice(TYPE_BYTE_SIZE))
+    // Get the actual thing
+    const [start, end] = this.getRandomSubrange(startBound, endBound)
+    const type = new BN(startBoundId.toArrayLike(Buffer, 'big', 16).slice(0, TYPE_BYTE_SIZE))
+    const startId = new BN(utils.getTokenId(type, start))
+    const endId = new BN(utils.getTokenId(type, end))
     // Get a random recipient that isn't us
     let recipient = this.peerList[Math.floor(Math.random() * this.peerList.length)]
     while (recipient === this) {
@@ -51,7 +66,7 @@ class MockNode {
     utils.subtractRange(this.ranges, startId, endId)
     recipient.pendingRanges.push([new BN(startId), new BN(endId)])
     recipient.addLog.push([this.account.address, start, end])
-    // console.log('sent a transaction!')
+    log('sent a transaction!')
   }
 
   makeTx (sender, recipient, type, start, end, blocknumber) {
