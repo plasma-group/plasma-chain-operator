@@ -155,7 +155,7 @@ class State {
       throw err
     }
     this.releaseLocks([recipient, type])
-    return newTotalDeposits
+    return depositRecord
   }
 
   isValidTransfer (tr) {

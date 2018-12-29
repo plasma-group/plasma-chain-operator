@@ -1,3 +1,5 @@
+const START_BYTE_SIZE = require('./constants.js').START_BYTE_SIZE
+const TYPE_BYTE_SIZE = require('./constants.js').TYPE_BYTE_SIZE
 const BN = require('./eth.js').utils.BN
 const _ = require('lodash')
 
@@ -70,7 +72,16 @@ function subtractRange (rangeList, start, end) {
   return true
 }
 
+function getTokenId (type, start) {
+  const buffers = [
+    type.toArrayLike(Buffer, 'big', TYPE_BYTE_SIZE),
+    start.toArrayLike(Buffer, 'big', START_BYTE_SIZE)
+  ]
+  return Buffer.concat(buffers)
+}
+
 module.exports = {
   addRange,
-  subtractRange
+  subtractRange,
+  getTokenId
 }

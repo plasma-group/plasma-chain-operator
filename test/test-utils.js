@@ -29,7 +29,7 @@ describe('utils', function () {
     })
   })
 
-  describe.only('subtractRange', () => {
+  describe('subtractRange', () => {
     it('removes ranges & splits them up if needed', async () => {
       const subtractRange = utils.subtractRange
       const rangeList = [bn(0), bn(3), bn(6), bn(10), bn(15), bn(17), bn(18), bn(18)]
