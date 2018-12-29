@@ -3,46 +3,51 @@
 const chai = require('chai')
 const expect = chai.expect
 const utils = require('../utils.js')
+const BN = require('../eth.js').utils.BN
+
+function bn (number) {
+  return new BN(number)
+}
 
 describe('utils', function () {
   describe('addRange', () => {
     it('adds ranges and merges if possible', async () => {
       const addRange = utils.addRange
-      const rangeList = [0, 1, 6, 10, 15, 17, 20, 20]
-      addRange(rangeList, 5, 5)
-      expect(rangeList).to.deep.equal([0, 1, 5, 10, 15, 17, 20, 20])
-      addRange(rangeList, 3, 3)
-      expect(rangeList).to.deep.equal([0, 1, 3, 3, 5, 10, 15, 17, 20, 20])
-      addRange(rangeList, 2, 2)
-      expect(rangeList).to.deep.equal([0, 3, 5, 10, 15, 17, 20, 20])
-      addRange(rangeList, 4, 4)
-      expect(rangeList).to.deep.equal([0, 10, 15, 17, 20, 20])
-      addRange(rangeList, 18, 19)
-      expect(rangeList).to.deep.equal([0, 10, 15, 20])
-      addRange(rangeList, 11, 14)
-      expect(rangeList).to.deep.equal([0, 20])
+      const rangeList = [bn(0), bn(1), bn(6), bn(10), bn(15), bn(17), bn(20), bn(20)]
+      addRange(rangeList, bn(5), bn(5))
+      expect(rangeList).to.deep.equal([bn(0), bn(1), bn(5), bn(10), bn(15), bn(17), bn(20), bn(20)])
+      addRange(rangeList, bn(3), bn(3))
+      expect(rangeList).to.deep.equal([bn(0), bn(1), bn(3), bn(3), bn(5), bn(10), bn(15), bn(17), bn(20), bn(20)])
+      addRange(rangeList, bn(2), bn(2))
+      expect(rangeList).to.deep.equal([bn(0), bn(3), bn(5), bn(10), bn(15), bn(17), bn(20), bn(20)])
+      addRange(rangeList, bn(4), bn(4))
+      expect(rangeList).to.deep.equal([bn(0), bn(10), bn(15), bn(17), bn(20), bn(20)])
+      addRange(rangeList, bn(18), bn(19))
+      expect(rangeList).to.deep.equal([bn(0), bn(10), bn(15), bn(20)])
+      addRange(rangeList, bn(11), bn(14))
+      expect(rangeList).to.deep.equal([bn(0), bn(20)])
     })
   })
 
-  describe('subtractRange', () => {
+  describe.only('subtractRange', () => {
     it('removes ranges & splits them up if needed', async () => {
       const subtractRange = utils.subtractRange
-      const rangeList = [0, 3, 6, 10, 15, 17, 18, 18]
-      subtractRange(rangeList, 0, 3)
-      expect(rangeList).to.deep.equal([6, 10, 15, 17, 18, 18])
-      subtractRange(rangeList, 18, 18)
-      expect(rangeList).to.deep.equal([6, 10, 15, 17])
-      subtractRange(rangeList, 7, 7)
-      expect(rangeList).to.deep.equal([6, 6, 8, 10, 15, 17])
-      subtractRange(rangeList, 15, 17)
-      expect(rangeList).to.deep.equal([6, 6, 8, 10])
-      subtractRange(rangeList, 6, 6)
-      expect(rangeList).to.deep.equal([8, 10])
-      subtractRange(rangeList, 9, 9)
-      expect(rangeList).to.deep.equal([8, 8, 10, 10])
-      subtractRange(rangeList, 8, 8)
-      expect(rangeList).to.deep.equal([10, 10])
-      subtractRange(rangeList, 10, 10)
+      const rangeList = [bn(0), bn(3), bn(6), bn(10), bn(15), bn(17), bn(18), bn(18)]
+      subtractRange(rangeList, bn(0), bn(3))
+      expect(rangeList).to.deep.equal([bn(6), bn(10), bn(15), bn(17), bn(18), bn(18)])
+      subtractRange(rangeList, bn(18), bn(18))
+      expect(rangeList).to.deep.equal([bn(6), bn(10), bn(15), bn(17)])
+      subtractRange(rangeList, bn(7), bn(7))
+      expect(rangeList).to.deep.equal([bn(6), bn(6), bn(8), bn(10), bn(15), bn(17)])
+      subtractRange(rangeList, bn(15), bn(17))
+      expect(rangeList).to.deep.equal([bn(6), bn(6), bn(8), bn(10)])
+      subtractRange(rangeList, bn(6), bn(6))
+      expect(rangeList).to.deep.equal([bn(8), bn(10)])
+      subtractRange(rangeList, bn(9), bn(9))
+      expect(rangeList).to.deep.equal([bn(8), bn(8), bn(10), bn(10)])
+      subtractRange(rangeList, bn(8), bn(8))
+      expect(rangeList).to.deep.equal([bn(10), bn(10)])
+      subtractRange(rangeList, bn(10), bn(10))
       expect(rangeList).to.deep.equal([])
     })
   })

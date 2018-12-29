@@ -1,14 +1,20 @@
+const BN = require('./eth.js').utils.BN
 const _ = require('lodash')
 
-function addRange (rangeList, start, end) {
+function addRange (rangeList, start, end, numSize) {
+  if (numSize === undefined) {
+    // Default to 16
+    numSize = 16
+  }
   // Find leftRange (a range which ends at the start of our tx) and right_range (a range which starts at the end of our tx)
   let leftRange
   let rightRange
-  let insertionPoint = _.sortedIndex(rangeList, start)
-  if (insertionPoint > 0 && rangeList[insertionPoint - 1] === start - 1) {
+  let insertionPoint = _.sortedIndexBy(rangeList, start, (n) => n.toString(16, numSize))
+  // let insertionPoint = _.sortedIndex  (rangeList, start)
+  if (insertionPoint > 0 && rangeList[insertionPoint - 1].eq(start.sub(new BN(1)))) {
     leftRange = insertionPoint - 2
   }
-  if (insertionPoint < rangeList.length && rangeList[insertionPoint] === end + 1) {
+  if (insertionPoint < rangeList.length && rangeList[insertionPoint].eq(end.add(new BN(1)))) {
     rightRange = insertionPoint
   }
   // Set the start and end of our new range based on the deleted ranges
@@ -39,7 +45,7 @@ function subtractRange (rangeList, start, end) {
   for (let i = 0; i < rangeList.length; i += 2) {
     arStart = rangeList[i]
     arEnd = rangeList[i + 1]
-    if (arStart <= start && end <= arEnd) {
+    if (arStart.lte(start) && end.lte(arEnd)) {
       affectedRange = i
       break
     }
@@ -50,15 +56,15 @@ function subtractRange (rangeList, start, end) {
   // Remove the effected range
   rangeList.splice(affectedRange, 2)
   // Create new sub-ranges based on what we deleted
-  if (arStart !== start) {
+  if (!arStart.eq(start)) {
     // # rangeList += [arStart, start - 1]
     rangeList.splice(affectedRange, 0, arStart)
-    rangeList.splice(affectedRange + 1, 0, start - 1)
+    rangeList.splice(affectedRange + 1, 0, start.sub(new BN(1)))
     affectedRange += 2
   }
-  if (arEnd !== end) {
+  if (!arEnd.eq(end)) {
     // # rangeList += [end + 1, arEnd]
-    rangeList.splice(affectedRange, 0, end + 1)
+    rangeList.splice(affectedRange, 0, end.add(new BN(1)))
     rangeList.splice(affectedRange + 1, 0, arEnd)
   }
   return true
