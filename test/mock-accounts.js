@@ -1,4 +1,4 @@
-const web3 = require('../eth.js')
+const web3 = require('../src/eth.js')
 
 // Generate a bunch of private keys
 const privateKeys = []

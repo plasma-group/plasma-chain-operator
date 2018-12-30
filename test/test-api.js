@@ -2,10 +2,10 @@
 
 const chai = require('chai')
 const chaiHttp = require('chai-http')
-const app = require('../app')
-const constants = require('../constants.js')
+const app = require('../src/app')
+const constants = require('../src/constants.js')
 const accounts = require('./mock-accounts.js').accounts
-const BN = require('../eth.js').utils.BN
+const BN = require('../src/eth.js').utils.BN
 
 const expect = chai.expect
 

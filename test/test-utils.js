@@ -2,8 +2,8 @@
 
 const chai = require('chai')
 const expect = chai.expect
-const utils = require('../utils.js')
-const BN = require('../eth.js').utils.BN
+const utils = require('../src/utils.js')
+const BN = require('../src/eth.js').utils.BN
 
 function bn (number) {
   return new BN(number)

@@ -3,11 +3,11 @@
 const fs = require('fs')
 const chai = require('chai')
 const chaiHttp = require('chai-http')
-const State = require('../state.js')
+const State = require('../src/state.js')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
 const accounts = require('./mock-accounts.js').accounts
-const BN = require('../eth.js').utils.BN
+const BN = require('../src/eth.js').utils.BN
 const MockNode = require('./mock-node.js')
 // const expect = chai.expect
 
@@ -64,7 +64,7 @@ describe('MockNode', function () {
       }
       Promise.all(depositPromises).then((res) => {
         // For 10 blocks, have every node send a random transaction
-        loopSendRandomTxs(10, state, nodes).then(() => {
+        loopSendRandomTxs(100, state, nodes).then(() => {
           done()
         })
       })

@@ -1,7 +1,7 @@
-const web3 = require('../eth.js')
+const web3 = require('../src/eth.js')
 const BN = web3.utils.BN
-const utils = require('../utils.js')
-const TYPE_BYTE_SIZE = require('../constants.js').TYPE_BYTE_SIZE
+const utils = require('../src/utils.js')
+const TYPE_BYTE_SIZE = require('../src/constants.js').TYPE_BYTE_SIZE
 const encoder = require('plasma-utils').encoder
 const log = require('debug')('info:node')
 
