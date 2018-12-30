@@ -8,7 +8,7 @@ const levelup = require('levelup')
 const leveldown = require('leveldown')
 const accounts = require('./mock-accounts.js').accounts
 const BN = require('../src/eth.js').utils.BN
-const MockNode = require('./mock-node.js')
+const MockNode = require('../src/mock-node.js')
 // const expect = chai.expect
 
 chai.use(chaiHttp)
