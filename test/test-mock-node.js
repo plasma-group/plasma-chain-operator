@@ -8,7 +8,6 @@ const levelup = require('levelup')
 const leveldown = require('leveldown')
 const accounts = require('./mock-accounts.js').accounts
 const BN = require('../eth.js').utils.BN
-// const tSerializer = require('../transaction-serialization.js')
 const MockNode = require('./mock-node.js')
 // const expect = chai.expect
 

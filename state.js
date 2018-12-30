@@ -1,7 +1,7 @@
 const fs = require('fs-extra')
 const web3 = require('./eth.js')
 const BN = web3.utils.BN
-const tSerializer = require('./transaction-serialization.js')
+const encoder = require('plasma-utils').encoder
 const log = require('debug')('info:state')
 
 const START_BYTE_SIZE = require('./constants.js').START_BYTE_SIZE
@@ -37,7 +37,7 @@ function itEnd (it) {
 }
 
 function getDepositRecord (owner, type, start, end, blocknumber) {
-  const tr = new tSerializer.SimpleSerializableElement([DEPOSIT_SENDER, owner, type, start, end, blocknumber], tSerializer.schemas.TransferRecord)
+  const tr = new encoder.TR([DEPOSIT_SENDER, owner, type, start, end, blocknumber])
   return tr
 }
 
@@ -193,7 +193,7 @@ class State {
         throw new Error('No affected ranges!')
       }
       for (let i = 0; i < af.length; i++) {
-        af[i].decoded = tSerializer.decodeElement(af[i].value, tSerializer.schemas.TransferRecord)
+        af[i].decoded = new encoder.TR(af[i].value)
       }
       trList[i].affectedRanges = af
     }

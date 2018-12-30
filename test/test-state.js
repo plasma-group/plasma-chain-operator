@@ -10,7 +10,7 @@ const BN = web3.utils.BN
 const State = require('../state.js')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
-const tSerializer = require('../transaction-serialization.js')
+const encoder = require('plasma-utils').encoder
 
 const expect = chai.expect
 
@@ -20,12 +20,10 @@ function makeTx (rawTrs, rawSigs) {
   const trs = []
   const sigs = []
   for (let i = 0; i < rawTrs.length; i++) {
-    trs.push(new tSerializer.SimpleSerializableElement(rawTrs[i], tSerializer.schemas.TransferRecord))
-    sigs.push(new tSerializer.SimpleSerializableElement(rawSigs[i], tSerializer.schemas.Signature))
+    trs.push(new encoder.TR(rawTrs[i]))
+    sigs.push(new encoder.Sig(rawSigs[i]))
   }
-  const trList = new tSerializer.SimpleSerializableList(trs, tSerializer.schemas.TransferRecord)
-  const sigList = new tSerializer.SimpleSerializableList(sigs, tSerializer.schemas.Signature)
-  const tx = new tSerializer.Transaction(trList, sigList)
+  const tx = new encoder.Transaction(trs, sigs)
   return tx
 }
 

@@ -2,7 +2,7 @@ const web3 = require('../eth.js')
 const BN = web3.utils.BN
 const utils = require('../utils.js')
 const TYPE_BYTE_SIZE = require('../constants.js').TYPE_BYTE_SIZE
-const tSerializer = require('../transaction-serialization.js')
+const encoder = require('plasma-utils').encoder
 const log = require('debug')('info:node')
 
 class MockNode {
@@ -70,12 +70,7 @@ class MockNode {
   }
 
   makeTx (sender, recipient, type, start, end, blocknumber) {
-    const tr1 = new tSerializer.SimpleSerializableElement([sender, recipient, type, start, end, blocknumber], tSerializer.schemas.TransferRecord)
-    const trList = new tSerializer.SimpleSerializableList([tr1], tSerializer.schemas.TransferRecord)
-    const sig1 = new tSerializer.SimpleSerializableElement([0, 0, 0], tSerializer.schemas.Signature)
-    const sigList = new tSerializer.SimpleSerializableList([sig1], tSerializer.schemas.Signature)
-    const tx = new tSerializer.Transaction(trList, sigList)
-    return tx
+    return new encoder.Transaction([[sender, recipient, type, start, end, blocknumber]], [[0, 0, 0]])
   }
 }
 
