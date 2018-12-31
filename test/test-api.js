@@ -13,7 +13,7 @@ chai.use(chaiHttp)
 
 describe('App', function () {
   describe('/api', function () {
-    it('responds with status 200', function (done) {
+    it.only('responds with status 200', function (done) {
       chai.request(app)
         .post('/api')
         .send({

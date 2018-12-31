@@ -1,55 +1,64 @@
-const levelup = require('levelup')
-const leveldown = require('leveldown')
-const State = require('./state.js').State
-const generateSumTree = require('./block-generator.js').generateSumTree
+const cp = require('child_process')
 const constants = require('./constants.js')
-const web3 = require('./eth.js')
-const BN = web3.utils.BN
+const defer = require('./utils.js').defer
 const express = require('express')
 const bodyParser = require('body-parser')
+const log = require('debug')('info:app')
 
 // Set up express
 const app = express()
 const port = 3000
+// Set up child processes
+const stateManager = cp.fork(`${__dirname}/state-manager/app.js`)
+const historyManager = cp.fork(`${__dirname}/history-manager/app.js`)
+
+// Set up listeners to print messages
+const logMsg = (m) => {
+  log('PARENT got message:', m)
+}
+stateManager.on('message', logMsg)
+historyManager.on('message', logMsg)
 
 app.use(bodyParser.json())
+
+// Setup simple message queue
+const messageQueue = {}
+let messageCounter = 0
+
+function sendMessage (message) {
+  const deferred = defer()
+  stateManager.send({
+    id: messageCounter,
+    message
+  })
+  messageQueue[messageCounter] = { resolve: deferred.resolve }
+  return deferred.promise
+}
+
+function resolveMessage (m) {
+  // console.log('PARENT got message:', m)
+  console.log('YYO\n\n\n\n\n\n\nOOOOO')
+  messageQueue[m.id].resolve(m)
+}
+
+stateManager.on('message', resolveMessage)
+historyManager.on('message', resolveMessage)
 
 // Handle incoming transactions
 app.post('/api', function (req, res) {
   console.log('Request body: \n', req.body)
   if (req.body.method === constants.DEPOSIT_METHOD) {
-    newDepositCallback(null, {
-      recipient: Buffer.from(web3.utils.hexToBytes(req.body.params.recipient)),
-      type: new BN(req.body.params.type, 16),
-      amount: new BN(req.body.params.amount, 16)
+    sendMessage(req.body).then((response) => {
+      console.log('response:', response)
+      res.send('POST request success')
     })
   }
-  res.send('POST request success')
 })
 
-// Create global state object
-let state = null
-
 async function startup () {
-  const db = levelup(leveldown('./db'))
-  state = new State(db, './db/tx_log/', generateSumTree)
-  await state.init()
   // Begin listening for connections
   app.listen(port, () => console.log(`Operator listening on port ${port}!`))
 }
 startup()
-
-// Handle new deposit -- Use something like the following code when we aren't just mocking the smart contract
-// plasmaContract.events.deposit({
-//     filter: {myIndexedParam: [20,23], myOtherIndexedParam: '0x123456789...'}, // Using an array means OR: e.g. 20 or 23
-//     fromBlock: 0
-// }, newDepositCallback)
-
-function newDepositCallback (err, depositEvent) {
-  if (err) {
-    throw err
-  }
-  state.addDeposit(depositEvent.recipient, depositEvent.type, depositEvent.amount)
-}
 
 module.exports = app

@@ -80,8 +80,23 @@ function getCoinId (type, start) {
   return Buffer.concat(buffers)
 }
 
+// Create a defer function which will allow us to add our promise to the messageQueue
+function defer () {
+  const deferred = {
+    promise: null,
+    resolve: null,
+    reject: null
+  }
+  deferred.promise = new Promise((resolve, reject) => {
+    deferred.resolve = resolve
+    deferred.reject = reject
+  })
+  return deferred
+}
+
 module.exports = {
   addRange,
   subtractRange,
+  defer,
   getCoinId
 }

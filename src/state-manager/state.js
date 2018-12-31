@@ -1,12 +1,12 @@
 const fs = require('fs-extra')
-const web3 = require('./eth.js')
+const web3 = require('../eth.js')
 const BN = web3.utils.BN
 const encoder = require('plasma-utils').encoder
 const log = require('debug')('info:state')
 
-const START_BYTE_SIZE = require('./constants.js').START_BYTE_SIZE
-const TYPE_BYTE_SIZE = require('./constants.js').TYPE_BYTE_SIZE
-const BLOCKNUMBER_BYTE_SIZE = require('./constants.js').BLOCKNUMBER_BYTE_SIZE
+const START_BYTE_SIZE = require('../constants.js').START_BYTE_SIZE
+const TYPE_BYTE_SIZE = require('../constants.js').TYPE_BYTE_SIZE
+const BLOCKNUMBER_BYTE_SIZE = require('../constants.js').BLOCKNUMBER_BYTE_SIZE
 const DEPOSIT_SENDER = '0x0000000000000000000000000000000000000000'
 
 // ************* HELPER FUNCTIONS ************* //

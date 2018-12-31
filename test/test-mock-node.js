@@ -3,13 +3,12 @@
 const fs = require('fs')
 const chai = require('chai')
 const chaiHttp = require('chai-http')
-const State = require('../src/state.js')
+const State = require('../src/state-manager/state.js')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
 const accounts = require('./mock-accounts.js').accounts
 const BN = require('../src/eth.js').utils.BN
 const MockNode = require('../src/mock-node.js')
-const generateSumTree = require('../src/block-generator.js').generateSumTree
 const log = require('debug')('test:info:test-mock-node')
 // const expect = chai.expect
 
@@ -24,7 +23,7 @@ describe('MockNode', function () {
     const txLogDirectory = './test-db/' + +new Date() + '-tx-log/'
     fs.mkdirSync(txLogDirectory)
     // Create state object
-    state = new State.State(db, txLogDirectory, generateSumTree)
+    state = new State.State(db, txLogDirectory, () => true)
     await state.init()
   }
   beforeEach(startNewDB)
@@ -71,7 +70,7 @@ describe('MockNode', function () {
         })
       })
     })
-    it.only('should work with one massive block', (done) => {
+    it('should work with one massive block', (done) => {
       const depositType = new BN(1)
       const depositAmount = new BN(10000000)
       const nodes = []
@@ -87,7 +86,7 @@ describe('MockNode', function () {
         console.log(err)
       }).then((res) => {
         // For 10 blocks, have every node send a random transaction
-        loopSendRandomTxs(10000, state, nodes).then(() => {
+        loopSendRandomTxs(10, state, nodes).then(() => {
           done()
         })
       })

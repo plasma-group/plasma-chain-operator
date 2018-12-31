@@ -7,11 +7,10 @@ const constants = require('../src/constants.js')
 const accounts = require('./mock-accounts.js').accounts
 const web3 = require('../src/eth.js')
 const BN = web3.utils.BN
-const State = require('../src/state.js')
+const State = require('../src/state-manager/state.js')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
 const encoder = require('plasma-utils').encoder
-const generateSumTree = require('../src/block-generator.js').generateSumTree
 
 const expect = chai.expect
 
@@ -37,7 +36,7 @@ describe('State', function () {
     const txLogDirectory = './test-db/' + +new Date() + '-tx-log/'
     fs.mkdirSync(txLogDirectory)
     // Create state object
-    state = new State.State(db, txLogDirectory, generateSumTree)
+    state = new State.State(db, txLogDirectory, () => true)
     await state.init()
   }
   beforeEach(startNewDB)

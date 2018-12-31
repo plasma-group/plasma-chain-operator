@@ -1,6 +1,8 @@
 # Database
 db
 test-db
+history-db
+state-db
 
 # Vim
 *.swp
