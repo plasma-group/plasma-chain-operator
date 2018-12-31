@@ -11,6 +11,7 @@ const State = require('../../src/state-manager/state.js')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
 const encoder = require('plasma-utils').encoder
+const log = require('debug')('test:info:test-state')
 
 const expect = chai.expect
 
@@ -31,9 +32,14 @@ describe('State', function () {
   let db
   let state
   const startNewDB = async () => {
-    db = levelup(leveldown('./test-db/' + +new Date()))
+    const dbDir = './db-test/'
+    if (!fs.existsSync(dbDir)) {
+      log('Creating a new db directory because it does not exist')
+      fs.mkdirSync(dbDir)
+    }
+    db = levelup(leveldown(dbDir + +new Date()))
     // Create a new tx-log dir for this test
-    const txLogDirectory = './test-db/' + +new Date() + '-tx-log/'
+    const txLogDirectory = dbDir + +new Date() + '-tx-log/'
     fs.mkdirSync(txLogDirectory)
     // Create state object
     state = new State.State(db, txLogDirectory, () => true)

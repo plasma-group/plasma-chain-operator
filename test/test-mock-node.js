@@ -1,8 +1,6 @@
 /* eslint-env mocha */
 
 const fs = require('fs')
-const chai = require('chai')
-const chaiHttp = require('chai-http')
 const State = require('../src/state-manager/state.js')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
@@ -12,15 +10,18 @@ const MockNode = require('../src/mock-node.js')
 const log = require('debug')('test:info:test-mock-node')
 // const expect = chai.expect
 
-chai.use(chaiHttp)
-
 describe('MockNode', function () {
   let db
   let state
   const startNewDB = async () => {
-    db = levelup(leveldown('./test-db/' + +new Date()))
+    const dbDir = './db-test/'
+    if (!fs.existsSync(dbDir)) {
+      log('Creating a new db directory because it does not exist')
+      fs.mkdirSync(dbDir)
+    }
+    db = levelup(leveldown(dbDir + +new Date()))
     // Create a new tx-log dir for this test
-    const txLogDirectory = './test-db/' + +new Date() + '-tx-log/'
+    const txLogDirectory = dbDir + +new Date() + '-tx-log/'
     fs.mkdirSync(txLogDirectory)
     // Create state object
     state = new State.State(db, txLogDirectory, () => true)
@@ -70,7 +71,7 @@ describe('MockNode', function () {
         })
       })
     })
-    it('should work with one massive block', (done) => {
+    it.only('should work with one massive block', (done) => {
       const depositType = new BN(1)
       const depositAmount = new BN(10000000)
       const nodes = []
@@ -85,8 +86,8 @@ describe('MockNode', function () {
       Promise.all(depositPromises).catch((err) => {
         console.log(err)
       }).then((res) => {
-        // For 10 blocks, have every node send a random transaction
-        loopSendRandomTxs(10, state, nodes).then(() => {
+        // For some number of rounds, have every node send a random transaction
+        loopSendRandomTxs(100, state, nodes).then(() => {
           done()
         })
       })
