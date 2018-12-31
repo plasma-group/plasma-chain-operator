@@ -3,7 +3,7 @@ const constants = require('./constants.js')
 const defer = require('./utils.js').defer
 const express = require('express')
 const bodyParser = require('body-parser')
-const log = require('debug')('info:app')
+const log = require('debug')('info:api-app')
 
 // Set up express
 const app = express()
@@ -36,8 +36,7 @@ function sendMessage (message) {
 }
 
 function resolveMessage (m) {
-  // console.log('PARENT got message:', m)
-  console.log('YYO\n\n\n\n\n\n\nOOOOO')
+  log('Resolving message with ID', m.id)
   messageQueue[m.id].resolve(m)
 }
 
@@ -46,10 +45,8 @@ historyManager.on('message', resolveMessage)
 
 // Handle incoming transactions
 app.post('/api', function (req, res) {
-  console.log('Request body: \n', req.body)
   if (req.body.method === constants.DEPOSIT_METHOD) {
     sendMessage(req.body).then((response) => {
-      console.log('response:', response)
       res.send('POST request success')
     })
   }
