@@ -1,3 +1,4 @@
+const fs = require('fs')
 const log = require('debug')('info:block-store')
 
 class BlockStore {
@@ -8,6 +9,10 @@ class BlockStore {
 
   generateBlock (txLogPath) {
     log('Generating new block based on path:', txLogPath)
+    const readStream = fs.createReadStream(txLogPath)
+    readStream.on('data', function (chunk) {
+      log(chunk.length)
+    })
   }
 }
 

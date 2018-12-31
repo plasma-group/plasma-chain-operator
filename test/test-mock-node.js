@@ -71,7 +71,7 @@ describe('MockNode', function () {
         })
       })
     })
-    it.only('should work with one massive block', (done) => {
+    it('should work with one massive block', (done) => {
       const depositType = new BN(1)
       const depositAmount = new BN(10000000)
       const nodes = []
