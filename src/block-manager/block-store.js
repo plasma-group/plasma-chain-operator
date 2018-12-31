@@ -1,8 +1,8 @@
-const log = require('debug')('info:history-store')
+const log = require('debug')('info:block-store')
 
 class BlockStore {
   constructor (db) {
-    log('Creating new history store')
+    log('Creating new block store')
     this.db = db
   }
 

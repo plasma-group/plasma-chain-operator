@@ -11,14 +11,14 @@ const log = require('debug')('info:api-app')
 const app = express()
 // Set up child processes
 const stateManager = cp.fork(`${__dirname}/state-manager/app.js`)
-const historyManager = cp.fork(`${__dirname}/history-manager/app.js`)
+const blockManager = cp.fork(`${__dirname}/block-manager/app.js`)
 
 // /////////////// CONFIG ///////////////// //
 const port = 3000
 const dbDir = './db'
 const txLogDir = dbDir + '/tx-log/'
 const stateDBDir = dbDir + '/state-db/'
-const historyDBDir = dbDir + '/history-db/'
+const blockDBDir = dbDir + '/block-db/'
 // /////////////// CONFIG ///////////////// //
 
 // Set up listeners to print messages
@@ -26,7 +26,7 @@ const logMsg = (m) => {
   log('PARENT got message:', m)
 }
 stateManager.on('message', logMsg)
-historyManager.on('message', logMsg)
+blockManager.on('message', logMsg)
 
 app.use(bodyParser.json())
 
@@ -51,7 +51,7 @@ function resolveMessage (m) {
 }
 
 stateManager.on('message', resolveMessage)
-historyManager.on('message', resolveMessage)
+blockManager.on('message', resolveMessage)
 
 // Handle incoming transactions
 app.post('/api', function (req, res) {
@@ -60,8 +60,8 @@ app.post('/api', function (req, res) {
       res.send('POST request success from state manager')
     })
   } else if (req.body.method === constants.NEW_BLOCK_METHOD) {
-    sendMessage(historyManager, req.body).then((response) => {
-      res.send('POST request success from history manager')
+    sendMessage(blockManager, req.body).then((response) => {
+      res.send('POST request success from block manager')
     })
   }
 })
@@ -77,8 +77,8 @@ async function startup () {
     dbDir: stateDBDir,
     txLogDir
   }))
-  await sendMessage(historyManager, jsonrpc(constants.INIT_METHOD, {
-    dbDir: historyDBDir,
+  await sendMessage(blockManager, jsonrpc(constants.INIT_METHOD, {
+    dbDir: blockDBDir,
     txLogDir
   }))
   app.listen(port, () => console.log('\x1b[36m%s\x1b[0m', `Operator listening on port ${port}!`))

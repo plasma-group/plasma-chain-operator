@@ -1,7 +1,7 @@
 const levelup = require('levelup')
 const leveldown = require('leveldown')
 const BlockStore = require('./block-store.js')
-const log = require('debug')('info:history-app')
+const log = require('debug')('info:block-app')
 const constants = require('../constants.js')
 
 // Create global state object
@@ -13,7 +13,7 @@ async function startup (options) {
 }
 
 process.on('message', async (m) => {
-  log('History got request:', m.message)
+  log('Block manager got request:', m.message)
   if (m.message.method === constants.INIT_METHOD) {
     await startup(m.message.params)
   } else if (m.message.method === constants.NEW_BLOCK_METHOD) {
