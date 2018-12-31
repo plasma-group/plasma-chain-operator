@@ -22,10 +22,10 @@ class MockNode {
     this.pendingRanges = []
   }
 
-  async deposit (tokenType, amount) {
-    const deposit = await this.state.addDeposit(Buffer.from(web3.utils.hexToBytes(this.account.address)), tokenType, amount)
-    const start = new BN(utils.getTokenId(deposit.type, deposit.start))
-    const end = new BN(utils.getTokenId(deposit.type, deposit.end))
+  async deposit (coinType, amount) {
+    const deposit = await this.state.addDeposit(Buffer.from(web3.utils.hexToBytes(this.account.address)), coinType, amount)
+    const start = new BN(utils.getCoinId(deposit.type, deposit.start))
+    const end = new BN(utils.getCoinId(deposit.type, deposit.end))
     utils.addRange(this.ranges, start, end)
   }
 
@@ -53,8 +53,8 @@ class MockNode {
     // Get the actual thing
     const [start, end] = this.getRandomSubrange(startBound, endBound)
     const type = new BN(startBoundId.toArrayLike(Buffer, 'big', 16).slice(0, TYPE_BYTE_SIZE))
-    const startId = new BN(utils.getTokenId(type, start))
-    const endId = new BN(utils.getTokenId(type, end))
+    const startId = new BN(utils.getCoinId(type, start))
+    const endId = new BN(utils.getCoinId(type, end))
     // Get a random recipient that isn't us
     let recipient = this.peerList[Math.floor(Math.random() * this.peerList.length)]
     while (recipient === this) {

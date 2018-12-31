@@ -41,7 +41,7 @@ function getDepositRecord (owner, type, start, end, blocknumber) {
   return tr
 }
 
-function getAddressToTokenKey (address, type, end) {
+function getAddressToCoinKey (address, type, end) {
   const buffers = [address,
     type.toArrayLike(Buffer, 'big', TYPE_BYTE_SIZE),
     end.toArrayLike(Buffer, 'big', START_BYTE_SIZE)
@@ -49,7 +49,7 @@ function getAddressToTokenKey (address, type, end) {
   return Buffer.concat(buffers)
 }
 
-function getTokenToTxKey (type, start) {
+function getCoinToTxKey (type, start) {
   const buffers = [
     type.toArrayLike(Buffer, 'big', TYPE_BYTE_SIZE),
     start.toArrayLike(Buffer, 'big', START_BYTE_SIZE)
@@ -138,7 +138,7 @@ class State {
       // Wait before attempting again
       await timeout(timeoutAmt)
     }
-    // Get total deposits for this token type
+    // Get total deposits for this coin type
     let oldTotalDeposits = new BN(0)
     try {
       const tdBuffer = await this.db.get(getTotalDepositsKey(type))
@@ -148,14 +148,14 @@ class State {
         log('No total deposits found for type ', type, '! Starting from 0.')
       } else { throw err }
     }
-    // Put the updated totalDeposits and owned token ranges
+    // Put the updated totalDeposits and owned coin ranges
     const newTotalDeposits = oldTotalDeposits.add(amount)
     const depositRecord = getDepositRecord(web3.utils.bytesToHex(recipient), type, oldTotalDeposits, newTotalDeposits, this.blocknumber)
     try {
-      // Put the new owned token range and the new total deposits
+      // Put the new owned coin range and the new total deposits
       const ops = [
-        { type: 'put', key: getAddressToTokenKey(recipient, type, depositRecord.end), value: Buffer.from([1]) },
-        { type: 'put', key: getTokenToTxKey(type, depositRecord.end), value: Buffer.from(depositRecord.encode()) },
+        { type: 'put', key: getAddressToCoinKey(recipient, type, depositRecord.end), value: Buffer.from([1]) },
+        { type: 'put', key: getCoinToTxKey(type, depositRecord.end), value: Buffer.from(depositRecord.encode()) },
         { type: 'put', key: getTotalDepositsKey(type), value: newTotalDeposits.toArrayLike(Buffer, 'big', TYPE_BYTE_SIZE) }
       ]
       await this.db.batch(ops)
@@ -261,8 +261,8 @@ class State {
       // Reduce the first affected range's end position. Eg: ##### becomes ###$$
       const arRecipient = Buffer.from(web3.utils.hexToBytes(ar.recipient))
       ar.end = tr.start
-      dbBatch.push({ type: 'put', key: getTokenToTxKey(ar.type, ar.end), value: Buffer.from(ar.encode()) })
-      dbBatch.push({ type: 'put', key: getAddressToTokenKey(arRecipient, ar.type, ar.end), value: Buffer.from([1]) })
+      dbBatch.push({ type: 'put', key: getCoinToTxKey(ar.type, ar.end), value: Buffer.from(ar.encode()) })
+      dbBatch.push({ type: 'put', key: getAddressToCoinKey(arRecipient, ar.type, ar.end), value: Buffer.from([1]) })
     }
     ar = affectedRanges[affectedRanges.length - 1].decoded
     if (!ar.end.eq(tr.end)) {
@@ -270,12 +270,12 @@ class State {
       const arRecipient = Buffer.from(web3.utils.hexToBytes(ar.recipient))
       ar.start = tr.end
       dbBatch.push({ type: 'put', key: affectedRanges[affectedRanges.length - 1].key, value: Buffer.from(ar.encode()) })
-      dbBatch.push({ type: 'put', key: getAddressToTokenKey(arRecipient, ar.type, ar.end), value: Buffer.from([1]) })
+      dbBatch.push({ type: 'put', key: getAddressToCoinKey(arRecipient, ar.type, ar.end), value: Buffer.from([1]) })
     }
     // Add our new transfer record
     const trRecipient = Buffer.from(web3.utils.hexToBytes(tr.recipient))
-    dbBatch.push({ type: 'put', key: getTokenToTxKey(tr.type, tr.end), value: Buffer.from(tr.encode()) })
-    dbBatch.push({ type: 'put', key: getAddressToTokenKey(trRecipient, tr.type, tr.end), value: Buffer.from([1]) })
+    dbBatch.push({ type: 'put', key: getCoinToTxKey(tr.type, tr.end), value: Buffer.from(tr.encode()) })
+    dbBatch.push({ type: 'put', key: getAddressToCoinKey(trRecipient, tr.type, tr.end), value: Buffer.from([1]) })
     // And finally apply the batch operations
     return dbBatch
   }
@@ -283,7 +283,7 @@ class State {
   async getAffectedRanges (type, start, end) {
     // TODO: Handle results which are undefined
     const it = this.db.iterator({
-      gt: getTokenToTxKey(new BN(type), new BN(start))
+      gt: getCoinToTxKey(new BN(type), new BN(start))
     })
     const affectedRanges = []
     let result = await itNext(it)
@@ -309,7 +309,7 @@ class State {
     // Get the ranges
     const addressBuffer = Buffer.from(web3.utils.hexToBytes(address))
     const it = this.db.iterator({
-      gt: getAddressToTokenKey(addressBuffer, new BN(0), new BN(0))
+      gt: getAddressToCoinKey(addressBuffer, new BN(0), new BN(0))
     })
     const ownedRanges = []
     let result = await itNext(it)
@@ -325,7 +325,7 @@ class State {
 
 module.exports = {
   State,
-  getAddressToTokenKey,
-  getTokenToTxKey,
+  getAddressToCoinKey,
+  getCoinToTxKey,
   getTotalDepositsKey
 }

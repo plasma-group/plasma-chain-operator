@@ -72,7 +72,7 @@ function subtractRange (rangeList, start, end) {
   }
 }
 
-function getTokenId (type, start) {
+function getCoinId (type, start) {
   const buffers = [
     type.toArrayLike(Buffer, 'big', TYPE_BYTE_SIZE),
     start.toArrayLike(Buffer, 'big', START_BYTE_SIZE)
@@ -83,5 +83,5 @@ function getTokenId (type, start) {
 module.exports = {
   addRange,
   subtractRange,
-  getTokenId
+  getCoinId
 }

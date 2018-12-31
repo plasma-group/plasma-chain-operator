@@ -46,7 +46,6 @@ describe('State', function () {
     it('increments total deposits by the deposit amount', async () => {
       const addr0 = Buffer.from(web3.utils.hexToBytes(accounts[0].address))
       const ethType = new BN(0)
-      // const tokenType = new BN(1)
       const depositAmount = new BN(10)
       // There should be no total deposits record
       try {
@@ -69,7 +68,6 @@ describe('State', function () {
     it('increments the current blocknumber', async () => {
       const addr0 = Buffer.from(web3.utils.hexToBytes(accounts[0].address))
       const ethType = new BN(0)
-      // const tokenType = new BN(1)
       const depositAmount = new BN(10)
       // Add a deposit
       await state.addDeposit(addr0, ethType, depositAmount)
@@ -83,7 +81,6 @@ describe('State', function () {
     it('should lock deposits while changing blocknumber', async () => {
       const addr0 = Buffer.from(web3.utils.hexToBytes(accounts[0].address))
       const ethType = new BN(0)
-      // const tokenType = new BN(1)
       const depositAmount = new BN(10)
       // Add a deposit
       await state.addDeposit(addr0, ethType, depositAmount)
@@ -107,7 +104,6 @@ describe('State', function () {
     it('should be correct', async () => {
       const addr0 = Buffer.from(web3.utils.hexToBytes(accounts[0].address))
       const ethType = new BN(0)
-      // const tokenType = new BN(1)
       const depositAmount = new BN(10)
       // Add a deposit
       await state.addDeposit(addr0, ethType, depositAmount)
