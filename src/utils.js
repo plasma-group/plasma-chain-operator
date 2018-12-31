@@ -94,9 +94,18 @@ function defer () {
   return deferred
 }
 
+function jsonrpc (method, params) {
+  return {
+    jsonrpc: '2.0',
+    method,
+    params
+  }
+}
+
 module.exports = {
   addRange,
   subtractRange,
   defer,
+  jsonrpc,
   getCoinId
 }

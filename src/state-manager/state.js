@@ -62,12 +62,11 @@ function getTotalDepositsKey (type) {
 }
 
 class State {
-  constructor (db, txLogDirectory, newBlockCallback) {
+  constructor (db, txLogDirectory) {
     this.db = db
     this.txLogDirectory = txLogDirectory
     this.tmpTxLogFile = this.txLogDirectory + 'tmp-tx-log.bin'
     this.lock = {}
-    this.newBlockCallback = newBlockCallback
   }
 
   async init () {
@@ -83,8 +82,13 @@ class State {
         await this.db.put(Buffer.from('blocknumber'), this.blocknumber.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE))
       } else { throw err }
     }
+    // Make a new tx-log directory if it doesn't exist.
+    if (!fs.existsSync(this.txLogDirectory)) {
+      log('Creating a new tx-log directory')
+      fs.mkdirSync(this.txLogDirectory)
+    }
     // Open a write stream for our tx log
-    this.writeStream = fs.createWriteStream(this.tmpTxLogFile, { flags: 'a' })
+    this.writeStream = fs.createWriteStream(this.tmpTxLogFile, { flags: 'w' })
   }
 
   async startNewBlock () {
@@ -104,7 +108,8 @@ class State {
     await this.db.put(Buffer.from('blocknumber'), this.blocknumber.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE))
     // Start a new tx log
     this.writeStream.end()
-    await fs.rename(this.tmpTxLogFile, this.txLogDirectory + +new Date())
+    const txLogPath = this.txLogDirectory + +new Date()
+    await fs.rename(this.tmpTxLogFile, txLogPath)
     this.writeStream = fs.createWriteStream(this.tmpTxLogFile, { flags: 'a' })
     // Release our lock
     delete this.lock.all

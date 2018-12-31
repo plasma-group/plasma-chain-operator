@@ -2,33 +2,32 @@ const levelup = require('levelup')
 const leveldown = require('leveldown')
 const State = require('./state.js').State
 const web3 = require('../eth.js')
+const constants = require('../constants.js')
 const BN = web3.utils.BN
 const log = require('debug')('info:state-app')
 
 // Create global state object
 let state
 
-const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
-async function startup () {
-  const db = levelup(leveldown('./db'))
-  log('New db:', db)
-  const s = new State(db, './db/tx_log/')
-  await s.init()
-  state = s
+async function startup (options) {
+  const db = levelup(leveldown(options.dbDir))
+  state = new State(db, options.txLogDir)
+  await state.init()
 }
-startup()
 
 process.on('message', async (m) => {
-  while (state === undefined) { // eslint-disable-line no-unmodified-loop-condition
-    log('State not initialized yet... waiting...')
-    await timeout(5)
+  log('State got request:', m.message)
+  if (m.message.method === constants.INIT_METHOD) {
+    await startup(m.message.params)
+  } else if (m.message.method === constants.DEPOSIT_METHOD) {
+    await newDepositCallback(null, {
+      recipient: Buffer.from(web3.utils.hexToBytes(m.message.params.recipient)),
+      type: new BN(m.message.params.type, 16),
+      amount: new BN(m.message.params.amount, 16)
+    })
+  } else {
+    throw new Error('RPC method not recognized!')
   }
-  log('CHILD got req body:', m.body)
-  await newDepositCallback(null, {
-    recipient: Buffer.from(web3.utils.hexToBytes(m.message.params.recipient)),
-    type: new BN(m.message.params.type, 16),
-    amount: new BN(m.message.params.amount, 16)
-  })
   process.send({ id: m.id, message: 'SUCESS' })
 })
 

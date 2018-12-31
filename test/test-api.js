@@ -31,7 +31,6 @@ describe('App', function () {
           done()
         })
     })
-
     it('responds with status 200 for many requests', function (done) {
       const promises = []
       for (let i = 0; i < 1000; i++) {

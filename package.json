@@ -4,7 +4,7 @@
   "description": "Plasma operator & simple REST server",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
+    "start": "node src/app.js",
     "clean": "rm -rf db",
     "interactive": "node",
     "test": "mocha --timeout 15000 --exit",
