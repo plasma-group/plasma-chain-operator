@@ -32,6 +32,7 @@ function sendMessage (message) {
     message
   })
   messageQueue[messageCounter] = { resolve: deferred.resolve }
+  messageCounter++
   return deferred.promise
 }
 

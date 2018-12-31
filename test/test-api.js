@@ -13,7 +13,7 @@ chai.use(chaiHttp)
 
 describe('App', function () {
   describe('/api', function () {
-    it.only('responds with status 200', function (done) {
+    it('responds with status 200', function (done) {
       chai.request(app)
         .post('/api')
         .send({
@@ -30,6 +30,26 @@ describe('App', function () {
           expect(res).to.have.status(200)
           done()
         })
+    })
+
+    it('responds with status 200 for many requests', function (done) {
+      const promises = []
+      for (let i = 0; i < 1000; i++) {
+        promises.push(chai.request(app)
+          .post('/api')
+          .send({
+            method: constants.DEPOSIT_METHOD,
+            jsonrpc: '2.0',
+            params: {
+              recipient: accounts[0].address,
+              type: new BN(0).toString(16),
+              amount: new BN(10).toString(16)
+            }
+          }))
+      }
+      Promise.all(promises).then((res) => {
+        done()
+      })
     })
   })
 })
