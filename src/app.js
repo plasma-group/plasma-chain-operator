@@ -1,6 +1,7 @@
 const levelup = require('levelup')
 const leveldown = require('leveldown')
 const State = require('./state.js').State
+const generateSumTree = require('./block-generator.js').generateSumTree
 const constants = require('./constants.js')
 const web3 = require('./eth.js')
 const BN = web3.utils.BN
@@ -31,7 +32,7 @@ let state = null
 
 async function startup () {
   const db = levelup(leveldown('./db'))
-  state = new State(db, './db/tx_log/')
+  state = new State(db, './db/tx_log/', generateSumTree)
   await state.init()
   // Begin listening for connections
   app.listen(port, () => console.log(`Operator listening on port ${port}!`))

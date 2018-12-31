@@ -9,6 +9,7 @@ const leveldown = require('leveldown')
 const accounts = require('./mock-accounts.js').accounts
 const BN = require('../src/eth.js').utils.BN
 const MockNode = require('../src/mock-node.js')
+const generateSumTree = require('../src/block-generator.js').generateSumTree
 // const expect = chai.expect
 
 chai.use(chaiHttp)
@@ -22,7 +23,7 @@ describe('MockNode', function () {
     const txLogDirectory = './test-db/' + +new Date() + '-tx-log/'
     fs.mkdirSync(txLogDirectory)
     // Create state object
-    state = new State.State(db, txLogDirectory)
+    state = new State.State(db, txLogDirectory, generateSumTree)
     await state.init()
   }
   beforeEach(startNewDB)

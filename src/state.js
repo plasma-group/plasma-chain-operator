@@ -62,11 +62,13 @@ function getTotalDepositsKey (type) {
 }
 
 class State {
-  constructor (db, txLogDirectory) {
+  constructor (db, txLogDirectory, newBlockCallback) {
     this.db = db
     this.txLogDirectory = txLogDirectory
     this.tmpTxLogFile = this.txLogDirectory + 'tmp-tx-log.bin'
     this.lock = {}
+    this.currentBlockTransactions = []
+    this.newBlockCallback = newBlockCallback
   }
 
   async init () {
@@ -99,6 +101,9 @@ class State {
     }
     // Everything should be locked now that we have a `lock.all` activated. Time to increment the blocknumber
     this.blocknumber = this.blocknumber.add(new BN(1))
+    // Create a new block
+    this.newBlockCallback(this.currentBlockTransactions)
+    this.currentBlockTransactions = []
     await this.db.put(Buffer.from('blocknumber'), this.blocknumber.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE))
     // Start a new tx log
     this.writeStream.end()
@@ -223,9 +228,23 @@ class State {
       dbBatch = dbBatch.concat(this.getTransferBatchOps(tr, tr.affectedRanges))
     }
     await this.db.batch(dbBatch)
-    this.writeStream.write(Buffer.from(tx.encode()))
+    const txEncoding = tx.encode()
+    this.writeStream.write(Buffer.from(txEncoding))
+    // Add to current block txs
+    this.addToCurrentBlockTxs(txEncoding, tx)
     this.releaseLocks(senders)
     return true
+  }
+
+  addToCurrentBlockTxs (txEncoding, tx) {
+    for (const tr of tx.transferRecords.elements) {
+      this.currentBlockTransactions.push({
+        txEncoding,
+        type: tr.type,
+        start: tr.start,
+        end: tr.end
+      })
+    }
   }
 
   getTransferBatchOps (tr, affectedRanges) {

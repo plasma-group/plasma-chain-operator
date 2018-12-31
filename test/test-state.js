@@ -11,6 +11,7 @@ const State = require('../src/state.js')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
 const encoder = require('plasma-utils').encoder
+const generateSumTree = require('../src/block-generator.js').generateSumTree
 
 const expect = chai.expect
 
@@ -36,7 +37,7 @@ describe('State', function () {
     const txLogDirectory = './test-db/' + +new Date() + '-tx-log/'
     fs.mkdirSync(txLogDirectory)
     // Create state object
-    state = new State.State(db, txLogDirectory)
+    state = new State.State(db, txLogDirectory, generateSumTree)
     await state.init()
   }
   beforeEach(startNewDB)
