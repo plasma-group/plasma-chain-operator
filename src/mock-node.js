@@ -29,7 +29,7 @@ class MockNode {
     utils.addRange(this.ranges, start, end)
   }
 
-  getRandomSubrange (startBound, endBound) {
+  getRandomSubrange (startBound, endBound, maxSize) {
     const totalSize = endBound.sub(startBound).toNumber()
     const startOffset = Math.floor(Math.random() * totalSize)
     const endOffset = Math.floor(Math.random() * (totalSize - startOffset))
@@ -38,7 +38,7 @@ class MockNode {
     return [start, end]
   }
 
-  async sendRandomTransaction () {
+  async sendRandomTransaction (maxSize) {
     if (this.ranges.length === 0) {
       log('got no money to send!')
       return
@@ -51,7 +51,13 @@ class MockNode {
     const startBound = new BN(startBoundId.toArrayLike(Buffer, 'big', 16).slice(TYPE_BYTE_SIZE))
     const endBound = new BN(endBoundId.toArrayLike(Buffer, 'big', 16).slice(TYPE_BYTE_SIZE))
     // Get the actual thing
-    const [start, end] = this.getRandomSubrange(startBound, endBound)
+    let start, end
+    if (maxSize === undefined) {
+      [start, end] = this.getRandomSubrange(startBound, endBound)
+    } else {
+      start = startBound
+      end = startBound.add(new BN(Math.floor(Math.random()) * maxSize + 1))
+    }
     const type = new BN(startBoundId.toArrayLike(Buffer, 'big', 16).slice(0, TYPE_BYTE_SIZE))
     const startId = new BN(utils.getCoinId(type, start))
     const endId = new BN(utils.getCoinId(type, end))

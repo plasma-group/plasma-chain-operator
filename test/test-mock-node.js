@@ -10,6 +10,7 @@ const accounts = require('./mock-accounts.js').accounts
 const BN = require('../src/eth.js').utils.BN
 const MockNode = require('../src/mock-node.js')
 const generateSumTree = require('../src/block-generator.js').generateSumTree
+const log = require('debug')('test:info:test-mock-node')
 // const expect = chai.expect
 
 chai.use(chaiHttp)
@@ -51,7 +52,7 @@ describe('MockNode', function () {
         }
       }
     })
-    it('should work with bursts of txs', (done) => {
+    it('should work with many small blocks', (done) => {
       const depositType = new BN(1)
       const depositAmount = new BN(10000000)
       const nodes = []
@@ -65,7 +66,28 @@ describe('MockNode', function () {
       }
       Promise.all(depositPromises).then((res) => {
         // For 10 blocks, have every node send a random transaction
-        loopSendRandomTxs(100, state, nodes).then(() => {
+        mineAndLoopSendRandomTxs(10, state, nodes).then(() => {
+          done()
+        })
+      })
+    })
+    it.only('should work with one massive block', (done) => {
+      const depositType = new BN(1)
+      const depositAmount = new BN(10000000)
+      const nodes = []
+      for (const acct of accounts) {
+        nodes.push(new MockNode(state, acct, nodes))
+      }
+      // Add deposits from 100 different accounts
+      const depositPromises = []
+      for (const node of nodes) {
+        depositPromises.push(node.deposit(depositType, depositAmount))
+      }
+      Promise.all(depositPromises).catch((err) => {
+        console.log(err)
+      }).then((res) => {
+        // For 10 blocks, have every node send a random transaction
+        loopSendRandomTxs(10000, state, nodes).then(() => {
           done()
         })
       })
@@ -74,19 +96,28 @@ describe('MockNode', function () {
 })
 
 async function loopSendRandomTxs (numTimes, state, nodes) {
+  await state.startNewBlock()
+  for (let i = 0; i < numTimes; i++) {
+    log('Sending new set of transactions!')
+    await sendRandomTransactions(nodes, 10)
+  }
+  await state.startNewBlock()
+}
+
+async function mineAndLoopSendRandomTxs (numTimes, state, nodes) {
   for (let i = 0; i < numTimes; i++) {
     await state.startNewBlock()
+    for (const node of nodes) {
+      node.processPendingRanges()
+    }
     await sendRandomTransactions(nodes)
   }
 }
 
-function sendRandomTransactions (nodes) {
-  for (const node of nodes) {
-    node.processPendingRanges()
-  }
+function sendRandomTransactions (nodes, maxSize) {
   const promises = []
   for (const node of nodes) {
-    promises.push(node.sendRandomTransaction())
+    promises.push(node.sendRandomTransaction(maxSize))
   }
   return Promise.all(promises)
 }
