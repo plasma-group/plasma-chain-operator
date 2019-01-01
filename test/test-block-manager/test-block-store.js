@@ -22,14 +22,14 @@ describe('BlockStore', function () {
     const dbDir = rootDBDir + 'block-db-' + +new Date()
     db = levelup(leveldown(dbDir))
     // Create a new tx-log dir for this test
-    const txLogDirectory = dbDir + '-tx-log'
-    fs.mkdirSync(txLogDirectory)
+    const txLogDirectory = './test/test-block-manager/tx-log/'
+    // fs.mkdirSync(txLogDirectory)
     // Create state object
     blockStore = new BlockStore(db, txLogDirectory)
   })
 
-  it.only('runs init script without fail', async () => {
-    blockStore.generateBlock('./test/test-block-manager/tx-log/raw-tx-log')
+  it('runs init script without fail', async () => {
+    blockStore.generateBlock('000000000000')
     expect(blockStore).to.not.equal(undefined)
   })
 })

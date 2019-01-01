@@ -108,7 +108,7 @@ class State {
     await this.db.put(Buffer.from('blocknumber'), this.blocknumber.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE))
     // Start a new tx log
     this.writeStream.end()
-    const txLogPath = this.txLogDirectory + +new Date()
+    const txLogPath = this.txLogDirectory + this.blocknumber.toString(10, BLOCKNUMBER_BYTE_SIZE)
     await fs.rename(this.tmpTxLogFile, txLogPath)
     this.writeStream = fs.createWriteStream(this.tmpTxLogFile, { flags: 'a' })
     // Release our lock

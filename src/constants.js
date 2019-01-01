@@ -3,10 +3,14 @@ const INIT_METHOD = 'init'
 const DEPOSIT_METHOD = 'deposit'
 const ADD_TX_METHOD = 'addTransaction'
 const NEW_BLOCK_METHOD = 'newBlock'
+const ADDRESS_BYTE_SIZE = 20
 const START_BYTE_SIZE = 12
 const TYPE_BYTE_SIZE = 4
 const COIN_ID_BYTE_SIZE = START_BYTE_SIZE + TYPE_BYTE_SIZE
-const BLOCKNUMBER_BYTE_SIZE = 12
+const BLOCKNUMBER_BYTE_SIZE = 32
+// For now, include a constant which defines the total size of a transaction
+const TRANSFER_BYTE_SIZE = ADDRESS_BYTE_SIZE * 2 + TYPE_BYTE_SIZE + START_BYTE_SIZE * 2 + BLOCKNUMBER_BYTE_SIZE
+const SIGNATURE_BYTE_SIZE = 32 * 3
 
 module.exports = {
   INIT_METHOD,
@@ -16,5 +20,7 @@ module.exports = {
   START_BYTE_SIZE,
   TYPE_BYTE_SIZE,
   COIN_ID_BYTE_SIZE,
-  BLOCKNUMBER_BYTE_SIZE
+  BLOCKNUMBER_BYTE_SIZE,
+  TRANSFER_BYTE_SIZE,
+  SIGNATURE_BYTE_SIZE
 }
