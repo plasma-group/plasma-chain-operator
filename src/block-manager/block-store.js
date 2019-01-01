@@ -1,6 +1,7 @@
 const fs = require('fs')
 const log = require('debug')('info:block-store')
 const BN = require('../eth.js').utils.BN
+const getCoinId = require('../utils.js').getCoinId
 const encoder = require('plasma-utils').encoder
 const BLOCKNUMBER_BYTE_SIZE = require('../constants.js').BLOCKNUMBER_BYTE_SIZE
 const TRANSFER_BYTE_SIZE = require('../constants.js').TRANSFER_BYTE_SIZE
@@ -12,22 +13,28 @@ class BlockStore {
     this.db = db
     this.txLogDir = txLogDir
     this.partialChunk = null
+    this.batchPromises = []
   }
 
-  generateBlock (txLogFile) {
+  ingestBlock (txLogFile) {
     const self = this
     log('Generating new block based on path:', txLogFile)
     const blocknumber = new BN(txLogFile)
     const blocknumberKey = blocknumber.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
     const readStream = fs.createReadStream(this.txLogDir + txLogFile)
     readStream.on('data', function (chunk) {
-      log(chunk.length)
+      log('Read chunk of size:', chunk.length)
       self.parseTxBinary(blocknumberKey, chunk)
-      // Read chunks
-      // Encode every x bytes
-      // Pull type, start & end
-      // Sort -- pump into DB as `blocknum + typedStart +
-      // Feed into plasma-sum-tree.PlasmaMerkleSumTree.parseLeaves
+    })
+    // Return a promise which resolves once the entire file has been read
+    return new Promise((resolve, reject) => {
+      readStream.on('end', (res) => {
+        log('Finished reading all chunks')
+        Promise.all(this.batchPromises).then(() => {
+          resolve()
+          log('Finished ingesting & sorting all chunks')
+        })
+      })
     })
   }
 
@@ -50,7 +57,7 @@ class BlockStore {
     const trList = new encoder.TRList([...chunk.slice(trStart, trEnd)])
     const sigList = new encoder.SigList([...chunk.slice(sigStart, sigEnd)])
     const nextTransaction = new encoder.Transaction(trList, sigList)
-    return [cursor + txSize, nextTransaction]
+    return [cursor + txSize, nextTransaction, chunk.slice(cursor, sigEnd)]
   }
 
   parseTxBinary (blocknumber, chunk) {
@@ -58,12 +65,23 @@ class BlockStore {
       chunk = Buffer.concat([this.partialChunk, chunk])
     }
     const txs = []
-    let [cursor, nextTx] = this.makeNextTransaction(0, chunk)
+    let [cursor, nextTx, nextTxEncoding] = this.makeNextTransaction(0, chunk)
     while (cursor !== null) {
-      [cursor, nextTx] = this.makeNextTransaction(cursor, chunk)
-      txs.push(nextTx)
+      txs.push([nextTx, nextTxEncoding]);
+      [cursor, nextTx, nextTxEncoding] = this.makeNextTransaction(cursor, chunk)
     }
-    log(txs.length)
+    // Ingest these transactions, into levelDB as `blocknum + typedStart +
+    const dbBatch = []
+    for (const tx of txs) {
+      for (const tr of tx[0].transferRecords.elements) {
+        dbBatch.push({
+          type: 'put',
+          key: Buffer.concat([blocknumber, getCoinId(tr.type, tr.start)]),
+          value: tx[1]
+        })
+      }
+    }
+    this.batchPromises.push(this.db.batch(dbBatch))
   }
 }
 

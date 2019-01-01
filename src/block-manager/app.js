@@ -17,7 +17,7 @@ process.on('message', async (m) => {
   if (m.message.method === constants.INIT_METHOD) {
     await startup(m.message.params)
   } else if (m.message.method === constants.NEW_BLOCK_METHOD) {
-    const isSuccessfullyStarted = await blockStore.generateBlock(m.message)
+    const isSuccessfullyStarted = await blockStore.ingestBlock(m.message)
     if (!isSuccessfullyStarted) {
       process.send({ id: m.id, message: 'FAIL' })
     }
