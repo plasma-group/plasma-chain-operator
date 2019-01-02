@@ -64,15 +64,19 @@ class BlockStore {
     if (this.partialChunk != null) {
       chunk = Buffer.concat([this.partialChunk, chunk])
     }
-    const txs = []
+    const txBundle = []
     let [cursor, nextTx, nextTxEncoding] = this.makeNextTransaction(0, chunk)
     while (cursor !== null) {
-      txs.push([nextTx, nextTxEncoding]);
+      txBundle.push([nextTx, nextTxEncoding]);
       [cursor, nextTx, nextTxEncoding] = this.makeNextTransaction(cursor, chunk)
     }
+    this.storeTransactions(blocknumber, txBundle)
+  }
+
+  storeTransactions (blocknumber, txBundle) {
     // Ingest these transactions, into levelDB as `blocknum + typedStart +
     const dbBatch = []
-    for (const tx of txs) {
+    for (const tx of txBundle) {
       for (const tr of tx[0].transferRecords.elements) {
         dbBatch.push({
           type: 'put',

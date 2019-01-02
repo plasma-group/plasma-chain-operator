@@ -23,16 +23,16 @@ class PlasmaMerkleSumTree extends MerkleSumTree {
   }
 
   getBranch (leafIndex) { // returns an array of nodes which can be use to verify the merkle branch
-    if (leafIndex >= this.levels[0].length || leafIndex < 0) { throw new Error('invalid branch index requested') }
+    if (leafIndex >= this.getHeight() || leafIndex < 0) { throw new Error('invalid branch index requested') }
     let proof = []
     let nodeIndex = Math.floor(leafIndex / 2) * 2
-    for (let i = 0; i < this.levels.length; i++) {
-      proof.push(this.levels[i][nodeIndex])
-      proof.push(this.levels[i][nodeIndex + 1])
+    for (let i = 0; i < this.getHeight(); i++) {
+      proof.push(this.getNode(i, nodeIndex))
+      proof.push(this.getNode(i, nodeIndex + 1))
       nodeIndex = Math.floor(nodeIndex / 4) * 2
     }
     return proof.map((node) => {
-      return (node === undefined) ? this.emptyLeaf() : node
+      return (node === undefined) ? this.emptyNode() : node
     })
   }
 }

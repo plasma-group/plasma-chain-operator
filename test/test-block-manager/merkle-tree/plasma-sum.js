@@ -1,8 +1,17 @@
-/* global describe it */
+/* eslint-env mocha */
+
+const fs = require('fs')
+// const chai = require('chai')
+const log = require('debug')('test:info:test-block-store')
+const levelup = require('levelup')
+const leveldown = require('leveldown')
+const BlockStore = require('../../../src/block-manager/block-store.js')
 const assert = require('chai').assert
 const PlasmaMerkleSumTree = require('../../../src/block-manager/sum-tree/plasma-sum-tree')
 const TS = require('plasma-utils').encoder
 const DT = require('./dummy-tx-utils')
+
+// const expect = chai.expect
 
 const tr1 = new TS.TR(['0x43aaDF3d5b44290385fe4193A1b13f15eF3A4FD5', '0xa12bcf1159aa01c739269391ae2d0be4037259f3', 0, 2, 3, 4])
 const tr2 = new TS.TR(['0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8', '0xa12bcf1159aa01c739269391ae2d0be4037259f4', 0, 6, 7, 5])
@@ -13,7 +22,32 @@ const TX2 = new TS.Transaction([tr2], [sig])
 const TX3 = new TS.Transaction([tr3], [sig])
 TX1.TRIndex = TX2.TRIndex = TX3.TRIndex = 0
 
-describe('PlasmaMerkleSumTree', function () {
+function getTxBundle (txs) {
+  const txBundle = []
+  for (const tx of txs) {
+    txBundle.push([tx, tx.encode()])
+  }
+  return txBundle
+}
+
+describe.only('PlasmaMerkleSumTree', function () {
+  let db
+  let blockStore
+  beforeEach(async () => {
+    const rootDBDir = './db-test/'
+    if (!fs.existsSync(rootDBDir)) {
+      log('Creating a new db directory because it does not exist')
+      fs.mkdirSync(rootDBDir)
+    }
+    const dbDir = rootDBDir + 'block-db-' + +new Date()
+    db = levelup(leveldown(dbDir))
+    // Create a new tx-log dir for this test
+    const txLogDirectory = './test/test-block-manager/tx-log/'
+    // fs.mkdirSync(txLogDirectory)
+    // Create state object
+    blockStore = new BlockStore(db, txLogDirectory)
+  })
+
   it('should return undefined for an empty tree', function () {
     const tree = new PlasmaMerkleSumTree()
     assert.strictEqual(tree.root(), undefined)
@@ -35,6 +69,8 @@ describe('PlasmaMerkleSumTree', function () {
   })
   it('should succeed in generating a tree of 100 ordered transactions', function () {
     const TXs = DT.genNSequentialTransactions(100)
+    const txBundle = getTxBundle(TXs)
+    blockStore.storeTransactions(Buffer.from([0]), txBundle)
     assert.doesNotThrow(function () { return new PlasmaMerkleSumTree(TXs) })
   })
 })

@@ -21,7 +21,11 @@ class MerkleSumTree {
   }
 
   root () {
-    return this.levels[this.levels.length - 1][0]
+    return this.getNode(this.getHeight(), 0)
+  }
+
+  getHeight () {
+    return this.levels.length - 1
   }
 
   hash (value) {
@@ -34,12 +38,20 @@ class MerkleSumTree {
     })
   }
 
-  emptyLeaf () {
+  emptyNode () {
     return new MerkleTreeNode('0x0000000000000000000000000000000000000000000000000000000000000000', 0)
   }
 
   parent (left, right) {
     return new MerkleTreeNode(this.hash('0x' + left.data + right.data), (left.sum.add(right.sum)))
+  }
+
+  getNode (level, index) {
+    return this.levels[level][index]
+  }
+
+  getLeaf (index) {
+    return this.leaves[index]
   }
 
   generate (children, levels) {
@@ -50,7 +62,7 @@ class MerkleSumTree {
     let parents = []
     for (let i = 0; i < children.length; i += 2) {
       let left = children[i]
-      let right = (i + 1 === children.length) ? this.emptyLeaf() : children[i + 1]
+      let right = (i + 1 === children.length) ? this.emptyNode() : children[i + 1]
       let parent = this.parent(left, right)
       parents.push(parent)
     }
