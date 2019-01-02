@@ -7,7 +7,7 @@ const levelup = require('levelup')
 const leveldown = require('leveldown')
 const BlockStore = require('../../../src/block-manager/block-store.js')
 const assert = require('chai').assert
-const PlasmaMerkleSumTree = require('../../../src/block-manager/sum-tree/plasma-sum-tree')
+const LevelDBSumTree = require('../../../src/block-manager/sum-tree/leveldb-sum-tree.js')
 const TS = require('plasma-utils').encoder
 const DT = require('./dummy-tx-utils')
 
@@ -30,7 +30,7 @@ function getTxBundle (txs) {
   return txBundle
 }
 
-describe('PlasmaMerkleSumTree', function () {
+describe.only('LevelDBSumTree', function () {
   let db
   let blockStore
   beforeEach(async () => {
@@ -48,29 +48,27 @@ describe('PlasmaMerkleSumTree', function () {
     blockStore = new BlockStore(db, txLogDirectory)
   })
 
-  it('should return undefined for an empty tree', function () {
-    const tree = new PlasmaMerkleSumTree()
-    assert.strictEqual(tree.root(), undefined)
-  })
-  it('should generate a single-leaf tree correctly', function () {
-    const tree = new PlasmaMerkleSumTree([TX1])
-    const root = tree.root()
-    assert.strictEqual(root.data, '351a7a2ec4f370b6d2eea2199516c22f5582bf37b4a54173ca5abbca3d0a9c65' + 'ffffffffffffffffffffffffffffffff')
-  })
-  it('should generate an even tree correctly', function () {
-    const tree = new PlasmaMerkleSumTree([TX1, TX2])
-    const root = tree.root()
-    assert.strictEqual(root.data, 'beec6525a226cfc4e7494f14960aeaf4ce826f8998e675fbf58d07b89d0d2749' + 'ffffffffffffffffffffffffffffffff')
-  })
-  it('should generate an odd tree w/ multiple types correctly', function () {
-    const tree = new PlasmaMerkleSumTree([TX1, TX2, TX3])
-    const root = tree.root()
-    assert.strictEqual(root.data, '26fa704d04daeef66fa9b5c89486813ad0697002cc6b82b52b8377b9fb7c28d4' + 'ffffffffffffffffffffffffffffffff')
-  })
-  it('should succeed in generating a tree of 100 ordered transactions', function () {
-    const TXs = DT.genNSequentialTransactions(100)
+  it.only('should generate an odd tree w/ multiple types correctly', async () => {
+    // Ingest the required data to begin processing the block
+    const TXs = [TX1, TX2, TX3]
     const txBundle = getTxBundle(TXs)
-    blockStore.storeTransactions(Buffer.from([0]), txBundle)
-    assert.doesNotThrow(function () { return new PlasmaMerkleSumTree(TXs) })
+    const blockNumber = Buffer.from([0])
+    blockStore.storeTransactions(blockNumber, txBundle)
+    await Promise.all(blockStore.batchPromises)
+    // Create a new tree based on block 0's transactions
+    const sumTree = new LevelDBSumTree(blockStore.db)
+    await sumTree.parseLeaves(blockNumber)
+    // assert.strictEqual(root.data, '26fa704d04daeef66fa9b5c89486813ad0697002cc6b82b52b8377b9fb7c28d4' + 'ffffffffffffffffffffffffffffffff')
+  })
+
+  it('should succeed in generating a tree of 100 ordered transactions', async () => {
+    const TXs = DT.genNSequentialTransactions(10000)
+    const txBundle = getTxBundle(TXs)
+    const blockNumber = Buffer.from([0])
+    blockStore.storeTransactions(blockNumber, txBundle)
+    await Promise.all(blockStore.batchPromises)
+    const sumTree = new LevelDBSumTree(blockStore.db)
+    await sumTree.parseLeaves(blockNumber)
+    console.log('yoyo')
   })
 })

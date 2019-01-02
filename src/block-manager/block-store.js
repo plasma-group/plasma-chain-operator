@@ -77,11 +77,11 @@ class BlockStore {
     // Ingest these transactions, into levelDB as `blocknum + typedStart +
     const dbBatch = []
     for (const tx of txBundle) {
-      for (const tr of tx[0].transferRecords.elements) {
+      for (const [i, tr] of tx[0].transferRecords.elements.entries()) {
         dbBatch.push({
           type: 'put',
           key: Buffer.concat([blocknumber, getCoinId(tr.type, tr.start)]),
-          value: tx[1]
+          value: Buffer.concat([Buffer.from([i]), Buffer.from(tx[1])]) // Store as index of the TR & then transaction
         })
       }
     }
