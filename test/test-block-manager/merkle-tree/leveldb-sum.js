@@ -6,7 +6,6 @@ const log = require('debug')('test:info:test-block-store')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
 const BlockStore = require('../../../src/block-manager/block-store.js')
-const assert = require('chai').assert
 const LevelDBSumTree = require('../../../src/block-manager/sum-tree/leveldb-sum-tree.js')
 const TS = require('plasma-utils').encoder
 const DT = require('./dummy-tx-utils')
@@ -30,7 +29,7 @@ function getTxBundle (txs) {
   return txBundle
 }
 
-describe.only('LevelDBSumTree', function () {
+describe('LevelDBSumTree', function () {
   let db
   let blockStore
   beforeEach(async () => {
@@ -48,27 +47,27 @@ describe.only('LevelDBSumTree', function () {
     blockStore = new BlockStore(db, txLogDirectory)
   })
 
-  it.only('should generate an odd tree w/ multiple types correctly', async () => {
+  it('should generate an odd tree w/ multiple types correctly', async () => {
     // Ingest the required data to begin processing the block
     const TXs = [TX1, TX2, TX3]
     const txBundle = getTxBundle(TXs)
-    const blockNumber = Buffer.from([0])
+    const blockNumber = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     blockStore.storeTransactions(blockNumber, txBundle)
     await Promise.all(blockStore.batchPromises)
     // Create a new tree based on block 0's transactions
     const sumTree = new LevelDBSumTree(blockStore.db)
     await sumTree.parseLeaves(blockNumber)
-    // assert.strictEqual(root.data, '26fa704d04daeef66fa9b5c89486813ad0697002cc6b82b52b8377b9fb7c28d4' + 'ffffffffffffffffffffffffffffffff')
+    await sumTree.generateLevel(blockNumber, 0)
   })
 
   it('should succeed in generating a tree of 100 ordered transactions', async () => {
     const TXs = DT.genNSequentialTransactions(10000)
     const txBundle = getTxBundle(TXs)
-    const blockNumber = Buffer.from([0])
+    const blockNumber = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     blockStore.storeTransactions(blockNumber, txBundle)
     await Promise.all(blockStore.batchPromises)
+    // TODO: Optimize this so that we don't spend so long hashing
     const sumTree = new LevelDBSumTree(blockStore.db)
     await sumTree.parseLeaves(blockNumber)
-    console.log('yoyo')
   })
 })
