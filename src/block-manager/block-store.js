@@ -2,6 +2,7 @@ const fs = require('fs')
 const log = require('debug')('info:block-store')
 const BN = require('../eth.js').utils.BN
 const getCoinId = require('../utils.js').getCoinId
+const LevelDBSumTree = require('./leveldb-sum-tree.js')
 const encoder = require('plasma-utils').encoder
 const BLOCKNUMBER_BYTE_SIZE = require('../constants.js').BLOCKNUMBER_BYTE_SIZE
 const TRANSFER_BYTE_SIZE = require('../constants.js').TRANSFER_BYTE_SIZE
@@ -11,34 +12,48 @@ class BlockStore {
   constructor (db, txLogDir) {
     log('Creating new block store')
     this.db = db
+    this.sumTree = new LevelDBSumTree(this.db)
     this.txLogDir = txLogDir
     this.partialChunk = null
     this.batchPromises = []
   }
 
-  ingestBlock (txLogFile) {
+  async addBlock (txLogFile) {
+    const blockNumberBN = new BN(txLogFile)
+    const blockNumber = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
+    await this.ingestBlock(blockNumber, this.txLogDir + txLogFile)
+    await this.sumTree.generateTree(blockNumber)
+  }
+
+  /*
+   * History proof logic
+   */
+  // TODO
+
+  /*
+   * Block ingestion logic
+   */
+  ingestBlock (blockNumber, txLogFilePath) {
     const self = this
-    log('Generating new block based on path:', txLogFile)
-    const blocknumber = new BN(txLogFile)
-    const blocknumberKey = blocknumber.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
-    const readStream = fs.createReadStream(this.txLogDir + txLogFile)
+    log('Generating new block for block:', blockNumber)
+    const readStream = fs.createReadStream(txLogFilePath)
     readStream.on('data', function (chunk) {
       log('Read chunk of size:', chunk.length)
-      self.parseTxBinary(blocknumberKey, chunk)
+      self.parseTxBinary(blockNumber, chunk)
     })
     // Return a promise which resolves once the entire file has been read
     return new Promise((resolve, reject) => {
       readStream.on('end', (res) => {
         log('Finished reading all chunks')
         Promise.all(this.batchPromises).then(() => {
-          resolve()
           log('Finished ingesting & sorting all chunks')
+          resolve()
         })
       })
     })
   }
 
-  makeNextTransaction (cursor, chunk) {
+  readNextTransaction (cursor, chunk) {
     const numElements = new BN(chunk.slice(cursor, cursor + 1)).toNumber()
     const transferSize = numElements * TRANSFER_BYTE_SIZE
     const signatureSize = numElements * SIGNATURE_BYTE_SIZE
@@ -60,27 +75,27 @@ class BlockStore {
     return [cursor + txSize, nextTransaction, chunk.slice(cursor, sigEnd)]
   }
 
-  parseTxBinary (blocknumber, chunk) {
+  parseTxBinary (blockNumber, chunk) {
     if (this.partialChunk != null) {
       chunk = Buffer.concat([this.partialChunk, chunk])
     }
     const txBundle = []
-    let [cursor, nextTx, nextTxEncoding] = this.makeNextTransaction(0, chunk)
+    let [cursor, nextTx, nextTxEncoding] = this.readNextTransaction(0, chunk)
     while (cursor !== null) {
       txBundle.push([nextTx, nextTxEncoding]);
-      [cursor, nextTx, nextTxEncoding] = this.makeNextTransaction(cursor, chunk)
+      [cursor, nextTx, nextTxEncoding] = this.readNextTransaction(cursor, chunk)
     }
-    this.storeTransactions(blocknumber, txBundle)
+    this.storeTransactions(blockNumber, txBundle)
   }
 
-  storeTransactions (blocknumber, txBundle) {
+  storeTransactions (blockNumber, txBundle) {
     // Ingest these transactions, into levelDB as `blocknum + typedStart +
     const dbBatch = []
     for (const tx of txBundle) {
       for (const [i, tr] of tx[0].transferRecords.elements.entries()) {
         dbBatch.push({
           type: 'put',
-          key: Buffer.concat([blocknumber, getCoinId(tr.type, tr.start)]),
+          key: Buffer.concat([blockNumber, getCoinId(tr.type, tr.start)]),
           value: Buffer.concat([Buffer.from([i]), Buffer.from(tx[1])]) // Store as index of the TR & then transaction
         })
       }

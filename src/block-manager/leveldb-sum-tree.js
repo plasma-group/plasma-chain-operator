@@ -1,7 +1,7 @@
 const log = require('debug')('info:leveldb-sum-tree')
 const web3 = require('web3')
 const BN = web3.utils.BN
-const COIN_ID_BYTE_SIZE = require('../../constants.js').COIN_ID_BYTE_SIZE
+const COIN_ID_BYTE_SIZE = require('../constants.js').COIN_ID_BYTE_SIZE
 const encoder = require('plasma-utils').encoder
 
 const INDEX_BYTES_SIZE = 4
@@ -37,6 +37,11 @@ function coinIdToBuffer (coinId) {
 class LevelDBSumTree {
   constructor (db) {
     this.db = db
+  }
+
+  async generateTree (blockNumber) {
+    await this.parseLeaves(blockNumber)
+    await this.generateLevel(blockNumber, 0)
   }
 
   getTransactionFromLeaf (value) {

@@ -26,3 +26,5 @@ process.on('message', async (m) => {
   }
   process.send({ id: m.id, message: 'SUCESS' })
 })
+
+// TODO: Add a watcher which watches the tx-log for new files and calls `blockStore.addBlock()` with the new block file every time one is added.

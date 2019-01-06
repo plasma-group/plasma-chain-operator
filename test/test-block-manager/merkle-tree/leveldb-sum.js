@@ -6,7 +6,7 @@ const log = require('debug')('test:info:test-block-store')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
 const BlockStore = require('../../../src/block-manager/block-store.js')
-const LevelDBSumTree = require('../../../src/block-manager/sum-tree/leveldb-sum-tree.js')
+const LevelDBSumTree = require('../../../src/block-manager/leveldb-sum-tree.js')
 const TS = require('plasma-utils').encoder
 const DT = require('./dummy-tx-utils')
 

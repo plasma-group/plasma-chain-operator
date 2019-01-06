@@ -29,7 +29,7 @@ describe('BlockStore', function () {
   })
 
   it('runs init script without fail', async () => {
-    await blockStore.ingestBlock('000000000000')
+    await blockStore.addBlock('000000000000')
     // await blockStore.ingestBlock('00000000000000000000000000000002')
     expect(blockStore).to.not.equal(undefined)
   })
