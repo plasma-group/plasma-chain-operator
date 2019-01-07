@@ -48,6 +48,19 @@ const genNSequentialTransactions = function (n) {
   return TXList
 }
 
+const genNSequentialTransactionsSpacedByOne = function (n) {
+  let TXList = []
+  //
+  TXList[0] = new TS.Transaction([['0x43aadf3d5b44290385fe4193a1b13f15ef3a4fd5', '0x43aadf3d5b44290385fe4193a1b13f15ef3a4fd5', 0, 0, 1, 0]], [genRandomSignature()])
+  TXList[0].TRIndex = 0
+  for (let i = 1; i < n; i++) {
+    TXList[i] = new TS.Transaction([['0x43aadf3d5b44290385fe4193a1b13f15ef3a4fd5', '0x43aadf3d5b44290385fe4193a1b13f15ef3a4fd5', 0, i, i + 1, 0]], [genRandomSignature()])
+    TXList[i].TRIndex = 0
+  }
+  return TXList
+}
+
 module.exports = {
-  genNSequentialTransactions
+  genNSequentialTransactions,
+  genNSequentialTransactionsSpacedByOne
 }

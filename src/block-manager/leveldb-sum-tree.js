@@ -2,33 +2,13 @@ const log = require('debug')('info:leveldb-sum-tree')
 const web3 = require('web3')
 const BN = web3.utils.BN
 const COIN_ID_BYTE_SIZE = require('../constants.js').COIN_ID_BYTE_SIZE
+const BLOCK_TX_PREFIX = require('../constants.js').BLOCK_TX_PREFIX
+const NODE_DB_PREFIX = require('../constants.js').NODE_DB_PREFIX
 const encoder = require('plasma-utils').encoder
+const itNext = require('../utils.js').itNext
+const itEnd = require('../utils.js').itEnd
 
 const INDEX_BYTES_SIZE = 4
-
-// Promisify the it.next(cb) function
-function itNext (it) {
-  return new Promise((resolve, reject) => {
-    it.next((err, key, value) => {
-      if (err) {
-        reject(err)
-      }
-      resolve({key, value})
-    })
-  })
-}
-
-// Promisify the it.end(cb) function
-function itEnd (it) {
-  return new Promise((resolve, reject) => {
-    it.end((err) => {
-      if (err) {
-        reject(err)
-      }
-      resolve()
-    })
-  })
-}
 
 function coinIdToBuffer (coinId) {
   return coinId.toArrayLike(Buffer, 'big', COIN_ID_BYTE_SIZE)
@@ -75,8 +55,8 @@ class LevelDBSumTree {
       // Read all remaining leaves, computing hash and setting sum value
       const firstTxStart = coinIdToBuffer(typedStart(getTr(firstTransaction))) // Store the first start as we will use it for our next seek
       this.db.createReadStream({
-        'gt': Buffer.concat([blockNumber, firstTxStart]),
-        'lt': Buffer.concat([blockNumber, maxEnd])
+        'gt': Buffer.concat([BLOCK_TX_PREFIX, blockNumber, firstTxStart]),
+        'lt': Buffer.concat([BLOCK_TX_PREFIX, blockNumber, maxEnd])
       }).on('data', function (data) {
         const transaction = self.getTransactionFromLeaf(data.value)
         transaction.sumStart = typedStart(getTr(transaction))
@@ -124,7 +104,7 @@ class LevelDBSumTree {
   }
 
   makeNodeKey (blockNumber, level, index) {
-    return Buffer.concat([Buffer.from('node-'), blockNumber, this.makeIndexId(level, index)])
+    return Buffer.concat([Buffer.from(NODE_DB_PREFIX), blockNumber, this.makeIndexId(level, index)])
   }
 
   async writeNode (blockNumber, level, index, hash, sum) {

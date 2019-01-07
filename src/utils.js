@@ -1,5 +1,6 @@
 const START_BYTE_SIZE = require('./constants.js').START_BYTE_SIZE
 const TYPE_BYTE_SIZE = require('./constants.js').TYPE_BYTE_SIZE
+const BLOCK_TX_PREFIX = require('./constants.js').BLOCK_TX_PREFIX
 const _ = require('lodash')
 
 function addRange (rangeList, start, end, numSize) {
@@ -102,10 +103,41 @@ function jsonrpc (method, params) {
   }
 }
 
+// Promisify the it.next(cb) function
+function itNext (it) {
+  return new Promise((resolve, reject) => {
+    it.next((err, key, value) => {
+      if (err) {
+        reject(err)
+      }
+      resolve({key, value})
+    })
+  })
+}
+
+// Promisify the it.end(cb) function
+function itEnd (it) {
+  return new Promise((resolve, reject) => {
+    it.end((err) => {
+      if (err) {
+        reject(err)
+      }
+      resolve()
+    })
+  })
+}
+
+function makeBlockTxKey (blockNumber, type, start) {
+  return Buffer.concat([BLOCK_TX_PREFIX, blockNumber, getCoinId(type, start)])
+}
+
 module.exports = {
   addRange,
   subtractRange,
   defer,
   jsonrpc,
-  getCoinId
+  itNext,
+  itEnd,
+  getCoinId,
+  makeBlockTxKey
 }

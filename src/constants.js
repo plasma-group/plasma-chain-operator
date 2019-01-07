@@ -11,6 +11,9 @@ const BLOCKNUMBER_BYTE_SIZE = 32
 // For now, include a constant which defines the total size of a transaction
 const TRANSFER_BYTE_SIZE = ADDRESS_BYTE_SIZE * 2 + TYPE_BYTE_SIZE + START_BYTE_SIZE * 2 + BLOCKNUMBER_BYTE_SIZE
 const SIGNATURE_BYTE_SIZE = 32 * 3
+// DB Prefixes
+const BLOCK_TX_PREFIX = Buffer.from([255])
+const NODE_DB_PREFIX = Buffer.from([254])
 
 module.exports = {
   INIT_METHOD,
@@ -22,5 +25,7 @@ module.exports = {
   COIN_ID_BYTE_SIZE,
   BLOCKNUMBER_BYTE_SIZE,
   TRANSFER_BYTE_SIZE,
+  BLOCK_TX_PREFIX,
+  NODE_DB_PREFIX,
   SIGNATURE_BYTE_SIZE
 }

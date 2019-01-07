@@ -1,12 +1,14 @@
 const fs = require('fs')
 const log = require('debug')('info:block-store')
 const BN = require('../eth.js').utils.BN
-const getCoinId = require('../utils.js').getCoinId
+const makeBlockTxKey = require('../utils.js').makeBlockTxKey
 const LevelDBSumTree = require('./leveldb-sum-tree.js')
 const encoder = require('plasma-utils').encoder
 const BLOCKNUMBER_BYTE_SIZE = require('../constants.js').BLOCKNUMBER_BYTE_SIZE
 const TRANSFER_BYTE_SIZE = require('../constants.js').TRANSFER_BYTE_SIZE
 const SIGNATURE_BYTE_SIZE = require('../constants.js').SIGNATURE_BYTE_SIZE
+const itNext = require('../utils.js').itNext
+const itEnd = require('../utils.js').itEnd
 
 class BlockStore {
   constructor (db, txLogDir) {
@@ -23,12 +25,28 @@ class BlockStore {
     const blockNumber = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
     await this.ingestBlock(blockNumber, this.txLogDir + txLogFile)
     await this.sumTree.generateTree(blockNumber)
+    return blockNumber
   }
 
   /*
    * History proof logic
    */
-  // TODO
+  async getRanges (blockNumber, type, start, end) {
+    const startKey = makeBlockTxKey(blockNumber, type, start)
+    const endKey = makeBlockTxKey(blockNumber, type, end)
+    const it = this.db.iterator({
+      lt: endKey,
+      reverse: true
+    })
+    const ranges = []
+    let result = await itNext(it)
+    while (result.key >= startKey) {
+      ranges.push(result)
+      result = await itNext(it)
+    }
+    await itEnd(it)
+    return ranges
+  }
 
   /*
    * Block ingestion logic
@@ -95,7 +113,7 @@ class BlockStore {
       for (const [i, tr] of tx[0].transferRecords.elements.entries()) {
         dbBatch.push({
           type: 'put',
-          key: Buffer.concat([blockNumber, getCoinId(tr.type, tr.start)]),
+          key: makeBlockTxKey(blockNumber, tr.type, tr.start),
           value: Buffer.concat([Buffer.from([i]), Buffer.from(tx[1])]) // Store as index of the TR & then transaction
         })
       }
