@@ -4,6 +4,7 @@ const BN = require('../eth.js').utils.BN
 const makeBlockTxKey = require('../utils.js').makeBlockTxKey
 const LevelDBSumTree = require('./leveldb-sum-tree.js')
 const encoder = require('plasma-utils').encoder
+const BLOCK_TX_PREFIX = require('../constants.js').BLOCK_TX_PREFIX
 const BLOCKNUMBER_BYTE_SIZE = require('../constants.js').BLOCKNUMBER_BYTE_SIZE
 const TRANSFER_BYTE_SIZE = require('../constants.js').TRANSFER_BYTE_SIZE
 const SIGNATURE_BYTE_SIZE = require('../constants.js').SIGNATURE_BYTE_SIZE
@@ -18,11 +19,15 @@ class BlockStore {
     this.txLogDir = txLogDir
     this.partialChunk = null
     this.batchPromises = []
+    this.blockNumberBN = new BN(-1) // Set block number to be -1 so that the first block is block 0
   }
 
   async addBlock (txLogFile) {
     const blockNumberBN = new BN(txLogFile)
     const blockNumber = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
+    if (!this.blockNumberBN.add(new BN(1)).eq(blockNumberBN)) {
+      throw new Error('Expected block number to be ' + this.blockNumberBN.add(new BN(1)).toString() + ' not ' + blockNumberBN.toString())
+    }
     await this.ingestBlock(blockNumber, this.txLogDir + txLogFile)
     await this.sumTree.generateTree(blockNumber)
     return blockNumber
@@ -31,22 +36,52 @@ class BlockStore {
   /*
    * History proof logic
    */
-  async getRanges (blockNumber, type, start, end) {
+  async getTransactionsAt (blockNumber, type, start, end) {
     const startKey = makeBlockTxKey(blockNumber, type, start)
     const endKey = makeBlockTxKey(blockNumber, type, end)
     const it = this.db.iterator({
       lt: endKey,
       reverse: true
     })
-    const ranges = []
-    let result = await itNext(it)
+    let result = await this._getNextBlockTx(it)
+    const ranges = [result]
+    // Make sure that we returned values that we expect
     while (result.key >= startKey) {
+      result = await this._getNextBlockTx(it)
       ranges.push(result)
-      result = await itNext(it)
     }
     await itEnd(it)
     return ranges
   }
+
+  async _getNextBlockTx (it) {
+    const result = await itNext(it)
+    if (result.key === undefined) {
+      await itEnd(it)
+      throw new Error('getTransactionsAt iterator returned undefined!')
+    }
+    if (result.key[0] !== BLOCK_TX_PREFIX[0]) {
+      await itEnd(it)
+      throw new Error('Expected BLOCK_TX_PREFIX instead of ' + result.key[0])
+    }
+    return result
+  }
+
+  async getTransactions (startBlockNumberBN, endBlockNumberBN, type, start, end) {
+    let blockNumberBN = startBlockNumberBN
+    const proof = []
+    while (blockNumberBN.lte(endBlockNumberBN)) {
+      const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
+      const ranges = await this.getTransactionsAt(blockNumberKey, type, start, end)
+      proof.push(ranges)
+      blockNumberBN = blockNumberBN.add(new BN(1))
+    }
+    return proof
+  }
+
+  // getHistoryAt (blockNumber, type, start, end) {
+  //   const transactions = this.getTransactionsAt(blockNumber, type, start, end)
+  // }
 
   /*
    * Block ingestion logic

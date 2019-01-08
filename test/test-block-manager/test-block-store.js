@@ -8,6 +8,7 @@ const leveldown = require('leveldown')
 const BlockStore = require('../../src/block-manager/block-store.js')
 const BN = require('web3').utils.BN
 const dummyTxs = require('./dummy-tx-utils')
+const BLOCKNUMBER_BYTE_SIZE = require('../../src/constants.js').BLOCKNUMBER_BYTE_SIZE
 // const constants = require('../../src/constants.js')
 
 const expect = chai.expect
@@ -44,12 +45,28 @@ describe('BlockStore', function () {
     expect(blockStore).to.not.equal(undefined)
   })
 
-  it.only('gets range correctly', async () => {
-    const TXs = dummyTxs.genNSequentialTransactionsSpacedByOne(100)
-    const txBundle = getTxBundle(TXs)
-    const blockNumber = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 15])
-    blockStore.storeTransactions(blockNumber, txBundle)
-    const res = await blockStore.getRanges(blockNumber, new BN(0), new BN(1), new BN(4))
-    for (let r of res) { console.log(r) }
+  // it('gets range correctly', async () => {
+  //   const TXs = dummyTxs.genNSequentialTransactionsSpacedByOne(100)
+  //   const txBundle = getTxBundle(TXs)
+  //   const blockNumber = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+  //   blockStore.storeTransactions(blockNumber, txBundle)
+  //   const res = await blockStore.getTransactionsAt(blockNumber, new BN(0), new BN(1), new BN(4))
+  //   // Should print out the ranges 1, 2, 3
+  //   for (let r of res) { log(r) }
+  //   console.log('')
+  // })
+
+  it('generates proofs for a range correctly', async () => {
+    for (let i = 0; i < 3; i++) {
+      const TXs = dummyTxs.genNSequentialTransactionsSpacedByOne(100)
+      const txBundle = getTxBundle(TXs)
+      const blockNumber = new BN(i).toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
+      blockStore.storeTransactions(blockNumber, txBundle)
+      blockStore.blockNumberBN = blockStore.blockNumberBN.add(new BN(1))
+    }
+    const rangeSinceBlockZero = await blockStore.getTransactions(new BN(0), blockStore.blockNumberBN, new BN(0), new BN(1), new BN(2))
+    for (const range of rangeSinceBlockZero) {
+      for (const r of range) { log(r) }
+    }
   })
 })
