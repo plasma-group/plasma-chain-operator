@@ -3,6 +3,7 @@ const web3 = require('web3')
 const BN = web3.utils.BN
 const COIN_ID_BYTE_SIZE = require('../constants.js').COIN_ID_BYTE_SIZE
 const BLOCK_TX_PREFIX = require('../constants.js').BLOCK_TX_PREFIX
+const BLOCK_INDEX_PREFIX = require('../constants.js').BLOCK_INDEX_PREFIX
 const NODE_DB_PREFIX = require('../constants.js').NODE_DB_PREFIX
 const encoder = require('plasma-utils').encoder
 const itNext = require('../utils.js').itNext
@@ -61,14 +62,16 @@ class LevelDBSumTree {
         const transaction = self.getTransactionFromLeaf(data.value)
         transaction.sumStart = typedStart(getTr(transaction))
         const range = coinIdToBuffer(transaction.sumStart.sub(previousTransaction.sumStart))
-        const prevTxHash = web3.utils.hexToBytes(web3.utils.soliditySha3(previousTransaction.encoding))
+        const prevTxHash = web3.utils.hexToBytes(web3.utils.soliditySha3(Buffer.from(previousTransaction.transferRecords.encode())))
         self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
+        self.writeTrToIndex(blockNumber, previousTxIndex, Buffer.from(getTr(previousTransaction).encode()))
         previousTxIndex = previousTxIndex.add(new BN(1))
         previousTransaction = transaction
       }).on('end', function (data) {
         const range = coinIdToBuffer(new BN(maxEnd).sub(previousTransaction.sumStart))
-        const prevTxHash = web3.utils.hexToBytes(web3.utils.soliditySha3(previousTransaction.encoding))
+        const prevTxHash = web3.utils.hexToBytes(web3.utils.soliditySha3(Buffer.from(previousTransaction.transferRecords.encode())))
         self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
+        self.writeTrToIndex(blockNumber, previousTxIndex, Buffer.from(getTr(previousTransaction).encode()))
         resolve()
       }).on('error', function (err) {
         reject(err)
@@ -111,6 +114,13 @@ class LevelDBSumTree {
     const newNodeKey = this.makeNodeKey(blockNumber, level, index)
     log('Writing new node\nKey:', newNodeKey, '\nValue:', Buffer.concat([Buffer.from(hash), sum]))
     await this.db.put(newNodeKey, Buffer.concat([Buffer.from(hash), sum]))
+  }
+
+  async writeTrToIndex (blockNumber, index, trEncoding) {
+    const newTrKey = Buffer.concat([BLOCK_INDEX_PREFIX, blockNumber, trEncoding])
+    const indexBuff = index.toArrayLike(Buffer, 'big', INDEX_BYTES_SIZE)
+    log('Writing new tr -> index\nKey:', newTrKey, '\nValue:', indexBuff)
+    await this.db.put(newTrKey, indexBuff)
   }
 
   makeIndexId (level, index) {

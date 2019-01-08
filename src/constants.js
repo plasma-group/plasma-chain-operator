@@ -13,7 +13,8 @@ const TRANSFER_BYTE_SIZE = ADDRESS_BYTE_SIZE * 2 + TYPE_BYTE_SIZE + START_BYTE_S
 const SIGNATURE_BYTE_SIZE = 32 * 3
 // DB Prefixes
 const BLOCK_TX_PREFIX = Buffer.from([255])
-const NODE_DB_PREFIX = Buffer.from([254])
+const BLOCK_INDEX_PREFIX = Buffer.from([254])
+const NODE_DB_PREFIX = Buffer.from([253])
 
 module.exports = {
   INIT_METHOD,
@@ -26,6 +27,7 @@ module.exports = {
   BLOCKNUMBER_BYTE_SIZE,
   TRANSFER_BYTE_SIZE,
   BLOCK_TX_PREFIX,
+  BLOCK_INDEX_PREFIX,
   NODE_DB_PREFIX,
   SIGNATURE_BYTE_SIZE
 }
