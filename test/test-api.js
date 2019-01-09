@@ -6,6 +6,7 @@ const app = require('../src/app')
 const constants = require('../src/constants.js')
 const accounts = require('./mock-accounts.js').accounts
 const BN = require('../src/eth.js').utils.BN
+const log = require('debug')('test:info:test-api')
 
 const expect = chai.expect
 
@@ -26,7 +27,7 @@ describe('App', function () {
           }
         })
         .end((err, res) => {
-          console.log(err)
+          log(err)
           expect(res).to.have.status(200)
           done()
         })

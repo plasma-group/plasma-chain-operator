@@ -92,11 +92,11 @@ describe('State', function () {
       // Now add a bunch of conflicting deposits. This will trigger a bunch of locks
       for (let i = 0; i < 20; i++) {
         state.addDeposit(addr0, ethType, depositAmount).then((res) => {
-          console.log('Added deposit')
+          log('Added deposit')
         })
       }
       let totalEthDeposits = await db.get(State.getTotalDepositsKey(ethType))
-      console.log('this is our total deposits:' + new BN(totalEthDeposits))
+      log('this is our total deposits:' + new BN(totalEthDeposits))
       // Check that our total deposits equal 10
       expect(totalEthDeposits).to.deep.equal(new BN(10).toArrayLike(Buffer, 'big', constants.TYPE_BYTE_SIZE))
       // Increment the blocknumber
@@ -117,7 +117,7 @@ describe('State', function () {
         await state.addDeposit(addr0, ethType, depositAmount)
       }
       const test = await state.getAffectedRanges(new BN(0), new BN(5), new BN(19))
-      console.log(test)
+      log(test)
     })
   })
 
