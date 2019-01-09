@@ -70,7 +70,7 @@ describe('State', function () {
   })
 
   describe('startNewBlock', () => {
-    it('increments the current blocknumber', async () => {
+    it('increments the current blockNumber', async () => {
       const addr0 = Buffer.from(web3.utils.hexToBytes(accounts[0].address))
       const ethType = new BN(0)
       const depositAmount = new BN(10)
@@ -79,11 +79,11 @@ describe('State', function () {
       let totalEthDeposits = await db.get(State.getTotalDepositsKey(ethType))
       // Check that our total deposits equal 10
       expect(totalEthDeposits).to.deep.equal(new BN(10).toArrayLike(Buffer, 'big', constants.TYPE_BYTE_SIZE))
-      // Increment the blocknumber
+      // Increment the blockNumber
       await state.startNewBlock()
-      expect(state.blocknumber).to.deep.equal(new BN(1))
+      expect(state.blockNumber).to.deep.equal(new BN(1))
     })
-    it('should lock deposits while changing blocknumber', async () => {
+    it('should lock deposits while changing blockNumber', async () => {
       const addr0 = Buffer.from(web3.utils.hexToBytes(accounts[0].address))
       const ethType = new BN(0)
       const depositAmount = new BN(10)
@@ -99,9 +99,9 @@ describe('State', function () {
       log('this is our total deposits:' + new BN(totalEthDeposits))
       // Check that our total deposits equal 10
       expect(totalEthDeposits).to.deep.equal(new BN(10).toArrayLike(Buffer, 'big', constants.TYPE_BYTE_SIZE))
-      // Increment the blocknumber
+      // Increment the blockNumber
       await state.startNewBlock()
-      expect(state.blocknumber).to.deep.equal(new BN(1))
+      expect(state.blockNumber).to.deep.equal(new BN(1))
     })
   })
 

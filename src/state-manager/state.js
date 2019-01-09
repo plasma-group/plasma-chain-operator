@@ -11,7 +11,7 @@ const DEPOSIT_SENDER = '0x0000000000000000000000000000000000000000'
 
 // ************* HELPER FUNCTIONS ************* //
 const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
-const timeoutAmt = 0
+const timeoutAmt = () => Math.floor(Math.random() * 2)
 // Promisify the it.next(cb) function
 function itNext (it) {
   return new Promise((resolve, reject) => {
@@ -36,8 +36,8 @@ function itEnd (it) {
   })
 }
 
-function getDepositRecord (owner, type, start, end, blocknumber) {
-  const tr = new encoder.TR([DEPOSIT_SENDER, owner, type, start, end, blocknumber])
+function getDepositRecord (owner, type, start, end, blockNumber) {
+  const tr = new encoder.TR([DEPOSIT_SENDER, owner, type, start, end, blockNumber])
   return tr
 }
 
@@ -72,14 +72,14 @@ class State {
   async init () {
     // Get the current block number
     try {
-      const blocknumberBuff = await this.db.get('blocknumber')
-      this.blocknumber = new BN(blocknumberBuff)
-      log('Blocknumber found! Starting at: ' + this.blocknumber)
+      const blockNumberBuff = await this.db.get('blockNumber')
+      this.blockNumber = new BN(blockNumberBuff)
+      log('Block number found! Starting at: ' + this.blockNumber)
     } catch (err) {
       if (err.notFound) {
-        log('No blocknumber found! Starting from block 0.')
-        this.blocknumber = new BN(0)
-        await this.db.put(Buffer.from('blocknumber'), this.blocknumber.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE))
+        log('No blockNumber found! Starting from block 0.')
+        this.blockNumber = new BN(0)
+        await this.db.put(Buffer.from('blockNumber'), this.blockNumber.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE))
       } else { throw err }
     }
     // Make a new tx-log directory if it doesn't exist.
@@ -100,20 +100,20 @@ class State {
     // Wait until all other locks are released
     while (Object.keys(this.lock).length !== 1) {
       log('Waiting to acquire global lock')
-      await timeout(timeoutAmt)
+      await timeout(timeoutAmt())
     }
-    // Everything should be locked now that we have a `lock.all` activated. Time to increment the blocknumber
-    this.blocknumber = this.blocknumber.add(new BN(1))
+    // Everything should be locked now that we have a `lock.all` activated. Time to increment the blockNumber
+    this.blockNumber = this.blockNumber.add(new BN(1))
     // Create a new block
-    await this.db.put(Buffer.from('blocknumber'), this.blocknumber.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE))
+    await this.db.put(Buffer.from('blockNumber'), this.blockNumber.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE))
     // Start a new tx log
     this.writeStream.end()
-    const txLogPath = this.txLogDirectory + this.blocknumber.toString(10, BLOCKNUMBER_BYTE_SIZE)
+    const txLogPath = this.txLogDirectory + this.blockNumber.toString(10, BLOCKNUMBER_BYTE_SIZE)
     await fs.rename(this.tmpTxLogFile, txLogPath)
     this.writeStream = fs.createWriteStream(this.tmpTxLogFile, { flags: 'a' })
     // Release our lock
     delete this.lock.all
-    log('#### Block #', this.blocknumber.toString())
+    log('#### Block #', this.blockNumber.toString())
   }
 
   attemptAcquireLocks (keywords) {
@@ -130,6 +130,7 @@ class State {
   }
 
   releaseLocks (keywords) {
+    // Pop off our lock queue
     for (const keyword of keywords) {
       delete this.lock[keyword]
     }
@@ -138,7 +139,7 @@ class State {
   async addDeposit (recipient, type, amount) {
     while (!this.attemptAcquireLocks([type])) {
       // Wait before attempting again
-      await timeout(timeoutAmt)
+      await timeout(timeoutAmt())
     }
     // Get total deposits for this coin type
     let oldTotalDeposits = new BN(0)
@@ -152,7 +153,7 @@ class State {
     }
     // Put the updated totalDeposits and owned coin ranges
     const newTotalDeposits = oldTotalDeposits.add(amount)
-    const depositRecord = getDepositRecord(web3.utils.bytesToHex(recipient), type, oldTotalDeposits, newTotalDeposits, this.blocknumber)
+    const depositRecord = getDepositRecord(web3.utils.bytesToHex(recipient), type, oldTotalDeposits, newTotalDeposits, this.blockNumber)
     try {
       // Put the new owned coin range and the new total deposits
       const ops = [
@@ -190,7 +191,7 @@ class State {
     }
     while (!this.attemptAcquireLocks(senders)) {
       // Wait before attempting again
-      await timeout(timeoutAmt)
+      await timeout(timeoutAmt())
     }
     // Get all of the affectedRanges for each transfer record
     for (const [i, tr] of trList.entries()) {
@@ -209,11 +210,11 @@ class State {
     //    2) All affected ranges are owned by the correct sender
     //    3) None of the transfer records overlap
     for (const [i, tr] of trList.entries()) {
-      if (!tr.block.eq(this.blocknumber)) { throw new Error('Transfer record blocknumber mismatch!') } // Make sure every transfer record is intended for this block
+      if (!tr.block.eq(this.blockNumber)) { throw new Error('Transfer record blockNumber mismatch!') } // Make sure every transfer record is intended for this block
       for (const ar of tr.affectedRanges) {
-        if (tr.sender.toLowerCase() !== ar.decoded.recipient.toLowerCase() || ar.decoded.block.eq(this.blocknumber)) {
+        if (tr.sender.toLowerCase() !== ar.decoded.recipient.toLowerCase() || ar.decoded.block.eq(this.blockNumber)) {
           this.releaseLocks(senders)
-          throw new Error('Affected range check failed! Looks like a recipient or blocknumber error!')
+          throw new Error('Affected range check failed! Looks like a recipient or blockNumber error!')
         }
       }
       // Check that none of the other transfer records overlap
@@ -293,7 +294,7 @@ class State {
   async getOwnedRanges (address) {
     while (!this.attemptAcquireLocks([address])) {
       // Wait before attempting again
-      await timeout(timeoutAmt)
+      await timeout(timeoutAmt())
     }
     // Get the ranges
     const addressBuffer = Buffer.from(web3.utils.hexToBytes(address))

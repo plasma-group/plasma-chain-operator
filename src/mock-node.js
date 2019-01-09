@@ -66,7 +66,7 @@ class MockNode {
     while (recipient === this) {
       recipient = this.peerList[Math.floor(Math.random() * this.peerList.length)]
     }
-    const tx = this.makeTx(this.account.address, recipient.account.address, type, start, end, this.state.blocknumber)
+    const tx = this.makeTx(this.account.address, recipient.account.address, type, start, end, this.state.blockNumber)
     await this.state.addTransaction(tx)
     // Update ranges
     utils.subtractRange(this.ranges, startId, endId)
@@ -75,8 +75,8 @@ class MockNode {
     log('sent a transaction!')
   }
 
-  makeTx (sender, recipient, type, start, end, blocknumber) {
-    return new encoder.Transaction([[sender, recipient, type, start, end, blocknumber]], [[0, 0, 0]])
+  makeTx (sender, recipient, type, start, end, blockNumber) {
+    return new encoder.Transaction([[sender, recipient, type, start, end, blockNumber]], [[0, 0, 0]])
   }
 }
 
