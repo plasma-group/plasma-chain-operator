@@ -46,7 +46,7 @@ class BlockStore {
     let result = await this._getNextBlockTx(it)
     const ranges = [result]
     // Make sure that we returned values that we expect
-    while (result.key >= startKey) {
+    while (result.key > startKey) {
       result = await this._getNextBlockTx(it)
       ranges.push(result)
     }
@@ -83,7 +83,6 @@ class BlockStore {
     const getTr = (tx) => tx.transferRecords.elements[tx.trIndex]
     const leaves = await this.getLeavesAt(blockNumber, type, start, end)
     for (const leaf of leaves) {
-      debugger
       const tx = this.sumTree.getTransactionFromLeaf(leaf.value)
       const trEncoding = Buffer.from(getTr(tx).encode())
       const index = await this.sumTree.getIndex(blockNumber, trEncoding)
