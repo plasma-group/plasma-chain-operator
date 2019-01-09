@@ -69,25 +69,58 @@ class BlockStore {
 
   async getTransactions (startBlockNumberBN, endBlockNumberBN, type, start, end) {
     let blockNumberBN = startBlockNumberBN
-    const proof = []
+    const relevantTransactions = []
     while (blockNumberBN.lte(endBlockNumberBN)) {
       const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
       const ranges = await this.getLeavesAt(blockNumberKey, type, start, end)
-      proof.push(ranges)
+      relevantTransactions.push(ranges)
       blockNumberBN = blockNumberBN.add(new BN(1))
     }
-    return proof
+    return relevantTransactions
   }
 
   async getHistoryAt (blockNumber, type, start, end) {
     const getTr = (tx) => tx.transferRecords.elements[tx.trIndex]
+    const numLevels = await this.sumTree.getNumLevels(blockNumber)
     const leaves = await this.getLeavesAt(blockNumber, type, start, end)
     for (const leaf of leaves) {
       const tx = this.sumTree.getTransactionFromLeaf(leaf.value)
       const trEncoding = Buffer.from(getTr(tx).encode())
       const index = await this.sumTree.getIndex(blockNumber, trEncoding)
       console.log(index)
+      debugger
     }
+  }
+
+  async getInclusionProof (blockNumber, index) {
+    const branch = []
+
+    // User needs to be given this extra information.
+    branch.push({
+      hash: '',
+      sum: this.levels[0][index].sum
+    })
+
+    let parentIndex
+    let node
+    let siblingIndex = index + (index % 2 === 0 ? 1 : -1)
+    for (let i = 0; i < this.levels.length - 1; i++) {
+      node = this.levels[i][siblingIndex]
+      if (node === undefined) {
+        node = PlasmaMerkleSumTree.emptyLeaf()
+      }
+
+      branch.push({
+        hash: node.hash,
+        sum: node.sum
+      })
+
+      // Figure out the parent and then figure out the parent's sibling.
+      parentIndex = siblingIndex === 0 ? 0 : Math.floor(siblingIndex / 2)
+      siblingIndex = parentIndex + (parentIndex % 2 === 0 ? 1 : -1)
+    }
+
+    return branch
   }
 
   /*

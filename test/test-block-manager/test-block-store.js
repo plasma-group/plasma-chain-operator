@@ -72,7 +72,7 @@ describe('BlockStore', function () {
     }
   })
 
-  it('generates history proofs correctly', async () => {
+  it.only('generates history proofs correctly', async () => {
     // add some blocks
     for (let i = 0; i < 3; i++) {
       const TXs = dummyTxs.genNSequentialTransactionsSpacedByOne(10)
@@ -82,11 +82,10 @@ describe('BlockStore', function () {
       blockStore.storeTransactions(blockNumber, txBundle)
       await Promise.all(blockStore.batchPromises)
       // Generate a new block using these transactions
-      await blockStore.sumTree.parseLeaves(blockNumber)
+      await blockStore.sumTree.generateTree(blockNumber)
       blockStore.blockNumberBN = blockStore.blockNumberBN.add(new BN(1))
     }
     // // begin test
-    // TODO: Write the real test
-    // const history = await blockStore.getHistoryAt(new BN(0).toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE), new BN(0), new BN(1), new BN(2))
+    const history = await blockStore.getHistoryAt(new BN(0).toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE), new BN(0), new BN(0), new BN(5))
   })
 })

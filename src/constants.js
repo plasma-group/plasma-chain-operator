@@ -14,7 +14,8 @@ const SIGNATURE_BYTE_SIZE = 32 * 3
 // DB Prefixes
 const BLOCK_TX_PREFIX = Buffer.from([255])
 const BLOCK_INDEX_PREFIX = Buffer.from([254])
-const NODE_DB_PREFIX = Buffer.from([253])
+const NUM_LEVELS_PREFIX = Buffer.from([253]) // The number of levels in a particular block
+const NODE_DB_PREFIX = Buffer.from([252])
 
 module.exports = {
   INIT_METHOD,
@@ -28,6 +29,7 @@ module.exports = {
   TRANSFER_BYTE_SIZE,
   BLOCK_TX_PREFIX,
   BLOCK_INDEX_PREFIX,
+  NUM_LEVELS_PREFIX,
   NODE_DB_PREFIX,
   SIGNATURE_BYTE_SIZE
 }

@@ -4,6 +4,7 @@ const BN = web3.utils.BN
 const COIN_ID_BYTE_SIZE = require('../constants.js').COIN_ID_BYTE_SIZE
 const BLOCK_TX_PREFIX = require('../constants.js').BLOCK_TX_PREFIX
 const BLOCK_INDEX_PREFIX = require('../constants.js').BLOCK_INDEX_PREFIX
+const NUM_LEVELS_PREFIX = require('../constants.js').BLOCK_TX_PREFIX
 const NODE_DB_PREFIX = require('../constants.js').NODE_DB_PREFIX
 const encoder = require('plasma-utils').encoder
 const itNext = require('../utils.js').itNext
@@ -132,6 +133,16 @@ class LevelDBSumTree {
     await this.db.put(newTrKey, indexBuff)
   }
 
+  async writeNumLevels (blockNumber, numLevels) {
+    log('Writing num levels for block:', Buffer.concat([NUM_LEVELS_PREFIX, blockNumber]), '\nWith value:', Buffer.from([numLevels]))
+    await this.db.put(Buffer.concat([NUM_LEVELS_PREFIX, blockNumber]), Buffer.from([numLevels]))
+  }
+
+  async getNumLevels (blockNumber) {
+    const numLevels = await this.db.get(Buffer.concat([NUM_LEVELS_PREFIX, blockNumber]))
+    return new BN(numLevels)
+  }
+
   makeIndexId (level, index) {
     return Buffer.concat([Buffer.from([level]), index.toArrayLike(Buffer, 'big', INDEX_BYTES_SIZE)])
   }
@@ -187,6 +198,7 @@ class LevelDBSumTree {
         // Check if there was only one node--that means we hit the root
         if (numChildren.eq(new BN(2))) {
           log('Returning root hash:', parentNode.hash.toString('hex'))
+          await self.writeNumLevels(blockNumber, parentLevel)
           resolve(parentNode.hash)
           return
         }
