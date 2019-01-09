@@ -36,7 +36,7 @@ class BlockStore {
   /*
    * History proof logic
    */
-  async getTransactionsAt (blockNumber, type, start, end) {
+  async getLeavesAt (blockNumber, type, start, end) {
     const startKey = makeBlockTxKey(blockNumber, type, start)
     const endKey = makeBlockTxKey(blockNumber, type, end)
     const it = this.db.iterator({
@@ -58,7 +58,7 @@ class BlockStore {
     const result = await itNext(it)
     if (result.key === undefined) {
       await itEnd(it)
-      throw new Error('getTransactionsAt iterator returned undefined!')
+      throw new Error('getLeavesAt iterator returned undefined!')
     }
     if (result.key[0] !== BLOCK_TX_PREFIX[0]) {
       await itEnd(it)
@@ -72,16 +72,24 @@ class BlockStore {
     const proof = []
     while (blockNumberBN.lte(endBlockNumberBN)) {
       const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
-      const ranges = await this.getTransactionsAt(blockNumberKey, type, start, end)
+      const ranges = await this.getLeavesAt(blockNumberKey, type, start, end)
       proof.push(ranges)
       blockNumberBN = blockNumberBN.add(new BN(1))
     }
     return proof
   }
 
-  // getHistoryAt (blockNumber, type, start, end) {
-  //   const transactions = this.getTransactionsAt(blockNumber, type, start, end)
-  // }
+  async getHistoryAt (blockNumber, type, start, end) {
+    const getTr = (tx) => tx.transferRecords.elements[tx.trIndex]
+    const leaves = await this.getLeavesAt(blockNumber, type, start, end)
+    for (const leaf of leaves) {
+      debugger
+      const tx = this.sumTree.getTransactionFromLeaf(leaf.value)
+      const trEncoding = Buffer.from(getTr(tx).encode())
+      const index = await this.sumTree.getIndex(blockNumber, trEncoding)
+      console.log(index)
+    }
+  }
 
   /*
    * Block ingestion logic

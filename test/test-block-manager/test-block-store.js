@@ -16,7 +16,7 @@ const expect = chai.expect
 function getTxBundle (txs) {
   const txBundle = []
   for (const tx of txs) {
-    txBundle.push([tx, tx.encode()])
+    txBundle.push([tx, Buffer.from(tx.encode())])
   }
   return txBundle
 }
@@ -56,7 +56,8 @@ describe('BlockStore', function () {
   //   console.log('')
   // })
 
-  it('generates proofs for a range correctly', async () => {
+  it('gets transaction leaves over a number of blocks correctly', async () => {
+    // add some blocks
     for (let i = 0; i < 3; i++) {
       const TXs = dummyTxs.genNSequentialTransactionsSpacedByOne(100)
       const txBundle = getTxBundle(TXs)
@@ -64,9 +65,28 @@ describe('BlockStore', function () {
       blockStore.storeTransactions(blockNumber, txBundle)
       blockStore.blockNumberBN = blockStore.blockNumberBN.add(new BN(1))
     }
+    // begin test
     const rangeSinceBlockZero = await blockStore.getTransactions(new BN(0), blockStore.blockNumberBN, new BN(0), new BN(1), new BN(2))
     for (const range of rangeSinceBlockZero) {
       for (const r of range) { log(r) }
     }
+  })
+
+  it('generates history proofs correctly', async () => {
+    // add some blocks
+    for (let i = 0; i < 3; i++) {
+      const TXs = dummyTxs.genNSequentialTransactionsSpacedByOne(10)
+      const txBundle = getTxBundle(TXs)
+      const blockNumber = new BN(i).toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
+      // Store the transactions
+      blockStore.storeTransactions(blockNumber, txBundle)
+      await Promise.all(blockStore.batchPromises)
+      // Generate a new block using these transactions
+      await blockStore.sumTree.parseLeaves(blockNumber)
+      blockStore.blockNumberBN = blockStore.blockNumberBN.add(new BN(1))
+    }
+    // // begin test
+    // TODO: Write the real test
+    // const history = await blockStore.getHistoryAt(new BN(0).toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE), new BN(0), new BN(1), new BN(2))
   })
 })

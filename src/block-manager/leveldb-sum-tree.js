@@ -47,7 +47,7 @@ class LevelDBSumTree {
       const minStart = Buffer.from('0'.repeat(COIN_ID_BYTE_SIZE * 2), 'hex')
       const maxEnd = Buffer.from('f'.repeat(COIN_ID_BYTE_SIZE * 2), 'hex')
       // We need special logic to handle the first leaf / transaction. Because of this, look it up independently.
-      const firstLeaf = await this.getNearest(Buffer.concat([blockNumber, minStart]))
+      const firstLeaf = await this.getNearest(Buffer.concat([BLOCK_TX_PREFIX, blockNumber, minStart]))
       const firstTransaction = this.getTransactionFromLeaf(firstLeaf.value)
       // Now set the prev tx's sum start to *zero* instead of what it normally is--the previous transaction's start
       let previousTransaction = firstTransaction
@@ -64,14 +64,14 @@ class LevelDBSumTree {
         const range = coinIdToBuffer(transaction.sumStart.sub(previousTransaction.sumStart))
         const prevTxHash = web3.utils.hexToBytes(web3.utils.soliditySha3(Buffer.from(previousTransaction.transferRecords.encode())))
         self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
-        self.writeTrToIndex(blockNumber, previousTxIndex, Buffer.from(getTr(previousTransaction).encode()))
+        self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encode()), previousTxIndex)
         previousTxIndex = previousTxIndex.add(new BN(1))
         previousTransaction = transaction
       }).on('end', function (data) {
         const range = coinIdToBuffer(new BN(maxEnd).sub(previousTransaction.sumStart))
         const prevTxHash = web3.utils.hexToBytes(web3.utils.soliditySha3(Buffer.from(previousTransaction.transferRecords.encode())))
         self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
-        self.writeTrToIndex(blockNumber, previousTxIndex, Buffer.from(getTr(previousTransaction).encode()))
+        self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encode()), previousTxIndex)
         resolve()
       }).on('error', function (err) {
         reject(err)
@@ -99,6 +99,11 @@ class LevelDBSumTree {
     return node
   }
 
+  async getIndex (blockNumber, trEncoding) {
+    const index = await this.db.get(this.makeTrToIndexKey(blockNumber, trEncoding))
+    return index
+  }
+
   parseNodeValue (value) {
     return {
       hash: value.slice(0, 32),
@@ -110,14 +115,18 @@ class LevelDBSumTree {
     return Buffer.concat([Buffer.from(NODE_DB_PREFIX), blockNumber, this.makeIndexId(level, index)])
   }
 
+  makeTrToIndexKey (blockNumber, trEncoding) {
+    return Buffer.concat([BLOCK_INDEX_PREFIX, blockNumber, trEncoding])
+  }
+
   async writeNode (blockNumber, level, index, hash, sum) {
     const newNodeKey = this.makeNodeKey(blockNumber, level, index)
     log('Writing new node\nKey:', newNodeKey, '\nValue:', Buffer.concat([Buffer.from(hash), sum]))
     await this.db.put(newNodeKey, Buffer.concat([Buffer.from(hash), sum]))
   }
 
-  async writeTrToIndex (blockNumber, index, trEncoding) {
-    const newTrKey = Buffer.concat([BLOCK_INDEX_PREFIX, blockNumber, trEncoding])
+  async writeTrToIndex (blockNumber, trEncoding, index) {
+    const newTrKey = this.makeTrToIndexKey(blockNumber, trEncoding)
     const indexBuff = index.toArrayLike(Buffer, 'big', INDEX_BYTES_SIZE)
     log('Writing new tr -> index\nKey:', newTrKey, '\nValue:', indexBuff)
     await this.db.put(newTrKey, indexBuff)
