@@ -72,7 +72,7 @@ describe('BlockStore', function () {
     }
   })
 
-  it.only('generates history proofs correctly', async () => {
+  it('generates history proofs correctly', async () => {
     // add some blocks
     for (let i = 0; i < 3; i++) {
       const TXs = dummyTxs.genNSequentialTransactionsSpacedByOne(10)
@@ -86,6 +86,7 @@ describe('BlockStore', function () {
       blockStore.blockNumberBN = blockStore.blockNumberBN.add(new BN(1))
     }
     // // begin test
-    const history = await blockStore.getHistoryAt(new BN(0).toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE), new BN(0), new BN(0), new BN(5))
+    const history = await blockStore.getHistory(new BN(0), new BN(2), new BN(0), new BN(3), new BN(8))
+    log('Returned history!', history)
   })
 })

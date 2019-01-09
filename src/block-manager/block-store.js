@@ -79,47 +79,71 @@ class BlockStore {
     return relevantTransactions
   }
 
-  async getHistoryAt (blockNumber, type, start, end) {
+  async getProofsFor (blockNumber, type, start, end) {
     const getTr = (tx) => tx.transferRecords.elements[tx.trIndex]
     const numLevels = await this.sumTree.getNumLevels(blockNumber)
     const leaves = await this.getLeavesAt(blockNumber, type, start, end)
+    const allProofs = []
     for (const leaf of leaves) {
       const tx = this.sumTree.getTransactionFromLeaf(leaf.value)
       const trEncoding = Buffer.from(getTr(tx).encode())
       const index = await this.sumTree.getIndex(blockNumber, trEncoding)
-      console.log(index)
-      debugger
+      const branch = await this.getInclusionProof(blockNumber, numLevels, new BN(index))
+      const proof = [tx, tx.trIndex, [index, branch]]
+      allProofs.push(proof)
     }
+    return allProofs
   }
 
-  async getInclusionProof (blockNumber, index) {
+  async getHistory (startBlockNumberBN, endBlockNumberBN, type, start, end) {
+    let blockNumberBN = startBlockNumberBN
+    const history = []
+    while (blockNumberBN.lte(endBlockNumberBN)) {
+      const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
+      const proofs = await this.getProofsFor(blockNumberKey, type, start, end)
+      history.push(proofs)
+      blockNumberBN = blockNumberBN.add(new BN(1))
+    }
+    return history
+  }
+
+  async getInclusionProof (blockNumber, numLevels, index) {
     const branch = []
+
+    // Initial node
+    const initialNodeValue = await this.sumTree.getNode(blockNumber, 0, index)
+    const initialNode = this.sumTree.parseNodeValue(initialNodeValue)
 
     // User needs to be given this extra information.
     branch.push({
-      hash: '',
-      sum: this.levels[0][index].sum
+      hash: initialNode.hash,
+      sum: initialNode.sum
     })
 
     let parentIndex
+    let nodeValue
     let node
-    let siblingIndex = index + (index % 2 === 0 ? 1 : -1)
-    for (let i = 0; i < this.levels.length - 1; i++) {
-      node = this.levels[i][siblingIndex]
-      if (node === undefined) {
-        node = PlasmaMerkleSumTree.emptyLeaf()
+    let siblingIndex = index.addn((index.mod(new BN(2)).eq(new BN(0)) ? 1 : -1))
+    for (let i = 0; i < numLevels - 1; i++) {
+      try {
+        nodeValue = await this.sumTree.getNode(blockNumber, i, siblingIndex)
+        node = this.sumTree.parseNodeValue(nodeValue)
+      } catch (err) {
+        if (err.type === 'NotFoundError') {
+          log('Node not found in block tree! Treating it as an empty leaf...')
+          nodeValue = undefined
+          node = this.sumTree.emptyNode()
+        } else throw err
       }
-
       branch.push({
         hash: node.hash,
         sum: node.sum
       })
 
       // Figure out the parent and then figure out the parent's sibling.
-      parentIndex = siblingIndex === 0 ? 0 : Math.floor(siblingIndex / 2)
-      siblingIndex = parentIndex + (parentIndex % 2 === 0 ? 1 : -1)
+      parentIndex = siblingIndex.eq(new BN(0)) ? new BN(0) : siblingIndex.divn(2)
+      siblingIndex = parentIndex.addn((parentIndex.mod(new BN(2)).eq(new BN(0)) ? 1 : -1))
     }
-
     return branch
   }
 
