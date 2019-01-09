@@ -81,7 +81,7 @@ class LevelDBSumTree {
 
   async getNearest (key) {
     const it = this.db.iterator({
-      gt: key,
+      gte: key,
       limit: 1
     })
     const result = await itNext(it)
