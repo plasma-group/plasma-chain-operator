@@ -4,6 +4,7 @@ const State = require('./state.js').State
 const web3 = require('../eth.js')
 const constants = require('../constants.js')
 const BN = web3.utils.BN
+const encoder = require('plasma-utils').encoder
 const log = require('debug')('info:state-app')
 
 // Create global state object
@@ -19,6 +20,10 @@ process.on('message', async (m) => {
   log('State got request:', m.message)
   if (m.message.method === constants.INIT_METHOD) {
     await startup(m.message.params)
+  } else if (m.message.method === constants.NEW_BLOCK_METHOD) {
+    const blockNumber = await state.startNewBlock()
+    process.send({ id: m.id, message: {newBlockNumber: blockNumber.toString()} })
+    return
   } else if (m.message.method === constants.DEPOSIT_METHOD) {
     const deposit = await newDepositCallback(null, {
       recipient: Buffer.from(web3.utils.hexToBytes(m.message.params.recipient)),
@@ -26,6 +31,12 @@ process.on('message', async (m) => {
       amount: new BN(m.message.params.amount, 16)
     })
     process.send({ id: m.id, message: deposit })
+    return
+  } else if (m.message.method === constants.ADD_TX_METHOD) {
+    // New transaction!
+    const tx = new encoder.Transaction(m.message.params.encodedTx)
+    const txResponse = await state.addTransaction(tx)
+    process.send({ id: m.id, message: txResponse })
     return
   } else {
     throw new Error('RPC method not recognized!')

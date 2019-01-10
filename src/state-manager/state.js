@@ -113,7 +113,8 @@ class State {
     this.writeStream = fs.createWriteStream(this.tmpTxLogFile, { flags: 'a' })
     // Release our lock
     delete this.lock.all
-    log('#### Block #', this.blockNumber.toString())
+    log('#### Started new Block #', this.blockNumber.toString())
+    return this.blockNumber
   }
 
   attemptAcquireLocks (keywords) {

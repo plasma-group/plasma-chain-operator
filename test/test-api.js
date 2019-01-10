@@ -11,14 +11,33 @@ const log = require('debug')('test:info:test-api')
 const MockNode = require('../src/mock-node.js')
 
 const expect = chai.expect
-const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 chai.use(chaiHttp)
 
 // Operator object wrapper to query api
 const operator = {
   addTransaction: (tx) => {
-    // TODO
+    const encodedTx = tx.encode()
+    return new Promise((resolve, reject) => {
+      chai.request(app)
+        .post('/api')
+        .send({
+          method: constants.ADD_TX_METHOD,
+          jsonrpc: '2.0',
+          params: {
+            encodedTx
+          }
+        })
+        .end((err, res) => {
+          if (err) {
+            throw err
+          }
+          // Parse the response to return what the mock node expects
+          const txResponse = res.body
+          // Return the deposit
+          resolve(txResponse)
+        })
+    })
   },
   addDeposit: (recipient, type, amount) => {
     return new Promise((resolve, reject) => {
@@ -39,11 +58,28 @@ const operator = {
           }
           // Parse the response to return what the mock node expects
           const deposit = res.body
-          deposit.type = new BN(deposit.type)
-          deposit.start = new BN(deposit.start)
-          deposit.end = new BN(deposit.end)
+          deposit.type = new BN(deposit.type, 'hex')
+          deposit.start = new BN(deposit.start, 'hex')
+          deposit.end = new BN(deposit.end, 'hex')
           // Return the deposit
           resolve(deposit)
+        })
+    })
+  },
+  startNewBlock: () => {
+    return new Promise((resolve, reject) => {
+      chai.request(app)
+        .post('/api')
+        .send({
+          method: constants.NEW_BLOCK_METHOD,
+          jsonrpc: '2.0',
+          params: {}
+        })
+        .end((err, res) => {
+          if (err) {
+            throw err
+          }
+          resolve(res.body)
         })
     })
   }
@@ -92,19 +128,34 @@ describe('App', function () {
 
     it('Nodes are able to deposit', (done) => {
       const depositType = new BN(1)
-      const depositAmount = new BN(10)
+      const depositAmount = new BN(10000)
       const nodes = []
       for (const acct of accounts) {
         nodes.push(new MockNode(operator, acct, nodes))
       }
-      const promises = []
+      const depositPromises = []
       // Add deposits from 100 different accounts
       for (const node of nodes) {
-        promises.push(node.deposit(depositType, depositAmount))
+        depositPromises.push(node.deposit(depositType, depositAmount))
       }
-      Promise.all(promises).then((res) => {
+      Promise.all(depositPromises).then((res) => {
+        // Start a new block
         log('Finished nodes depositing over http!')
-        done()
+        operator.startNewBlock().then((res) => {
+          const blockNumber = res.newBlockNumber
+          log('Started new block', res)
+          // Now send some transactions
+          const txPromises = []
+          for (let i = 0; i < 3; i++) {
+            for (const node of nodes) {
+              txPromises.push(node.sendRandomTransaction(new BN(blockNumber)))
+            }
+          }
+          Promise.all(txPromises).then((res) => {
+            log('Transaction sent!')
+            done()
+          })
+        })
       })
     })
   })

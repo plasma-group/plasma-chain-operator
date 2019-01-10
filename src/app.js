@@ -55,11 +55,13 @@ blockManager.on('message', resolveMessage)
 
 // Handle incoming transactions
 app.post('/api', function (req, res) {
-  if (req.body.method === constants.DEPOSIT_METHOD || req.body.method === constants.ADD_TX_METHOD) {
+  if (req.body.method === constants.DEPOSIT_METHOD ||
+      req.body.method === constants.ADD_TX_METHOD ||
+      req.body.method === constants.NEW_BLOCK_METHOD) {
     sendMessage(stateManager, req.body).then((response) => {
       res.send(response.message)
     })
-  } else if (req.body.method === constants.NEW_BLOCK_METHOD) {
+  } else if (req.body.method === 'NOT YET IMPLEMENTED') {
     sendMessage(blockManager, req.body).then((response) => {
       res.send('POST request success from block manager')
     })

@@ -26,6 +26,7 @@ class MockNode {
     const deposit = await this.operator.addDeposit(Buffer.from(web3.utils.hexToBytes(this.account.address)), coinType, amount)
     const start = new BN(utils.getCoinId(deposit.type, deposit.start))
     const end = new BN(utils.getCoinId(deposit.type, deposit.end))
+    log('Adding range from deposit with start:', deposit.start.toString(), '- end:', deposit.end.toString())
     utils.addRange(this.ranges, start, end)
   }
 
@@ -67,11 +68,12 @@ class MockNode {
       recipient = this.peerList[Math.floor(Math.random() * this.peerList.length)]
     }
     const tx = this.makeTx(this.account.address, recipient.account.address, type, start, end, blockNumber)
-    await this.operator.addTransaction(tx)
     // Update ranges
     utils.subtractRange(this.ranges, startId, endId)
     recipient.pendingRanges.push([new BN(startId), new BN(endId)])
     recipient.addLog.push([this.account.address, start, end])
+    // Add transaction
+    await this.operator.addTransaction(tx)
     log('sent a transaction!')
   }
 
