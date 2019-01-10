@@ -15,7 +15,7 @@ const genRandomAddress = function () {
 }
 
 const genRandomSignature = function () {
-  const v = genRandomNByteBN(32)
+  const v = genRandomNByteBN(1)
   const r = genRandomNByteBN(32)
   const s = genRandomNByteBN(32)
   return new TS.Sig([v, r, s])

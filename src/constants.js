@@ -7,10 +7,10 @@ const ADDRESS_BYTE_SIZE = 20
 const START_BYTE_SIZE = 12
 const TYPE_BYTE_SIZE = 4
 const COIN_ID_BYTE_SIZE = START_BYTE_SIZE + TYPE_BYTE_SIZE
-const BLOCKNUMBER_BYTE_SIZE = 32
+const BLOCKNUMBER_BYTE_SIZE = 4
 // For now, include a constant which defines the total size of a transaction
 const TRANSFER_BYTE_SIZE = ADDRESS_BYTE_SIZE * 2 + TYPE_BYTE_SIZE + START_BYTE_SIZE * 2 + BLOCKNUMBER_BYTE_SIZE
-const SIGNATURE_BYTE_SIZE = 32 * 3
+const SIGNATURE_BYTE_SIZE = 1 + 32 * 2
 // DB Prefixes
 const BLOCK_TX_PREFIX = Buffer.from([255])
 const BLOCK_INDEX_PREFIX = Buffer.from([254])
