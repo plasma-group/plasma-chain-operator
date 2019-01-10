@@ -20,11 +20,13 @@ process.on('message', async (m) => {
   if (m.message.method === constants.INIT_METHOD) {
     await startup(m.message.params)
   } else if (m.message.method === constants.DEPOSIT_METHOD) {
-    await newDepositCallback(null, {
+    const deposit = await newDepositCallback(null, {
       recipient: Buffer.from(web3.utils.hexToBytes(m.message.params.recipient)),
       type: new BN(m.message.params.type, 16),
       amount: new BN(m.message.params.amount, 16)
     })
+    process.send({ id: m.id, message: deposit })
+    return
   } else {
     throw new Error('RPC method not recognized!')
   }
@@ -35,5 +37,5 @@ async function newDepositCallback (err, depositEvent) {
   if (err) {
     throw err
   }
-  state.addDeposit(depositEvent.recipient, depositEvent.type, depositEvent.amount)
+  return state.addDeposit(depositEvent.recipient, depositEvent.type, depositEvent.amount)
 }

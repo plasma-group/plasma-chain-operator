@@ -6,8 +6,8 @@ const encoder = require('plasma-utils').encoder
 const log = require('debug')('info:node')
 
 class MockNode {
-  constructor (state, account, peerList) {
-    this.state = state
+  constructor (operator, account, peerList) {
+    this.operator = operator
     this.account = account
     this.peerList = peerList
     this.ranges = []
@@ -23,7 +23,7 @@ class MockNode {
   }
 
   async deposit (coinType, amount) {
-    const deposit = await this.state.addDeposit(Buffer.from(web3.utils.hexToBytes(this.account.address)), coinType, amount)
+    const deposit = await this.operator.addDeposit(Buffer.from(web3.utils.hexToBytes(this.account.address)), coinType, amount)
     const start = new BN(utils.getCoinId(deposit.type, deposit.start))
     const end = new BN(utils.getCoinId(deposit.type, deposit.end))
     utils.addRange(this.ranges, start, end)
@@ -38,7 +38,7 @@ class MockNode {
     return [start, end]
   }
 
-  async sendRandomTransaction (maxSize) {
+  async sendRandomTransaction (blockNumber, maxSize) {
     if (this.ranges.length === 0) {
       log('got no money to send!')
       return
@@ -66,8 +66,8 @@ class MockNode {
     while (recipient === this) {
       recipient = this.peerList[Math.floor(Math.random() * this.peerList.length)]
     }
-    const tx = this.makeTx(this.account.address, recipient.account.address, type, start, end, this.state.blockNumber)
-    await this.state.addTransaction(tx)
+    const tx = this.makeTx(this.account.address, recipient.account.address, type, start, end, blockNumber)
+    await this.operator.addTransaction(tx)
     // Update ranges
     utils.subtractRange(this.ranges, startId, endId)
     recipient.pendingRanges.push([new BN(startId), new BN(endId)])

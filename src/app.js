@@ -57,7 +57,7 @@ blockManager.on('message', resolveMessage)
 app.post('/api', function (req, res) {
   if (req.body.method === constants.DEPOSIT_METHOD || req.body.method === constants.ADD_TX_METHOD) {
     sendMessage(stateManager, req.body).then((response) => {
-      res.send('POST request success from state manager')
+      res.send(response.message)
     })
   } else if (req.body.method === constants.NEW_BLOCK_METHOD) {
     sendMessage(blockManager, req.body).then((response) => {
@@ -81,7 +81,10 @@ async function startup () {
     dbDir: blockDBDir,
     txLogDir
   }))
-  app.listen(port, () => console.log('\x1b[36m%s\x1b[0m', `Operator listening on port ${port}!`))
+  log('Finished sub process startup')
+  app.listen(port, () => {
+    console.log('\x1b[36m%s\x1b[0m', `Operator listening on port ${port}!`)
+  })
 }
 startup()
 

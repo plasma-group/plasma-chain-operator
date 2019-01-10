@@ -48,7 +48,7 @@ describe('MockNode', function () {
           node.processPendingRanges()
         }
         for (const node of nodes) {
-          await node.sendRandomTransaction()
+          await node.sendRandomTransaction(state.blockNumber)
         }
       }
     })
@@ -99,7 +99,7 @@ async function loopSendRandomTxs (numTimes, state, nodes) {
   await state.startNewBlock()
   for (let i = 0; i < numTimes; i++) {
     log('Sending new set of transactions!')
-    await sendRandomTransactions(nodes, 10)
+    await sendRandomTransactions(state, nodes, 10)
   }
   await state.startNewBlock()
 }
@@ -110,14 +110,14 @@ async function mineAndLoopSendRandomTxs (numTimes, state, nodes) {
     for (const node of nodes) {
       node.processPendingRanges()
     }
-    await sendRandomTransactions(nodes)
+    await sendRandomTransactions(state, nodes)
   }
 }
 
-function sendRandomTransactions (nodes, maxSize) {
+function sendRandomTransactions (state, nodes, maxSize) {
   const promises = []
   for (const node of nodes) {
-    promises.push(node.sendRandomTransaction(maxSize))
+    promises.push(node.sendRandomTransaction(state.blockNumber, maxSize))
   }
   return Promise.all(promises)
 }

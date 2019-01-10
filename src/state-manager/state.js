@@ -166,6 +166,7 @@ class State {
       throw err
     }
     this.releaseLocks([recipient, type])
+    log('Added deposit with type:', type.toString(), 'and amount:', amount.toString())
     return depositRecord
   }
 
