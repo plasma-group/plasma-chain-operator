@@ -19,12 +19,12 @@ process.on('message', async (m) => {
   } else if (m.message.method === constants.NEW_BLOCK_METHOD) {
     const isSuccessfullyStarted = await blockStore.ingestBlock(m.message)
     if (!isSuccessfullyStarted) {
-      process.send({ id: m.id, message: 'FAIL' })
+      process.send({ ipcID: m.ipcID, message: 'FAIL' })
     }
   } else {
     throw new Error('RPC method not recognized!')
   }
-  process.send({ id: m.id, message: 'SUCESS' })
+  process.send({ ipcID: m.ipcID, message: 'SUCESS' })
 })
 
 // TODO: Add a watcher which watches the tx-log for new files and calls `blockStore.addBlock()` with the new block file every time one is added.

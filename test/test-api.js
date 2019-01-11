@@ -14,6 +14,8 @@ const expect = chai.expect
 
 chai.use(chaiHttp)
 
+let idCounter = 0
+
 // Operator object wrapper to query api
 const operator = {
   addTransaction: (tx) => {
@@ -24,6 +26,7 @@ const operator = {
         .send({
           method: constants.ADD_TX_METHOD,
           jsonrpc: '2.0',
+          id: idCounter++,
           params: {
             encodedTx
           }
@@ -32,6 +35,7 @@ const operator = {
           if (err) {
             throw err
           }
+          log('Resolve add tx')
           // Parse the response to return what the mock node expects
           const txResponse = res.body
           // Return the deposit
@@ -46,6 +50,7 @@ const operator = {
         .send({
           method: constants.DEPOSIT_METHOD,
           jsonrpc: '2.0',
+          id: idCounter++,
           params: {
             recipient: web3.utils.bytesToHex(recipient),
             type: type.toString(16),
@@ -73,12 +78,14 @@ const operator = {
         .send({
           method: constants.NEW_BLOCK_METHOD,
           jsonrpc: '2.0',
+          id: idCounter++,
           params: {}
         })
         .end((err, res) => {
           if (err) {
             throw err
           }
+          log('Resolve new block')
           resolve(res.body)
         })
     })
@@ -139,20 +146,9 @@ describe('App', function () {
         depositPromises.push(node.deposit(depositType, depositAmount))
       }
       Promise.all(depositPromises).then((res) => {
-        // Start a new block
-        log('Finished nodes depositing over http!')
         operator.startNewBlock().then((res) => {
-          const blockNumber = res.newBlockNumber
-          log('Started new block', res)
-          // Now send some transactions
-          const txPromises = []
-          for (let i = 0; i < 3; i++) {
-            for (const node of nodes) {
-              txPromises.push(node.sendRandomTransaction(new BN(blockNumber)))
-            }
-          }
-          Promise.all(txPromises).then((res) => {
-            log('Transaction sent!')
+          // Send txs!
+          mineAndLoopSendRandomTxs(3, operator, nodes).then(() => {
             done()
           })
         })
@@ -160,3 +156,35 @@ describe('App', function () {
     })
   })
 })
+
+async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
+  for (let i = 0; i < numTimes; i++) {
+    log('Starting new block...')
+    const blockNumberResponse = await operator.startNewBlock()
+    const blockNumber = new BN(blockNumberResponse.newBlockNumber)
+    log('Sending new txs for block number:', blockNumber.toString())
+    for (const node of nodes) {
+      node.processPendingRanges()
+    }
+    await sendRandomTransactions(operator, nodes, blockNumber)
+  }
+}
+
+let randomTxPromises
+let promisesAndTestIds = []
+
+function sendRandomTransactions (operator, nodes, blockNumber, rounds, maxSize) {
+  if (rounds === undefined) rounds = 1
+  randomTxPromises = []
+  for (let i = 0; i < rounds; i++) {
+    for (const node of nodes) {
+      randomTxPromises.push(node.sendRandomTransaction(blockNumber, maxSize))
+      promisesAndTestIds.push({
+        promise: randomTxPromises[randomTxPromises.length - 1],
+        id: idCounter
+      })
+    }
+  }
+  Promise.all(randomTxPromises).then(() => { promisesAndTestIds = [] })
+  return Promise.all(randomTxPromises)
+}

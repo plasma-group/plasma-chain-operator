@@ -6,6 +6,7 @@ const constants = require('../constants.js')
 const BN = web3.utils.BN
 const encoder = require('plasma-utils').encoder
 const log = require('debug')('info:state-app')
+const error = require('debug')('ERROR:state-app')
 
 // Create global state object
 let state
@@ -17,12 +18,14 @@ async function startup (options) {
 }
 
 process.on('message', async (m) => {
-  log('State got request:', m.message)
+  log('INCOMING request with method:', m.message.method, 'and rpcID:', m.message.id)
   if (m.message.method === constants.INIT_METHOD) {
     await startup(m.message.params)
+    return
   } else if (m.message.method === constants.NEW_BLOCK_METHOD) {
     const blockNumber = await state.startNewBlock()
-    process.send({ id: m.id, message: {newBlockNumber: blockNumber.toString()} })
+    log('OUTGOING new block success with rpcID:', m.message.id)
+    process.send({ ipcID: m.ipcID, message: {newBlockNumber: blockNumber.toString()} })
     return
   } else if (m.message.method === constants.DEPOSIT_METHOD) {
     const deposit = await newDepositCallback(null, {
@@ -30,18 +33,25 @@ process.on('message', async (m) => {
       type: new BN(m.message.params.type, 16),
       amount: new BN(m.message.params.amount, 16)
     })
-    process.send({ id: m.id, message: deposit })
+    log('OUTGOING new deposit with rpcID:', m.message.id)
+    process.send({ ipcID: m.ipcID, message: deposit })
     return
   } else if (m.message.method === constants.ADD_TX_METHOD) {
     // New transaction!
     const tx = new encoder.Transaction(m.message.params.encodedTx)
-    const txResponse = await state.addTransaction(tx)
-    process.send({ id: m.id, message: txResponse })
+    let txResponse
+    try {
+      const addTxResult = await state.addTransaction(tx)
+      txResponse = { result: addTxResult }
+    } catch (err) {
+      error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
+      txResponse = { error: err }
+    }
+    log('OUTGOING addTransaction response with rpcID:', m.message.id)
+    process.send({ ipcID: m.ipcID, message: txResponse })
     return
-  } else {
-    throw new Error('RPC method not recognized!')
   }
-  process.send({ id: m.id, message: 'SUCESS' })
+  throw new Error('RPC method not recognized!')
 })
 
 async function newDepositCallback (err, depositEvent) {

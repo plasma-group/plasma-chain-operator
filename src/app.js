@@ -37,7 +37,7 @@ let messageCounter = 0
 function sendMessage (process, message) {
   const deferred = defer()
   process.send({
-    id: messageCounter,
+    ipcID: messageCounter,
     message
   })
   messageQueue[messageCounter] = { resolve: deferred.resolve }
@@ -46,8 +46,9 @@ function sendMessage (process, message) {
 }
 
 function resolveMessage (m) {
-  log('Resolving message with ID', m.id)
-  messageQueue[m.id].resolve(m)
+  log('Resolving message with ipcID', m.ipcID)
+  messageQueue[m.ipcID].resolve(m)
+  delete messageQueue[m.ipcID]
 }
 
 stateManager.on('message', resolveMessage)
@@ -55,10 +56,12 @@ blockManager.on('message', resolveMessage)
 
 // Handle incoming transactions
 app.post('/api', function (req, res) {
+  log('INCOMING RPC request with method:', req.body.method, 'and rpcID:', req.body.id)
   if (req.body.method === constants.DEPOSIT_METHOD ||
       req.body.method === constants.ADD_TX_METHOD ||
       req.body.method === constants.NEW_BLOCK_METHOD) {
     sendMessage(stateManager, req.body).then((response) => {
+      log('OUTGOING response to RPC request with method:', req.body.method, 'and rpcID:', req.body.id)
       res.send(response.message)
     })
   } else if (req.body.method === 'NOT YET IMPLEMENTED') {
