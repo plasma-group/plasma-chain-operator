@@ -1,7 +1,7 @@
 /* eslint-env mocha */
 
 const fs = require('fs')
-// const chai = require('chai')
+const chai = require('chai')
 const log = require('debug')('test:info:test-block-store')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
@@ -9,8 +9,9 @@ const BlockStore = require('../../src/block-manager/block-store.js')
 const LevelDBSumTree = require('../../src/block-manager/leveldb-sum-tree.js')
 const TS = require('plasma-utils').encoder
 const DT = require('./dummy-tx-utils')
+const BN = require('web3').utils.BN
 
-// const expect = chai.expect
+const expect = chai.expect
 
 const tr1 = new TS.TR(['0x43aaDF3d5b44290385fe4193A1b13f15eF3A4FD5', '0xa12bcf1159aa01c739269391ae2d0be4037259f3', 0, 2, 3, 4])
 const tr2 = new TS.TR(['0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8', '0xa12bcf1159aa01c739269391ae2d0be4037259f4', 0, 6, 7, 5])
@@ -45,6 +46,28 @@ describe('LevelDBSumTree', function () {
     // fs.mkdirSync(txLogDirectory)
     // Create state object
     blockStore = new BlockStore(db, txLogDirectory)
+  })
+
+  it('should return 0x0000000 as blockhash if the block is empty', async () => {
+    // Ingest the required data to begin processing the block
+    const blockNumber = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    // Put a fake entry in the db to find
+    await blockStore.db.put(Buffer.from([ 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255 ]), 'this is a fake value')
+    // Create a new tree based on block 0's transactions
+    const sumTree = new LevelDBSumTree(blockStore.db)
+    await sumTree.parseLeaves(blockNumber)
+    const root = await sumTree.generateLevel(blockNumber, 0)
+    expect(new BN(root).eq(new BN(0))).to.equal(true)
+  })
+
+  it('should return 0x0000000 as blockhash even if the entire DB is empty', async () => {
+    // Ingest the required data to begin processing the block
+    const blockNumber = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    // Create a new tree based on block 0's transactions
+    const sumTree = new LevelDBSumTree(blockStore.db)
+    await sumTree.parseLeaves(blockNumber)
+    const root = await sumTree.generateLevel(blockNumber, 0)
+    expect(new BN(root).eq(new BN(0))).to.equal(true)
   })
 
   it('should generate an odd tree w/ multiple types correctly', async () => {

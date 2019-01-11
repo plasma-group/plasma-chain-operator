@@ -47,8 +47,16 @@ class LevelDBSumTree {
       // Store the min and max values which can exist for any range. This will be used as the bounds of our stream
       const minStart = Buffer.from('0'.repeat(COIN_ID_BYTE_SIZE * 2), 'hex')
       const maxEnd = Buffer.from('f'.repeat(COIN_ID_BYTE_SIZE * 2), 'hex')
+      // Store the prefix which all our transactions should have
+      const blockTxPrefix = Buffer.concat([BLOCK_TX_PREFIX, blockNumber])
       // We need special logic to handle the first leaf / transaction. Because of this, look it up independently.
-      const firstLeaf = await this.getNearest(Buffer.concat([BLOCK_TX_PREFIX, blockNumber, minStart]))
+      const firstLeaf = await this.getNearest(Buffer.concat([blockTxPrefix, minStart]))
+      // Check if this block is empty -- if the nearest
+      if (firstLeaf.key === undefined || !firstLeaf.key.slice(0, blockTxPrefix.length).equals(blockTxPrefix)) {
+        // This block appears to be empty! Return early
+        resolve()
+        return
+      }
       const firstTransaction = this.getTransactionFromLeaf(firstLeaf.value)
       // Now set the prev tx's sum start to *zero* instead of what it normally is--the previous transaction's start
       let previousTransaction = firstTransaction
@@ -168,6 +176,13 @@ class LevelDBSumTree {
     log('Starting to generate level:', level)
     const self = this
     const parentLevel = level + 1
+    // Check that there is at least one node at this level--if not it might be an empty block
+    try {
+      await this.getNode(blockNumber, level, new BN(0))
+    } catch (err) {
+      // No node found! Is this an empty block?
+      return this.emptyNode().hash
+    }
     return new Promise((resolve, reject) => {
       // Create readstream for all nodes at the previous level
       const maxEnd = new BN('f'.repeat(INDEX_BYTES_SIZE * 2), 16)
