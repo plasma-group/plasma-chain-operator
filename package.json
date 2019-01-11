@@ -7,7 +7,7 @@
     "start": "node src/app.js",
     "clean": "rm -rf db",
     "interactive": "node",
-    "test": "mocha --timeout 15000 --exit --recursive",
+    "test": "mocha --timeout 15000 --recursive",
     "test-debug": "mocha debug --timeout 15000 --recursive"
   },
   "repository": {
