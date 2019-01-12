@@ -10,6 +10,7 @@ const TRANSFER_BYTE_SIZE = require('../constants.js').TRANSFER_BYTE_SIZE
 const SIGNATURE_BYTE_SIZE = require('../constants.js').SIGNATURE_BYTE_SIZE
 const itNext = require('../utils.js').itNext
 const itEnd = require('../utils.js').itEnd
+const defer = require('../utils.js').defer
 
 class BlockStore {
   constructor (db, txLogDir) {
@@ -20,9 +21,31 @@ class BlockStore {
     this.partialChunk = null
     this.batchPromises = []
     this.blockNumberBN = new BN(-1) // Set block number to be -1 so that the first block is block 0
+    this.newBlockQueue = []
   }
 
   async addBlock (txLogFile) {
+    log('Adding new block:', txLogFile)
+    const deferred = defer()
+    this.newBlockQueue.push({ txLogFile, resolve: deferred.resolve })
+    if (this.newBlockQueue.length === 1) {
+      this._processNewBlockQueue()
+    }
+    return deferred.promise
+  }
+
+  async _processNewBlockQueue () {
+    let numBlocksProcessed
+    for (numBlocksProcessed = 0; numBlocksProcessed < this.newBlockQueue.length; numBlocksProcessed++) {
+      this.newBlockQueue[numBlocksProcessed].blockNumber = await this._processBlock(this.newBlockQueue[numBlocksProcessed].txLogFile)
+    }
+    const processedBlocks = this.newBlockQueue.splice(0, numBlocksProcessed)
+    for (const processedBlock of processedBlocks) {
+      processedBlock.resolve(processedBlock.blockNumber)
+    }
+  }
+
+  async _processBlock (txLogFile) {
     const blockNumberBN = new BN(txLogFile)
     const blockNumber = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
     if (!this.blockNumberBN.add(new BN(1)).eq(blockNumberBN)) {

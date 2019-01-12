@@ -14,7 +14,6 @@ const expect = chai.expect
 
 chai.use(chaiHttp)
 
-const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
 let idCounter = 0
 
 // Operator object wrapper to query api
@@ -134,7 +133,7 @@ describe('App', function () {
       })
     })
 
-    it('Nodes are able to deposit', (done) => {
+    it('Nodes are able to deposit and send transactions', (done) => {
       const depositType = new BN(1)
       const depositAmount = new BN(10000)
       const nodes = []
@@ -158,7 +157,6 @@ describe('App', function () {
 
 async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
   await operator.startNewBlock()
-  await timeout(100)
   for (let i = 0; i < numTimes; i++) {
     log('Starting new block...')
     const blockNumberResponse = await operator.startNewBlock()
@@ -168,7 +166,6 @@ async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
       node.processPendingRanges()
     }
     await sendRandomTransactions(operator, nodes, blockNumber)
-    await timeout(100)
   }
 }
 
