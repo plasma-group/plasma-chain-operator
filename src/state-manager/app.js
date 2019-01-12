@@ -21,6 +21,7 @@ process.on('message', async (m) => {
   log('INCOMING request with method:', m.message.method, 'and rpcID:', m.message.id)
   if (m.message.method === constants.INIT_METHOD) {
     await startup(m.message.params)
+    process.send({ ipcID: m.ipcID, message: {startup: 'SUCCESS'} })
     return
   } else if (m.message.method === constants.NEW_BLOCK_METHOD) {
     const blockNumber = await state.startNewBlock()

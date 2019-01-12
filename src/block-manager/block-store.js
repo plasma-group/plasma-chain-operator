@@ -30,6 +30,7 @@ class BlockStore {
     }
     await this.ingestBlock(blockNumber, this.txLogDir + txLogFile)
     await this.sumTree.generateTree(blockNumber)
+    this.blockNumberBN = this.blockNumberBN.addn(1)
     return blockNumber
   }
 

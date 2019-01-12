@@ -14,6 +14,7 @@ const expect = chai.expect
 
 chai.use(chaiHttp)
 
+const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
 let idCounter = 0
 
 // Operator object wrapper to query api
@@ -146,11 +147,9 @@ describe('App', function () {
         depositPromises.push(node.deposit(depositType, depositAmount))
       }
       Promise.all(depositPromises).then((res) => {
-        operator.startNewBlock().then((res) => {
-          // Send txs!
-          mineAndLoopSendRandomTxs(3, operator, nodes).then(() => {
-            done()
-          })
+        // Send txs!
+        mineAndLoopSendRandomTxs(5, operator, nodes).then(() => {
+          done()
         })
       })
     })
@@ -158,6 +157,8 @@ describe('App', function () {
 })
 
 async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
+  await operator.startNewBlock()
+  await timeout(100)
   for (let i = 0; i < numTimes; i++) {
     log('Starting new block...')
     const blockNumberResponse = await operator.startNewBlock()
@@ -167,6 +168,7 @@ async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
       node.processPendingRanges()
     }
     await sendRandomTransactions(operator, nodes, blockNumber)
+    await timeout(100)
   }
 }
 
