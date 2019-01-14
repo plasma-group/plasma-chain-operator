@@ -14,8 +14,10 @@ const stateManager = cp.fork(`${__dirname}/state-manager/app.js`)
 const blockManager = cp.fork(`${__dirname}/block-manager/app.js`)
 
 // /////////////// CONFIG ///////////////// //
+const configFile = (process.env.CONFIG) ? process.env.CONFIG : './config.json'
+const config = JSON.parse(fs.readFileSync(configFile, 'utf8'))
 const port = 3000
-const dbDir = './db'
+const dbDir = (process.env.NODE_ENV === 'test') ? config.dbDir + +new Date() : config.dbDir // Set db dir to a new db if test mode is enabled
 const txLogDir = dbDir + '/tx-log/'
 const stateDBDir = dbDir + '/state-db/'
 const blockDBDir = dbDir + '/block-db/'
