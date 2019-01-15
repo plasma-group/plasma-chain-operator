@@ -1,7 +1,7 @@
 {
   "dbDir": "./db/",
-  "plasmaRegistryAddress": "0x0000000000000000000000000000000000000000",
+  "plasmaRegistryAddress": "0x3937461e2d953C0f28d83911ffae708a26B4eE18",
   "operatorAddress": "0x0000000000000000000000000000000000000000",
   "operatorIpAddress": "0.0.0.0",
-  "web3Provider": ""
+  "web3HttpProvider": "http://localhost:8545"
 }
