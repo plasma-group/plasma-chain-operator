@@ -91,7 +91,7 @@ async function deployNewPlasmaChain (web3, config) {
 }
 
 function _addTestWalletsToWeb3 (web3) {
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 100; i++) {
     web3.eth.accounts.wallet.add(web3.utils.sha3(i.toString()))
   }
 }
