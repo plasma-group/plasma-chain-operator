@@ -6,11 +6,12 @@ const app = require('../src/app')
 const web3 = require('web3')
 const constants = require('../src/constants.js')
 const accounts = require('./mock-accounts.js').accounts
-const BN = require('../src/eth.js').utils.BN
+const BN = require('web3').utils.BN
 const log = require('debug')('test:info:test-api')
 const MockNode = require('../src/mock-node.js')
 
 const expect = chai.expect
+const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 chai.use(chaiHttp)
 
@@ -93,6 +94,11 @@ const operator = {
 }
 
 describe('App', function () {
+  before(async () => {
+    // Delay for startup to complete
+    await timeout(500)
+  })
+
   describe('/api', function () {
     it('responds with status 200', function (done) {
       chai.request(app)

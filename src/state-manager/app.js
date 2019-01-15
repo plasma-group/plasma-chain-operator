@@ -1,9 +1,9 @@
 const levelup = require('levelup')
 const leveldown = require('leveldown')
 const State = require('./state.js').State
-const web3 = require('../eth.js')
+const Web3 = require('web3')
 const constants = require('../constants.js')
-const BN = web3.utils.BN
+const BN = Web3.utils.BN
 const encoder = require('plasma-utils').encoder
 const log = require('debug')('info:state-app')
 const error = require('debug')('ERROR:state-app')
@@ -30,7 +30,7 @@ process.on('message', async (m) => {
     return
   } else if (m.message.method === constants.DEPOSIT_METHOD) {
     const deposit = await newDepositCallback(null, {
-      recipient: Buffer.from(web3.utils.hexToBytes(m.message.params.recipient)),
+      recipient: Buffer.from(Web3.utils.hexToBytes(m.message.params.recipient)),
       type: new BN(m.message.params.type, 16),
       amount: new BN(m.message.params.amount, 16)
     })

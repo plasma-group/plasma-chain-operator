@@ -16,6 +16,8 @@ const BLOCK_TX_PREFIX = Buffer.from([255])
 const BLOCK_INDEX_PREFIX = Buffer.from([254])
 const NUM_LEVELS_PREFIX = Buffer.from([253]) // The number of levels in a particular block
 const NODE_DB_PREFIX = Buffer.from([252])
+// DB
+const PLASMA_CHAIN_ADDRESS_FILENAME = 'plasma-chain-eth-address.txt'
 
 module.exports = {
   INIT_METHOD,
@@ -31,5 +33,6 @@ module.exports = {
   BLOCK_INDEX_PREFIX,
   NUM_LEVELS_PREFIX,
   NODE_DB_PREFIX,
-  SIGNATURE_BYTE_SIZE
+  SIGNATURE_BYTE_SIZE,
+  PLASMA_CHAIN_ADDRESS_FILENAME
 }

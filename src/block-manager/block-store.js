@@ -1,6 +1,6 @@
 const fs = require('fs')
 const log = require('debug')('info:block-store')
-const BN = require('../eth.js').utils.BN
+const BN = require('web3').utils.BN
 const makeBlockTxKey = require('../utils.js').makeBlockTxKey
 const LevelDBSumTree = require('./leveldb-sum-tree.js')
 const encoder = require('plasma-utils').encoder

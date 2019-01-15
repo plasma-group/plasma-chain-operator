@@ -1,5 +1,5 @@
-const web3 = require('../src/eth.js')
-const BN = web3.utils.BN
+const Web3 = require('web3')
+const BN = Web3.utils.BN
 const utils = require('../src/utils.js')
 const TYPE_BYTE_SIZE = require('../src/constants.js').TYPE_BYTE_SIZE
 const encoder = require('plasma-utils').encoder
@@ -23,7 +23,7 @@ class MockNode {
   }
 
   async deposit (coinType, amount) {
-    const deposit = await this.operator.addDeposit(Buffer.from(web3.utils.hexToBytes(this.account.address)), coinType, amount)
+    const deposit = await this.operator.addDeposit(Buffer.from(Web3.utils.hexToBytes(this.account.address)), coinType, amount)
     const start = new BN(utils.getCoinId(deposit.type, deposit.start))
     const end = new BN(utils.getCoinId(deposit.type, deposit.end))
     log('Adding range from deposit with start:', deposit.start.toString(), '- end:', deposit.end.toString())

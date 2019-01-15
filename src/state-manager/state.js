@@ -1,6 +1,6 @@
 const fs = require('fs-extra')
-const web3 = require('../eth.js')
-const BN = web3.utils.BN
+const Web3 = require('web3')
+const BN = Web3.utils.BN
 const encoder = require('plasma-utils').encoder
 const log = require('debug')('info:state')
 
@@ -154,7 +154,7 @@ class State {
     }
     // Put the updated totalDeposits and owned coin ranges
     const newTotalDeposits = oldTotalDeposits.add(amount)
-    const depositRecord = getDepositRecord(web3.utils.bytesToHex(recipient), type, oldTotalDeposits, newTotalDeposits, this.blockNumber)
+    const depositRecord = getDepositRecord(Web3.utils.bytesToHex(recipient), type, oldTotalDeposits, newTotalDeposits, this.blockNumber)
     try {
       // Put the new owned coin range and the new total deposits
       const ops = [
@@ -243,7 +243,7 @@ class State {
     const dbBatch = []
     // Begin by queuing up the deletion of all affected ranges.
     for (const arEntry of affectedRanges) {
-      const arRecipient = Buffer.from(web3.utils.hexToBytes(arEntry.decoded.recipient))
+      const arRecipient = Buffer.from(Web3.utils.hexToBytes(arEntry.decoded.recipient))
       dbBatch.push({ type: 'del', key: arEntry.key })
       dbBatch.push({ type: 'del', key: Buffer.concat([arRecipient, arEntry.key]) }) // Delete the address -> end mapping
     }
@@ -251,7 +251,7 @@ class State {
     let ar = affectedRanges[0].decoded
     if (!ar.start.eq(tr.start)) {
       // Reduce the first affected range's end position. Eg: ##### becomes ###$$
-      const arRecipient = Buffer.from(web3.utils.hexToBytes(ar.recipient))
+      const arRecipient = Buffer.from(Web3.utils.hexToBytes(ar.recipient))
       ar.end = tr.start
       dbBatch.push({ type: 'put', key: getCoinToTxKey(ar.type, ar.end), value: Buffer.from(ar.encode()) })
       dbBatch.push({ type: 'put', key: getAddressToCoinKey(arRecipient, ar.type, ar.end), value: Buffer.from([1]) })
@@ -259,13 +259,13 @@ class State {
     ar = affectedRanges[affectedRanges.length - 1].decoded
     if (!ar.end.eq(tr.end)) {
       // Increase the last affected range's start position. Eg: ##### becomes $$###
-      const arRecipient = Buffer.from(web3.utils.hexToBytes(ar.recipient))
+      const arRecipient = Buffer.from(Web3.utils.hexToBytes(ar.recipient))
       ar.start = tr.end
       dbBatch.push({ type: 'put', key: affectedRanges[affectedRanges.length - 1].key, value: Buffer.from(ar.encode()) })
       dbBatch.push({ type: 'put', key: getAddressToCoinKey(arRecipient, ar.type, ar.end), value: Buffer.from([1]) })
     }
     // Add our new transfer record
-    const trRecipient = Buffer.from(web3.utils.hexToBytes(tr.recipient))
+    const trRecipient = Buffer.from(Web3.utils.hexToBytes(tr.recipient))
     dbBatch.push({ type: 'put', key: getCoinToTxKey(tr.type, tr.end), value: Buffer.from(tr.encode()) })
     dbBatch.push({ type: 'put', key: getAddressToCoinKey(trRecipient, tr.type, tr.end), value: Buffer.from([1]) })
     // And finally apply the batch operations
@@ -299,7 +299,7 @@ class State {
       await timeout(timeoutAmt())
     }
     // Get the ranges
-    const addressBuffer = Buffer.from(web3.utils.hexToBytes(address))
+    const addressBuffer = Buffer.from(Web3.utils.hexToBytes(address))
     const it = this.db.iterator({
       gt: getAddressToCoinKey(addressBuffer, new BN(0), new BN(0))
     })

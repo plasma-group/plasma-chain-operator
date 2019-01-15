@@ -3,7 +3,7 @@
 const chai = require('chai')
 const expect = chai.expect
 const utils = require('../src/utils.js')
-const BN = require('../src/eth.js').utils.BN
+const BN = require('web3').utils.BN
 
 function bn (number) {
   return new BN(number)

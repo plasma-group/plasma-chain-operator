@@ -1,4 +1,7 @@
 {
   "dbDir": "./db/",
-  "plasmaNetworkAddress": "0x0000000000000000000000000000000000000000"
+  "plasmaRegistryAddress": "0x0000000000000000000000000000000000000000",
+  "operatorAddress": "0x0000000000000000000000000000000000000000",
+  "operatorIpAddress": "0.0.0.0",
+  "web3Provider": ""
 }

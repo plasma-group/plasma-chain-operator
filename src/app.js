@@ -6,29 +6,24 @@ const jsonrpc = require('./utils.js').jsonrpc
 const express = require('express')
 const bodyParser = require('body-parser')
 const log = require('debug')('info:api-app')
+const eth = require('./eth.js')
 
 // Set up express
 const app = express()
 // Set up child processes
-const stateManager = cp.fork(`${__dirname}/state-manager/app.js`)
-const blockManager = cp.fork(`${__dirname}/block-manager/app.js`)
+let stateManager
+let blockManager
 
 // /////////////// CONFIG ///////////////// //
 const configFile = (process.env.CONFIG) ? process.env.CONFIG : './config.json'
 const config = JSON.parse(fs.readFileSync(configFile, 'utf8'))
 const port = 3000
-const dbDir = (process.env.NODE_ENV === 'test') ? config.dbDir + +new Date() : config.dbDir // Set db dir to a new db if test mode is enabled
-const txLogDir = dbDir + '/tx-log/'
-const stateDBDir = dbDir + '/state-db/'
-const blockDBDir = dbDir + '/block-db/'
+// Set db dir to a new db if test mode is enabled
+config.dbDir = (process.env.NODE_ENV === 'test') ? config.dbDir + +new Date() : config.dbDir
+const txLogDir = config.dbDir + '/tx-log/'
+const stateDBDir = config.dbDir + '/state-db/'
+const blockDBDir = config.dbDir + '/block-db/'
 // /////////////// CONFIG ///////////////// //
-
-// Set up listeners to print messages
-const logMsg = (m) => {
-  log('PARENT got message:', m)
-}
-stateManager.on('message', logMsg)
-blockManager.on('message', logMsg)
 
 app.use(bodyParser.json())
 
@@ -53,9 +48,6 @@ function resolveMessage (m) {
   delete messageQueue[m.ipcID]
 }
 
-stateManager.on('message', resolveMessage)
-blockManager.on('message', resolveMessage)
-
 // Handle incoming transactions
 app.post('/api', function (req, res) {
   log('INCOMING RPC request with method:', req.body.method, 'and rpcID:', req.body.id)
@@ -76,18 +68,30 @@ app.post('/api', function (req, res) {
 async function startup () {
   // Begin listening for connections
   // Make a new db directory if it doesn't exist.
-  if (!fs.existsSync(dbDir)) {
+  if (!fs.existsSync(config.dbDir)) {
     log('Creating a new db directory because it does not exist')
-    fs.mkdirSync(dbDir)
+    fs.mkdirSync(config.dbDir)
   }
-  await sendMessage(stateManager, jsonrpc(constants.INIT_METHOD, {
-    dbDir: stateDBDir,
-    txLogDir
-  }))
-  await sendMessage(blockManager, jsonrpc(constants.INIT_METHOD, {
-    dbDir: blockDBDir,
-    txLogDir
-  }))
+  try {
+    // Setup web3
+    await eth.startup(config)
+    // Setup our child processes -- stateManager & blockManager
+    stateManager = cp.fork(`${__dirname}/state-manager/app.js`)
+    blockManager = cp.fork(`${__dirname}/block-manager/app.js`)
+    stateManager.on('message', resolveMessage)
+    blockManager.on('message', resolveMessage)
+    // Now send a message
+    await sendMessage(stateManager, jsonrpc(constants.INIT_METHOD, {
+      dbDir: stateDBDir,
+      txLogDir
+    }))
+    await sendMessage(blockManager, jsonrpc(constants.INIT_METHOD, {
+      dbDir: blockDBDir,
+      txLogDir
+    }))
+  } catch (err) {
+    throw err
+  }
   log('Finished sub process startup')
   app.listen(port, () => {
     console.log('\x1b[36m%s\x1b[0m', `Operator listening on port ${port}!`)
