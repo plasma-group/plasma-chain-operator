@@ -29,7 +29,7 @@ const es = {
     // Create our plasma chain es.web3 object, this will point to an existing Ethereum smart contract
     const plasmaChainAddress = fs.readFileSync(path.join(config.dbDir, PLASMA_CHAIN_ADDRESS_FILENAME), 'utf8')
     es.plasmaChain = new es.web3.eth.Contract(plasmaChainCompiled.abi, plasmaChainAddress)
-    console.log('Using Plasma Chain at address:', plasmaChainAddress)
+    console.log('Plasma Chain address:', plasmaChainAddress)
   }
 }
 
@@ -40,6 +40,7 @@ async function initializeTestingEnv (config) {
   await deployNewPlasmaRegistry(config)
   // Deploy our new Plasma Chain and save it in a file
   const plasmaContractAddress = await deployNewPlasmaChain(es.web3, config)
+  console.log('Testing mode enabled so deployed a new Plasma chain')
   fs.writeFileSync(path.join(config.dbDir, PLASMA_CHAIN_ADDRESS_FILENAME), plasmaContractAddress)
 }
 
@@ -78,8 +79,10 @@ async function initializeProdEnv (config) {
     }
     // Deploy a new Plasma Chain and save it in a file
     const plasmaContractAddress = await deployNewPlasmaChain(es.web3, config)
-    console.log('No Plasma Chain detected! Created a new one at address:', plasmaContractAddress)
+    console.log('No Plasma Chain contract detected! Created a new one at address:', plasmaContractAddress)
     fs.writeFileSync(path.join(config.dbDir, PLASMA_CHAIN_ADDRESS_FILENAME), plasmaContractAddress)
+  } else {
+    console.log('Plasma Chain contract found!')
   }
 }
 

@@ -84,7 +84,7 @@ describe('App', function () {
     // Now require eth / web3 once it's been initialized
     console.log('importing eth!')
   })
-  it.only('Nodes are able to deposit and send transactions', (done) => {
+  it.skip('Nodes are able to deposit and send transactions', (done) => {
     const depositType = new BN(0)
     const depositAmount = new BN(10000)
     const nodes = []
