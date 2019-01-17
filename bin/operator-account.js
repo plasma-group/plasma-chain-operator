@@ -16,6 +16,9 @@ program
   .option('-p, --plaintext', 'Store the private key in plaintext')
   .action(async (none, cmd) => {
     const newAccount = await createAccount(cmd.plaintext)
+    if (newAccount === undefined) {
+      return
+    }
     console.log('Created new account with address:', newAccount.address.green)
     const keystorePath = path.join(keystoreDirectory, new Date().toISOString() + '--' + newAccount.address)
     console.log('Saving encrypted account to:', keystorePath.yellow)
@@ -66,3 +69,7 @@ async function createAccount (isPlaintext) {
 }
 
 program.parse(process.argv)
+
+if (program.args.length === 1) {
+  console.log('Command not found. Try', 'operator account --help'.green, 'for more options')
+}
