@@ -32,6 +32,9 @@ program
   .action((none, cmd) => {
     let counter = 0
     fs.readdirSync(keystoreDirectory).forEach(file => {
+      if (file === '.gitignore') {
+        return
+      }
       console.log('Account #' + counter++ + ':', file.split('--')[1])
     })
   })
