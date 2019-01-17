@@ -74,5 +74,5 @@ async function createAccount (isPlaintext) {
 program.parse(process.argv)
 
 if (program.args.length === 1) {
-  console.log('Command not found. Try', 'operator account --help'.green, 'for more options')
+  console.log('Command not found. Try `' + 'operator help account'.yellow + '` for more options')
 }
