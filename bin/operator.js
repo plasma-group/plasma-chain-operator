@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 const program = require('commander')
-const appRoot = require('app-root-path')
 const colors = require('colors') // eslint-disable-line no-unused-vars
 
 program
@@ -10,6 +9,5 @@ program
   .command('start', 'start the operator')
   .command('account [cmd]', 'manage accounts')
   .action((command) => {
-    // console.log('App root:', appRoot.toString(), command)
   })
   .parse(process.argv)

@@ -13,6 +13,8 @@ const app = express()
 // Set up child processes
 let stateManager
 let blockManager
+let started = false
+const alreadyStartedError = new Error('Operator already started!')
 
 // /////////////// CONFIG ///////////////// //
 const configFile = (process.env.CONFIG) ? process.env.CONFIG : './config.json'
@@ -66,6 +68,9 @@ app.post('/api', function (req, res) {
 })
 
 async function startup () {
+  if (started) {
+    throw alreadyStartedError
+  }
   // Begin listening for connections
   // Make a new db directory if it doesn't exist.
   if (!fs.existsSync(config.dbDir)) {
@@ -96,7 +101,24 @@ async function startup () {
   app.listen(port, () => {
     console.log('\x1b[36m%s\x1b[0m', `Operator listening on port ${port}!`)
   })
+  started = true
 }
-startup()
 
-module.exports = app
+// Startup that will only run once
+async function safeStartup () {
+  try {
+    await startup()
+  } catch (err) {
+    if (err !== alreadyStartedError) {
+      // If this error is anything other than an already started error, throw it
+      throw err
+    }
+    log('Startup has already been run... skipping...')
+  }
+}
+
+module.exports = {
+  app,
+  startup,
+  safeStartup
+}

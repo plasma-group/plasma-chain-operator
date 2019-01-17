@@ -2,15 +2,13 @@
 
 const chai = require('chai')
 const chaiHttp = require('chai-http')
-const app = require('../src/app')
+const server = require('../src/server')
 const constants = require('../src/constants.js')
 const accounts = require('./mock-accounts.js').accounts
 const BN = require('web3').utils.BN
 const log = require('debug')('test:info:test-integration')
 const MockNode = require('../src/mock-node.js')
 const EthService = require('../src/eth-service.js')
-
-const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 chai.use(chaiHttp)
 
@@ -21,7 +19,7 @@ const operator = {
   addTransaction: (tx) => {
     const encodedTx = tx.encode()
     return new Promise((resolve, reject) => {
-      chai.request(app)
+      chai.request(server.app)
         .post('/api')
         .send({
           method: constants.ADD_TX_METHOD,
@@ -58,7 +56,7 @@ const operator = {
   },
   startNewBlock: () => {
     return new Promise((resolve, reject) => {
-      chai.request(app)
+      chai.request(server.app)
         .post('/api')
         .send({
           method: constants.NEW_BLOCK_METHOD,
@@ -77,10 +75,9 @@ const operator = {
   }
 }
 
-describe('App', function () {
+describe('Server', function () {
   before(async () => {
-    // Delay for startup to complete
-    await timeout(500)
+    await server.safeStartup()
     // Now require eth / web3 once it's been initialized
     console.log('importing eth!')
   })

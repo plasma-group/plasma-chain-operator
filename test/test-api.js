@@ -2,7 +2,7 @@
 
 const chai = require('chai')
 const chaiHttp = require('chai-http')
-const app = require('../src/app')
+const server = require('../src/server')
 const web3 = require('web3')
 const constants = require('../src/constants.js')
 const accounts = require('./mock-accounts.js').accounts
@@ -11,7 +11,6 @@ const log = require('debug')('test:info:test-api')
 const MockNode = require('../src/mock-node.js')
 
 const expect = chai.expect
-const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 chai.use(chaiHttp)
 
@@ -22,7 +21,7 @@ const operator = {
   addTransaction: (tx) => {
     const encodedTx = tx.encode()
     return new Promise((resolve, reject) => {
-      chai.request(app)
+      chai.request(server.app)
         .post('/api')
         .send({
           method: constants.ADD_TX_METHOD,
@@ -46,7 +45,7 @@ const operator = {
   },
   addDeposit: (recipient, type, amount) => {
     return new Promise((resolve, reject) => {
-      chai.request(app)
+      chai.request(server.app)
         .post('/api')
         .send({
           method: constants.DEPOSIT_METHOD,
@@ -74,7 +73,7 @@ const operator = {
   },
   startNewBlock: () => {
     return new Promise((resolve, reject) => {
-      chai.request(app)
+      chai.request(server.app)
         .post('/api')
         .send({
           method: constants.NEW_BLOCK_METHOD,
@@ -93,15 +92,15 @@ const operator = {
   }
 }
 
-describe('App', function () {
+describe('Server', function () {
   before(async () => {
     // Delay for startup to complete
-    await timeout(500)
+    await server.safeStartup()
   })
 
   describe('/api', function () {
     it('responds with status 200', function (done) {
-      chai.request(app)
+      chai.request(server.app)
         .post('/api')
         .send({
           method: constants.DEPOSIT_METHOD,
@@ -121,7 +120,7 @@ describe('App', function () {
     it('responds with status 200 for many requests', function (done) {
       const promises = []
       for (let i = 0; i < 100; i++) {
-        promises.push(chai.request(app)
+        promises.push(chai.request(server.app)
           .post('/api')
           .send({
             method: constants.DEPOSIT_METHOD,
