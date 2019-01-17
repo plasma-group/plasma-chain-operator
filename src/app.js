@@ -6,7 +6,7 @@ const jsonrpc = require('./utils.js').jsonrpc
 const express = require('express')
 const bodyParser = require('body-parser')
 const log = require('debug')('info:api-app')
-const eth = require('./eth.js')
+const EthService = require('./eth-service.js')
 
 // Set up express
 const app = express()
@@ -74,7 +74,7 @@ async function startup () {
   }
   try {
     // Setup web3
-    await eth.startup(config)
+    await EthService.startup(config)
     // Setup our child processes -- stateManager & blockManager
     stateManager = cp.fork(`${__dirname}/state-manager/app.js`)
     blockManager = cp.fork(`${__dirname}/block-manager/app.js`)
