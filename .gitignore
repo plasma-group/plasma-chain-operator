@@ -3,6 +3,7 @@ db
 db-test
 history-db
 state-db
+keystore
 
 # Vim
 *.swp
