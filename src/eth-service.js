@@ -18,8 +18,13 @@ const es = {
   startup: async (config) => {
     // TODO: Remove this and replace with proper account management
     es.web3 = new Web3()
-    _addTestWalletsToWeb3(es.web3)
+    if (config.privateKey !== undefined) {
+      es.web3.eth.accounts.wallet.add(config.privateKey)
+    } else {
+      _addTestWalletsToWeb3(es.web3)
+    }
     es.operatorAddress = es.web3.eth.accounts.wallet[0].address
+    console.log('Operator address:', es.operatorAddress)
     // Check if we are in test mode
     if (process.env.NODE_ENV === 'test') {
       await initializeTestingEnv(config)
@@ -40,7 +45,7 @@ async function initializeTestingEnv (config) {
   await deployNewPlasmaRegistry(config)
   // Deploy our new Plasma Chain and save it in a file
   const plasmaContractAddress = await deployNewPlasmaChain(es.web3, config)
-  console.log('Testing mode enabled so deployed a new Plasma chain')
+  console.log('Testing mode enabled so deployed a new Plasma Registry & Plasma Chain')
   fs.writeFileSync(path.join(config.ethDBDir, PLASMA_CHAIN_ADDRESS_FILENAME), plasmaContractAddress)
 }
 

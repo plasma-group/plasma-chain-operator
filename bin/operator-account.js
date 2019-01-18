@@ -15,15 +15,22 @@ program
   .description('creates a new account')
   .option('-p, --plaintext', 'Store the private key in plaintext')
   .action(async (none, cmd) => {
+    if (!fs.existsSync(keystoreDirectory)) {
+      fs.mkdirSync(keystoreDirectory)
+    }
+    // Check that there are no accounts already -- no reason to have more than one operator account
+    const accounts = fs.readdirSync(keystoreDirectory)
+    if (accounts.length) {
+      console.log('Account already created! Try starting the operator with `operator start`')
+      return
+    }
+    // There are no accounts so create one!
     const newAccount = await createAccount(cmd.plaintext)
     if (newAccount === undefined) {
       return
     }
     console.log('Created new account with address:', newAccount.address.green)
     const keystorePath = path.join(keystoreDirectory, new Date().toISOString() + '--' + newAccount.address)
-    if (!fs.existsSync(keystoreDirectory)) {
-      fs.mkdirSync(keystoreDirectory)
-    }
     console.log('Saving encrypted account to:', keystorePath.yellow)
     fs.writeFileSync(keystorePath, newAccount.keystoreFile)
     // Create new password file
@@ -34,10 +41,11 @@ program
   .description('list all accounts')
   .action((none, cmd) => {
     let counter = 0
+    if (!fs.existsSync(keystoreDirectory)) {
+      console.log('No accounts found!')
+      return
+    }
     fs.readdirSync(keystoreDirectory).forEach(file => {
-      if (file === '.gitignore') {
-        return
-      }
       console.log('Account #' + counter++ + ':', file.split('--')[1])
     })
   })
