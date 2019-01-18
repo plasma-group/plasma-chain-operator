@@ -7,6 +7,7 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const log = require('debug')('info:api-app')
 const EthService = require('./eth-service.js')
+const appRoot = require('app-root-path')
 
 // Set up express
 const app = express()
@@ -15,17 +16,6 @@ let stateManager
 let blockManager
 let started = false
 const alreadyStartedError = new Error('Operator already started!')
-
-// /////////////// CONFIG ///////////////// //
-const configFile = (process.env.CONFIG) ? process.env.CONFIG : './config.json'
-const config = JSON.parse(fs.readFileSync(configFile, 'utf8'))
-const port = 3000
-// Set db dir to a new db if test mode is enabled
-config.dbDir = (process.env.NODE_ENV === 'test') ? config.dbDir + +new Date() : config.dbDir
-const txLogDir = config.dbDir + '/tx-log/'
-const stateDBDir = config.dbDir + '/state-db/'
-const blockDBDir = config.dbDir + '/block-db/'
-// /////////////// CONFIG ///////////////// //
 
 app.use(bodyParser.json())
 
@@ -67,7 +57,7 @@ app.post('/api', function (req, res) {
   }
 })
 
-async function startup () {
+async function startup (config) {
   if (started) {
     throw alreadyStartedError
   }
@@ -76,38 +66,39 @@ async function startup () {
   if (!fs.existsSync(config.dbDir)) {
     log('Creating a new db directory because it does not exist')
     fs.mkdirSync(config.dbDir)
+    fs.mkdirSync(config.ethDBDir)
   }
   try {
     // Setup web3
     await EthService.startup(config)
     // Setup our child processes -- stateManager & blockManager
-    stateManager = cp.fork(`${__dirname}/state-manager/app.js`)
-    blockManager = cp.fork(`${__dirname}/block-manager/app.js`)
+    stateManager = cp.fork(appRoot + '/src/state-manager/app.js')
+    blockManager = cp.fork(appRoot + '/src/block-manager/app.js')
     stateManager.on('message', resolveMessage)
     blockManager.on('message', resolveMessage)
     // Now send a message
     await sendMessage(stateManager, jsonrpc(constants.INIT_METHOD, {
-      dbDir: stateDBDir,
-      txLogDir
+      stateDBDir: config.stateDBDir,
+      txLogDir: config.txLogDir
     }))
     await sendMessage(blockManager, jsonrpc(constants.INIT_METHOD, {
-      dbDir: blockDBDir,
-      txLogDir
+      blockDBDir: config.blockDBDir,
+      txLogDir: config.txLogDir
     }))
   } catch (err) {
     throw err
   }
   log('Finished sub process startup')
-  app.listen(port, () => {
-    console.log('\x1b[36m%s\x1b[0m', `Operator listening on port ${port}!`)
+  app.listen(config.port, () => {
+    console.log('\x1b[36m%s\x1b[0m', `Operator listening on port ${config.port}!`)
   })
   started = true
 }
 
 // Startup that will only run once
-async function safeStartup () {
+async function safeStartup (config) {
   try {
-    await startup()
+    await startup(config)
   } catch (err) {
     if (err !== alreadyStartedError) {
       // If this error is anything other than an already started error, throw it

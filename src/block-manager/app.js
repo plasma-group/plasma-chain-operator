@@ -10,7 +10,7 @@ let blockStore
 
 async function startup (options) {
   log('Starting block manager')
-  const db = levelup(leveldown(options.dbDir))
+  const db = levelup(leveldown(options.blockDBDir))
   blockStore = new BlockStore(db, options.txLogDir)
   // Add a watcher which watches the tx-log for new files and calls `blockStore.addBlock()` with the new block file every time one is added.
   fs.watch(options.txLogDir, { encoding: 'utf8' }, async (eventType, filename) => {

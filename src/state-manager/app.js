@@ -12,7 +12,7 @@ const error = require('debug')('ERROR:state-app')
 let state
 
 async function startup (options) {
-  const db = levelup(leveldown(options.dbDir))
+  const db = levelup(leveldown(options.stateDBDir))
   state = new State(db, options.txLogDir)
   await state.init()
 }

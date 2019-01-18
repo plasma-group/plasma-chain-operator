@@ -18,6 +18,7 @@ const NUM_LEVELS_PREFIX = Buffer.from([253]) // The number of levels in a partic
 const NODE_DB_PREFIX = Buffer.from([252])
 // DB
 const PLASMA_CHAIN_ADDRESS_FILENAME = 'plasma-chain-eth-address.txt'
+const TEST_DB_DIR = './db-test/'
 
 module.exports = {
   INIT_METHOD,
@@ -34,5 +35,6 @@ module.exports = {
   NUM_LEVELS_PREFIX,
   NODE_DB_PREFIX,
   SIGNATURE_BYTE_SIZE,
-  PLASMA_CHAIN_ADDRESS_FILENAME
+  PLASMA_CHAIN_ADDRESS_FILENAME,
+  TEST_DB_DIR
 }

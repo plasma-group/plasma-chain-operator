@@ -3,5 +3,6 @@
   "plasmaRegistryAddress": "0x0000000000000000000000000000000000000000",
   "operatorAddress": "0x0000000000000000000000000000000000000000",
   "operatorIpAddress": "0.0.0.0",
+  "port": "3000",
   "web3Provider": ""
 }

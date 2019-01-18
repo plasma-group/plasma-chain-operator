@@ -9,6 +9,9 @@ const BN = require('web3').utils.BN
 const log = require('debug')('test:info:test-integration')
 const MockNode = require('../src/mock-node.js')
 const EthService = require('../src/eth-service.js')
+const appRoot = require('app-root-path')
+const readConfigFile = require('../src/utils.js').readConfigFile
+const path = require('path')
 
 chai.use(chaiHttp)
 
@@ -77,9 +80,10 @@ const operator = {
 
 describe('Server', function () {
   before(async () => {
-    await server.safeStartup()
-    // Now require eth / web3 once it's been initialized
-    console.log('importing eth!')
+    // Startup with test config file
+    const configFile = path.join(appRoot.toString(), 'test', 'config-test.json')
+    const config = readConfigFile(configFile, 'test')
+    await server.safeStartup(config)
   })
   it.skip('Nodes are able to deposit and send transactions', (done) => {
     const depositType = new BN(0)

@@ -1,6 +1,8 @@
 const START_BYTE_SIZE = require('./constants.js').START_BYTE_SIZE
 const TYPE_BYTE_SIZE = require('./constants.js').TYPE_BYTE_SIZE
 const BLOCK_TX_PREFIX = require('./constants.js').BLOCK_TX_PREFIX
+const TEST_DB_DIR = require('./constants.js').TEST_DB_DIR
+const fs = require('fs')
 const _ = require('lodash')
 
 function addRange (rangeList, start, end, numSize) {
@@ -131,6 +133,28 @@ function makeBlockTxKey (blockNumber, type, start) {
   return Buffer.concat([BLOCK_TX_PREFIX, blockNumber, getCoinId(type, start)])
 }
 
+function readConfigFile (configFilePath, mode) {
+  const config = JSON.parse(fs.readFileSync(configFilePath, 'utf8'))
+  const setIfUndefined = (config, key, value) => {
+    if (config[key] === undefined) {
+      config[key] = value
+    }
+  }
+  if (mode === 'test') {
+    config.dbDir = _generateNewDbTestDir()
+  }
+  // Set db sub directories defaults if they don't exist
+  setIfUndefined(config, 'txLogDir', config.dbDir + '/tx-log/')
+  setIfUndefined(config, 'stateDBDir', config.dbDir + '/state-db/')
+  setIfUndefined(config, 'blockDBDir', config.dbDir + '/block-db/')
+  setIfUndefined(config, 'ethDBDir', config.dbDir + '/eth-db/')
+  return config
+}
+
+function _generateNewDbTestDir () {
+  return TEST_DB_DIR + +new Date()
+}
+
 module.exports = {
   addRange,
   subtractRange,
@@ -139,5 +163,6 @@ module.exports = {
   itNext,
   itEnd,
   getCoinId,
+  readConfigFile,
   makeBlockTxKey
 }

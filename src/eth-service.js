@@ -27,7 +27,7 @@ const es = {
       await initializeProdEnv(config)
     }
     // Create our plasma chain es.web3 object, this will point to an existing Ethereum smart contract
-    const plasmaChainAddress = fs.readFileSync(path.join(config.dbDir, PLASMA_CHAIN_ADDRESS_FILENAME), 'utf8')
+    const plasmaChainAddress = fs.readFileSync(path.join(config.ethDBDir, PLASMA_CHAIN_ADDRESS_FILENAME), 'utf8')
     es.plasmaChain = new es.web3.eth.Contract(plasmaChainCompiled.abi, plasmaChainAddress)
     console.log('Plasma Chain address:', plasmaChainAddress)
   }
@@ -41,7 +41,7 @@ async function initializeTestingEnv (config) {
   // Deploy our new Plasma Chain and save it in a file
   const plasmaContractAddress = await deployNewPlasmaChain(es.web3, config)
   console.log('Testing mode enabled so deployed a new Plasma chain')
-  fs.writeFileSync(path.join(config.dbDir, PLASMA_CHAIN_ADDRESS_FILENAME), plasmaContractAddress)
+  fs.writeFileSync(path.join(config.ethDBDir, PLASMA_CHAIN_ADDRESS_FILENAME), plasmaContractAddress)
 }
 
 async function deployNewPlasmaRegistry (config) {
@@ -70,7 +70,7 @@ async function initializeProdEnv (config) {
     console.log('Deployed new registry to address:', config.plasmaRegistryAddress, '--save this in your config')
   }
   // Check if we have a Plasma Contract already deployed
-  const plasmaChainAddressPath = path.join(config.dbDir, PLASMA_CHAIN_ADDRESS_FILENAME)
+  const plasmaChainAddressPath = path.join(config.ethDBDir, PLASMA_CHAIN_ADDRESS_FILENAME)
   if (!fs.existsSync(plasmaChainAddressPath)) {
     // Check that the plasma registry was deployed
     const plasmaRegistryCode = await es.web3.eth.getCode(config.plasmaRegistryAddress)
@@ -80,7 +80,7 @@ async function initializeProdEnv (config) {
     // Deploy a new Plasma Chain and save it in a file
     const plasmaContractAddress = await deployNewPlasmaChain(es.web3, config)
     console.log('No Plasma Chain contract detected! Created a new one at address:', plasmaContractAddress)
-    fs.writeFileSync(path.join(config.dbDir, PLASMA_CHAIN_ADDRESS_FILENAME), plasmaContractAddress)
+    fs.writeFileSync(path.join(config.ethDBDir, PLASMA_CHAIN_ADDRESS_FILENAME), plasmaContractAddress)
   } else {
     console.log('Plasma Chain contract found!')
   }
