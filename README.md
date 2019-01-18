@@ -1,5 +1,5 @@
-# Plasma Prime Operator
-An operator for Plasma prime. Functionality includes:
+# Plasma Operator
+An operator for Plasma. Functionality includes:
 
 1. Transaction validity checking.
 2. Transaction log creation.
