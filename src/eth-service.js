@@ -5,7 +5,9 @@ const plasmaRegistryCompiled = require('plasma-contracts').plasmaRegistryCompile
 const Web3 = require('web3')
 const ganache = require('ganache-cli')
 const log = require('debug')('info:eth')
-const PLASMA_CHAIN_ADDRESS_FILENAME = require('./constants.js').PLASMA_CHAIN_ADDRESS_FILENAME
+const ETH_DB_FILENAME = require('./constants.js').ETH_DB_FILENAME
+
+const DEPLOY_REGISTRY = 'DEPLOY'
 
 // ES short for EthService
 // `web3` & `plasmaChain` start as uninitialized because the startup script must be run before we can interact meaningfully with our node
@@ -13,29 +15,55 @@ const es = {
   web3: 'UNINITIALIZED',
   plasmaChain: 'UNINITIALIZED',
   operatorAddress: 'UNINITIALIZED',
+  ethDB: {}
+}
 
-  // Startup function called to initialize everything
-  startup: async (config) => {
-    // TODO: Remove this and replace with proper account management
-    es.web3 = new Web3()
-    if (config.privateKey !== undefined) {
-      es.web3.eth.accounts.wallet.add(config.privateKey)
-    } else {
-      _addTestWalletsToWeb3(es.web3)
-    }
-    es.operatorAddress = es.web3.eth.accounts.wallet[0].address
-    console.log('Operator address:', es.operatorAddress)
-    // Check if we are in test mode
-    if (process.env.NODE_ENV === 'test') {
-      await initializeTestingEnv(config)
-    } else {
-      await initializeProdEnv(config)
-    }
-    // Create our plasma chain es.web3 object, this will point to an existing Ethereum smart contract
-    const plasmaChainAddress = fs.readFileSync(path.join(config.ethDBDir, PLASMA_CHAIN_ADDRESS_FILENAME), 'utf8')
-    es.plasmaChain = new es.web3.eth.Contract(plasmaChainCompiled.abi, plasmaChainAddress)
-    console.log('Plasma Chain address:', plasmaChainAddress)
+// Startup function called to initialize everything
+async function startup (config) {
+  es.web3 = new Web3()
+  // Initalize our wallet
+  initializeWallet(es.web3, config.privateKey)
+  // Load the ethDB database
+  es.ethDB = loadEthDB(config)
+  // Check if we are in test mode
+  if (process.env.NODE_ENV === 'test') {
+    await initializeTestingEnv(config)
+  } else {
+    await initializeProdEnv(config)
   }
+  // Create our plasma chain es.web3 object, this will point to an existing Ethereum smart contract
+  es.plasmaChain = new es.web3.eth.Contract(plasmaChainCompiled.abi, es.ethDB.plasmaChainAddress)
+  console.log('Plasma Registry address:', es.ethDB.plasmaRegistryAddress.yellow)
+  console.log('Plasma Chain address:', es.ethDB.plasmaChainAddress.yellow)
+}
+
+function loadEthDB (config) {
+  const ethDBPath = path.join(config.ethDBDir, ETH_DB_FILENAME)
+  let ethDB = {}
+  if (fs.existsSync(ethDBPath)) {
+    // Load the db if it exists
+    ethDB = JSON.parse(fs.readFileSync(ethDBPath, 'utf8'))
+  }
+  if (config.plasmaRegistryAddress !== undefined) {
+    ethDB.plasmaRegistryAddress = config.plasmaRegistryAddress
+  }
+  return ethDB
+}
+
+function writeEthDB (config, ethDB) {
+  fs.writeFileSync(path.join(config.ethDBDir, ETH_DB_FILENAME), JSON.stringify(ethDB))
+}
+
+function initializeWallet (web3, privateKey) {
+  if (privateKey !== undefined) {
+    es.web3.eth.accounts.wallet.add(privateKey)
+  } else if (process.env.NODE_ENV === 'test') {
+    _addTestWalletsToWeb3(es.web3) // If we are in test mode & there is no private key, add some fake private keys
+  } else {
+    throw new Error('No private key specified!')
+  }
+  es.operatorAddress = es.web3.eth.accounts.wallet[0].address
+  console.log('Operator address:', es.operatorAddress.yellow)
 }
 
 async function initializeTestingEnv (config) {
@@ -44,9 +72,9 @@ async function initializeTestingEnv (config) {
   // Deploy a new Plasma Registry
   await deployNewPlasmaRegistry(config)
   // Deploy our new Plasma Chain and save it in a file
-  const plasmaContractAddress = await deployNewPlasmaChain(es.web3, config)
+  es.ethDB.plasmaChainAddress = await deployNewPlasmaChain(es.web3, config)
   console.log('Testing mode enabled so deployed a new Plasma Registry & Plasma Chain')
-  fs.writeFileSync(path.join(config.ethDBDir, PLASMA_CHAIN_ADDRESS_FILENAME), plasmaContractAddress)
+  writeEthDB(config, es.ethDB)
 }
 
 async function deployNewPlasmaRegistry (config) {
@@ -56,10 +84,11 @@ async function deployNewPlasmaRegistry (config) {
   const plasmaRegistryCt = new es.web3.eth.Contract(plasmaRegistryCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 3500000, gasPrice: '300000'})
   // To set up the Plasma Network, we need to first deploy a Plasma Chain contract
   const plasmaChain = await plasmaChainCt.deploy({ data: plasmaChainCompiled.bytecode }).send()
-  // Finally deploy the Plasma Registry and save the address in our config
+  // Finally deploy the Plasma Registry and save the address in our ethDB
   const plasmaRegistry = await plasmaRegistryCt.deploy({ data: plasmaRegistryCompiled.bytecode }).send()
-  config.plasmaRegistryAddress = plasmaRegistry.options.address
-  log('Deployed a Plasma Registry at', config.plasmaRegistryAddress)
+  es.ethDB.plasmaRegistryAddress = plasmaRegistry.options.address
+  writeEthDB(config, es.ethDB)
+  log('Deployed a Plasma Registry at', es.ethDB.plasmaRegistryAddress)
   // Initialize the registry
   await plasmaRegistry.methods.initializeRegistry(plasmaChain.options.address).send()
 }
@@ -69,31 +98,33 @@ async function initializeProdEnv (config) {
     throw new Error('Web3 provider undefined!')
   }
   es.web3.setProvider(new Web3.providers.HttpProvider(config.web3HttpProvider))
-  // Check if we need to deploy a new Plasma registry. TODO: Save the deployed registry address automatically
-  if (config.plasmaRegistryAddress === 'NONE') {
+  // Check if we need to deploy a new Plasma registry.
+  if (es.ethDB.plasmaRegistryAddress === DEPLOY_REGISTRY) {
+    console.log('Deploying new registry...'.green)
     await deployNewPlasmaRegistry(config)
-    console.log('Deployed new registry to address:', config.plasmaRegistryAddress, '--save this in your config')
+    log('New registry at address:', es.ethDB.plasmaRegistryAddress)
+    es.ethDB.plasmaChainAddress = undefined
   }
-  // Check if we have a Plasma Contract already deployed
-  const plasmaChainAddressPath = path.join(config.ethDBDir, PLASMA_CHAIN_ADDRESS_FILENAME)
-  if (!fs.existsSync(plasmaChainAddressPath)) {
+  // Check if we need to deploy a new Plasma Chain
+  if (es.ethDB.plasmaChainAddress === undefined) {
     // Check that the plasma registry was deployed
-    const plasmaRegistryCode = await es.web3.eth.getCode(config.plasmaRegistryAddress)
+    const plasmaRegistryCode = await es.web3.eth.getCode(es.ethDB.plasmaRegistryAddress)
     if (plasmaRegistryCode === '0x') {
-      throw new Error('No plasma registry found at address: ' + config.plasmaRegistryAddress)
+      throw new Error('No plasma registry found at address: ' + es.ethDB.plasmaRegistryAddress)
     }
     // Deploy a new Plasma Chain and save it in a file
-    const plasmaContractAddress = await deployNewPlasmaChain(es.web3, config)
-    console.log('No Plasma Chain contract detected! Created a new one at address:', plasmaContractAddress)
-    fs.writeFileSync(path.join(config.ethDBDir, PLASMA_CHAIN_ADDRESS_FILENAME), plasmaContractAddress)
+    es.ethDB.plasmaChainAddress = await deployNewPlasmaChain(es.web3, config)
+    console.log('No Plasma Chain contract detected! Deploying an new one...'.green)
+    log('Deployed Plasma Chain to address:', es.ethDB.plasmaChainAddress)
+    writeEthDB(config, es.ethDB)
   } else {
-    console.log('Plasma Chain contract found!')
+    console.log('Plasma Chain contract already deployed. Skipping deployment...'.green)
   }
 }
 
 async function deployNewPlasmaChain (web3, config) {
   // We have the compiled contracts, let's create objects for them...
-  const plasmaRegistry = new web3.eth.Contract(plasmaRegistryCompiled.abi, config.plasmaRegistryAddress)
+  const plasmaRegistry = new web3.eth.Contract(plasmaRegistryCompiled.abi, es.ethDB.plasmaRegistryAddress)
   const createPChainReciept = await plasmaRegistry.methods.createPlasmaChain(es.operatorAddress, Buffer.from(config.operatorIpAddress)).send({ from: es.operatorAddress, gas: 3500000, gasPrice: '300000' })
   const newPlasmaChainAddress = createPChainReciept.events.NewPlasmaChain.returnValues['0']
   log('Deployed a Plasma Chain at', newPlasmaChainAddress)
@@ -101,6 +132,7 @@ async function deployNewPlasmaChain (web3, config) {
 }
 
 function _addTestWalletsToWeb3 (web3) {
+  log('Filling wallet with test private keys')
   for (let i = 0; i < 100; i++) {
     web3.eth.accounts.wallet.add(web3.utils.sha3(i.toString()))
   }
@@ -120,5 +152,8 @@ function _setupTestProvider (web3) {
   // TODO: Remove this as it is squashing errors. See https://github.com/ethereum/web3.js/issues/1648
   web3.currentProvider.setMaxListeners(300)
 }
+
+// Set functions which we will export as well
+es.startup = startup
 
 module.exports = es

@@ -17,7 +17,7 @@ const BLOCK_INDEX_PREFIX = Buffer.from([254])
 const NUM_LEVELS_PREFIX = Buffer.from([253]) // The number of levels in a particular block
 const NODE_DB_PREFIX = Buffer.from([252])
 // DB
-const PLASMA_CHAIN_ADDRESS_FILENAME = 'plasma-chain-eth-address.txt'
+const ETH_DB_FILENAME = 'eth-config.json'
 const TEST_DB_DIR = './db-test/'
 
 module.exports = {
@@ -35,6 +35,6 @@ module.exports = {
   NUM_LEVELS_PREFIX,
   NODE_DB_PREFIX,
   SIGNATURE_BYTE_SIZE,
-  PLASMA_CHAIN_ADDRESS_FILENAME,
+  ETH_DB_FILENAME,
   TEST_DB_DIR
 }
