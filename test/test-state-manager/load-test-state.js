@@ -17,14 +17,10 @@ let state
 
 const operator = {
   addDeposit: (address, tokenType, amount) => {
-    // console.log('adding deposit')
-    const result = state.addDeposit(address, tokenType, amount)
-    return result
+    return state.addDeposit(address, tokenType, amount)
   },
   addTransaction: (tx) => {
-    // console.log('adding tx')
-    // return state.addTransaction(tx)
-    return state._addTransaction(tx)
+    return state.addTransaction(tx)
   }
 }
 
@@ -121,7 +117,6 @@ function sendRandomTransactions (operator, nodes, blockNumber, rounds, maxSize) 
   const randomTxPromises = []
   for (let i = 0; i < rounds; i++) {
     for (const node of nodes) {
-      debugger
       randomTxPromises.push(node.sendRandomTransaction(blockNumber, maxSize))
     }
     log('Starting round:', i)

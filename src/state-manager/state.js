@@ -7,7 +7,6 @@ const UnsignedTransaction = models.UnsignedTransaction
 const SignedTransaction = models.SignedTransaction
 const itNext = require('../utils.js').itNext
 const itEnd = require('../utils.js').itEnd
-const defer = require('../utils.js').defer
 
 const COIN_ID_PREFIX = require('../constants.js').COIN_ID_PREFIX
 const ADDRESS_PREFIX = require('../constants.js').ADDRESS_PREFIX
@@ -68,9 +67,6 @@ class State {
     this.txLogDirectory = txLogDirectory
     this.tmpTxLogFile = this.txLogDirectory + 'tmp-tx-log.bin'
     this.lock = {}
-    this.numTxsAdded = 0
-    this.numTxsQueued = 0
-    this.txQueue = []
   }
 
   async init () {
@@ -279,34 +275,6 @@ class State {
   }
 
   async addTransaction (tx) {
-    while (this.txQueue.length > 10000) {
-      await timeout(100)
-    }
-    const deferred = defer()
-    this.txQueue.push({
-      transaction: tx,
-      resolve: deferred.resolve
-    })
-    this.numTxsQueued++
-    log('Processing queue')
-    if (this.txQueue.length === 1) {
-      this._processTxQueue()
-    }
-    return deferred.promise
-  }
-
-  async _processTxQueue () {
-    let numTxsProcessed
-    for (numTxsProcessed = 0; numTxsProcessed < this.txQueue.length; numTxsProcessed++) {
-      this.txQueue[numTxsProcessed].result = await this._addTransaction(this.txQueue[numTxsProcessed].transaction)
-    }
-    const processedTxs = this.txQueue.splice(0, numTxsProcessed)
-    for (const processedTx of processedTxs) {
-      processedTx.resolve(processedTx.blockNumber)
-    }
-  }
-
-  async _addTransaction (tx) {
     // Check that the transaction is well formatted
     this.validateTransaction(tx)
     // Acquire lock on all of the transfer record senders
@@ -325,7 +293,6 @@ class State {
     }
     this.releaseTransactionLock(tx)
     log('Added transaction from:')
-    this.numTxsAdded++
     return true
   }
 
