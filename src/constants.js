@@ -12,6 +12,10 @@ const BLOCKNUMBER_BYTE_SIZE = 4
 const TRANSFER_BYTE_SIZE = ADDRESS_BYTE_SIZE * 2 + TYPE_BYTE_SIZE + START_BYTE_SIZE * 2 + BLOCKNUMBER_BYTE_SIZE
 const SIGNATURE_BYTE_SIZE = 1 + 32 * 2
 // DB Prefixes
+//   State Manager
+const COIN_ID_PREFIX = Buffer.from([128])
+const ADDRESS_PREFIX = Buffer.from([127])
+//   Block Manager
 const BLOCK_TX_PREFIX = Buffer.from([255])
 const BLOCK_INDEX_PREFIX = Buffer.from([254])
 const NUM_LEVELS_PREFIX = Buffer.from([253]) // The number of levels in a particular block
@@ -30,6 +34,8 @@ module.exports = {
   COIN_ID_BYTE_SIZE,
   BLOCKNUMBER_BYTE_SIZE,
   TRANSFER_BYTE_SIZE,
+  COIN_ID_PREFIX,
+  ADDRESS_PREFIX,
   BLOCK_TX_PREFIX,
   BLOCK_INDEX_PREFIX,
   NUM_LEVELS_PREFIX,

@@ -7,19 +7,22 @@ const levelup = require('levelup')
 const leveldown = require('leveldown')
 const BlockStore = require('../../src/block-manager/block-store.js')
 const LevelDBSumTree = require('../../src/block-manager/leveldb-sum-tree.js')
-const TS = require('plasma-utils').encoder
+const models = require('plasma-utils').serialization.models
+const Transfer = models.Transfer
+const Signature = models.Signature
+const SignedTransaction = models.SignedTransaction
+const BN = require('bn.js')
 const DT = require('./dummy-tx-utils')
-const BN = require('web3').utils.BN
 
 const expect = chai.expect
 
-const tr1 = new TS.TR(['0x43aaDF3d5b44290385fe4193A1b13f15eF3A4FD5', '0xa12bcf1159aa01c739269391ae2d0be4037259f3', 0, 2, 3, 4])
-const tr2 = new TS.TR(['0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8', '0xa12bcf1159aa01c739269391ae2d0be4037259f4', 0, 6, 7, 5])
-const tr3 = new TS.TR(['0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8', '0xa12bcf1159aa01c739269391ae2d0be4037259f4', 1, 100, 108, 5])
-const sig = new TS.Sig([0, 56789, 901234])
-const TX1 = new TS.Transaction([tr1], [sig])
-const TX2 = new TS.Transaction([tr2], [sig])
-const TX3 = new TS.Transaction([tr3], [sig])
+const tr1 = new Transfer({sender: '0x43aaDF3d5b44290385fe4193A1b13f15eF3A4FD5', recipient: '0xa12bcf1159aa01c739269391ae2d0be4037259f3', token: 0, start: 2, end: 3})
+const tr2 = new Transfer({sender: '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8', recipient: '0xa12bcf1159aa01c739269391ae2d0be4037259f4', token: 0, start: 6, end: 7})
+const tr3 = new Transfer({sender: '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8', recipient: '0xa12bcf1159aa01c739269391ae2d0be4037259f4', token: 1, start: 100, end: 108})
+const sig = new Signature({v: '0a', r: 'd693b532a80fed6392b428604171fb32fdbf953728a3a7ecc7d4062b1652c042', s: 'd693b532a80fed6392b428604171fb32fdbf953728a3a7ecc7d4062b1652c042'})
+const TX1 = new SignedTransaction({block: new BN(4), transfers: [tr1], signatures: [sig]})
+const TX2 = new SignedTransaction({block: new BN(5), transfers: [tr2], signatures: [sig]})
+const TX3 = new SignedTransaction({block: new BN(5), transfers: [tr3], signatures: [sig]})
 TX1.TRIndex = TX2.TRIndex = TX3.TRIndex = 0
 
 function getTxBundle (txs) {

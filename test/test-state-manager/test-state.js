@@ -10,25 +10,34 @@ const BN = web3.utils.BN
 const State = require('../../src/state-manager/state.js')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
-const encoder = require('plasma-utils').encoder
+const models = require('plasma-utils').serialization.models
+const Transfer = models.Transfer
+const Signature = models.Signature
+const SignedTransaction = models.SignedTransaction
 const log = require('debug')('test:info:test-state')
 
 const expect = chai.expect
 
 chai.use(chaiHttp)
 
-function makeTx (rawTrs, rawSigs) {
+const fakeSig = {
+  v: '1b',
+  r: '0000000000000000000000000000000000000000000000000000000000000000',
+  s: '0000000000000000000000000000000000000000000000000000000000000000'
+}
+
+function makeTx (rawTrs, rawSigs, block) {
   const trs = []
   const sigs = []
   for (let i = 0; i < rawTrs.length; i++) {
-    trs.push(new encoder.TR(rawTrs[i]))
-    sigs.push(new encoder.Sig(rawSigs[i]))
+    trs.push(new Transfer(rawTrs[i]))
+    sigs.push(new Signature(rawSigs[i]))
   }
-  const tx = new encoder.Transaction(trs, sigs)
+  const tx = new SignedTransaction({transfers: trs, signatures: sigs, block: block})
   return tx
 }
 
-describe('State', function () {
+describe.only('State', function () {
   let db
   let state
   const startNewDB = async () => {
@@ -109,24 +118,22 @@ describe('State', function () {
     it('should be correct', async () => {
       const addr0 = Buffer.from(web3.utils.hexToBytes(accounts[0].address))
       const ethType = new BN(0)
-      const depositAmount = new BN(10)
-      // Add a deposit
-      await state.addDeposit(addr0, ethType, depositAmount)
-      // Now add a bunch of conflicting deposits. This will trigger a bunch of locks
+      const depositAmount = new BN(16)
+      // Now add a bunch of deposits.
       for (let i = 0; i < 20; i++) {
         await state.addDeposit(addr0, ethType, depositAmount)
       }
-      const test = await state.getAffectedRanges(new BN(0), new BN(5), new BN(19))
+      const test = await state._getAffectedRanges(new BN(0), new BN(0), new BN(50))
       log(test)
     })
   })
 
   describe('addTransaction', () => {
-    it('should return false if the block already contains a deposit or transfer for the range', async () => {
+    it('should return false if the block already contains a transfer for the range', async () => {
       // Add deposits for us to later send
       await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), new BN(0), new BN(10))
       // Create a transfer record which touches the same range which we just deposited
-      const tx = makeTx([[accounts[0].address, accounts[1].address, 1, 0, 12, 1]], [[0, 0, 0]])
+      const tx = makeTx([{sender: accounts[0].address, recipient: accounts[1].address, token: 1, start: 0, end: 12}], [fakeSig], 1)
       try {
         await state.addTransaction(tx)
         throw new Error('Expect to fail')
@@ -142,16 +149,17 @@ describe('State', function () {
       await state.startNewBlock()
       // Create some transfer records & trList
       const tx = makeTx([
-        [accounts[0].address, accounts[1].address, ethType, 0, 8, 1],
-        [accounts[0].address, accounts[1].address, ethType, 3, 7, 1]
+        {sender: accounts[0].address, recipient: accounts[1].address, token: ethType, start: 0, end: 8},
+        {sender: accounts[0].address, recipient: accounts[1].address, token: ethType, start: 3, end: 7}
       ], [
-        [0, 0, 0], [0, 0, 0]
-      ])
+        fakeSig, fakeSig
+      ], 1)
       try {
         await state.addTransaction(tx)
-        throw new Error('This should have failed!')
       } catch (err) {
+        return
       }
+      throw new Error('This should have failed!')
     })
 
     it('should handle multisends', async () => {
@@ -166,11 +174,11 @@ describe('State', function () {
       await state.startNewBlock()
       // Create some transfer records & trList
       const tx = makeTx([
-        [accounts[0].address, accounts[1].address, ethType, 0, 12, 1],
-        [accounts[1].address, accounts[0].address, ethType, 35, 40, 1]
+        {sender: accounts[0].address, recipient: accounts[1].address, token: ethType, start: 0, end: 12},
+        {sender: accounts[1].address, recipient: accounts[0].address, token: ethType, start: 35, end: 40}
       ], [
-        [0, 0, 0], [0, 0, 0]
-      ])
+        fakeSig, fakeSig
+      ], 1)
       const result = await state.addTransaction(tx)
       expect(result).to.equal(true)
     })
@@ -178,7 +186,6 @@ describe('State', function () {
 
   describe('getOwnedRanges', () => {
     it('should return the proper number of ranges', async () => {
-      // TODO: Actually test the results
       const ethType = new BN(0)
       const depositAmount = new BN(10)
       // Add 100 deposits of value 10 from 100 different accounts

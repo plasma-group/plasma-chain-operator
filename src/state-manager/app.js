@@ -4,9 +4,10 @@ const State = require('./state.js').State
 const Web3 = require('web3')
 const constants = require('../constants.js')
 const BN = Web3.utils.BN
-const encoder = require('plasma-utils').encoder
 const log = require('debug')('info:state-app')
 const error = require('debug')('ERROR:state-app')
+const models = require('plasma-utils').serialization.models
+const Transaction = models.Transaction
 
 // Create global state object
 let state
@@ -39,7 +40,7 @@ process.on('message', async (m) => {
     return
   } else if (m.message.method === constants.ADD_TX_METHOD) {
     // New transaction!
-    const tx = new encoder.Transaction(m.message.params.encodedTx)
+    const tx = new Transaction(m.message.params.encodedTx)
     let txResponse
     try {
       const addTxResult = await state.addTransaction(tx)
