@@ -21,7 +21,7 @@ function getTxBundle (txs) {
   return txBundle
 }
 
-describe('BlockStore', function () {
+describe.skip('BlockStore', function () {
   let db
   let blockStore
   beforeEach(async () => {

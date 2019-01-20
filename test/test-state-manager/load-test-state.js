@@ -64,7 +64,7 @@ describe('State', function () {
       })
     })
 
-    it.only('should work with one massive block', (done) => {
+    it('should work with one massive block', (done) => {
       // const accts = accounts.slice(0, 2)
       const depositType = new BN(1)
       const depositAmount = new BN('1000000')
@@ -82,9 +82,7 @@ describe('State', function () {
         console.log(err)
       }).then((res) => {
         // For some number of rounds, have every node send a random transaction
-        loopSendRandomTxs(8000, operator, nodes).then(() => {
-          console.log('THIS IS IT: Num txs queued', state.numTxsQueued)
-          console.log('THIS IS IT. Num txs added:', state.numTxsAdded)
+        loopSendRandomTxs(100, operator, nodes).then(() => {
           done()
         })
       })

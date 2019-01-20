@@ -33,7 +33,7 @@ function getTxBundle (txs) {
   return txBundle
 }
 
-describe('LevelDBSumTree', function () {
+describe.skip('LevelDBSumTree', function () {
   let db
   let blockStore
   beforeEach(async () => {
