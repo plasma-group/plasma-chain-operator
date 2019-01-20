@@ -10,9 +10,6 @@ const levelup = require('levelup')
 const leveldown = require('leveldown')
 const log = require('debug')('test:info:load-test-state')
 const MockNode = require('../../src/mock-node.js')
-const models = require('plasma-utils').serialization.models
-const SignedTransaction = models.SignedTransaction
-const UnsignedTransaction = models.UnsignedTransaction
 
 const expect = chai.expect // eslint-disable-line no-unused-vars
 
@@ -20,14 +17,18 @@ let state
 
 const operator = {
   addDeposit: (address, tokenType, amount) => {
-    return state.addDeposit(address, tokenType, amount)
+    // console.log('adding deposit')
+    const result = state.addDeposit(address, tokenType, amount)
+    return result
   },
   addTransaction: (tx) => {
-    state.addTransaction(tx)
+    // console.log('adding tx')
+    // return state.addTransaction(tx)
+    return state._addTransaction(tx)
   }
 }
 
-describe.only('State', function () {
+describe('State', function () {
   let db
   const startNewDB = async () => {
     const dbDir = './db-test/'
@@ -46,7 +47,7 @@ describe.only('State', function () {
   beforeEach(startNewDB)
 
   describe('Mock node swarm', () => {
-    it.only('accepts many deposits from the mock node swarm', (done) => {
+    it('accepts many deposits from the mock node swarm', (done) => {
       // const accts = accounts.slice(0, 2)
       const depositType = new BN(0)
       const depositAmount = new BN(256)
@@ -61,7 +62,33 @@ describe.only('State', function () {
       }
       Promise.all(depositPromises).then((res) => {
         // Send txs!
-        mineAndLoopSendRandomTxs(10000, operator, nodes).then(() => { // 10000
+        mineAndLoopSendRandomTxs(100, operator, nodes).then(() => { // 10000
+          done()
+        })
+      })
+    })
+
+    it.only('should work with one massive block', (done) => {
+      // const accts = accounts.slice(0, 2)
+      const depositType = new BN(1)
+      const depositAmount = new BN('1000000')
+      const nodes = []
+      for (const acct of accounts) {
+      // for (const acct of accts) {
+        nodes.push(new MockNode(state, acct, nodes))
+      }
+      // Add deposits from 100 different accounts
+      const depositPromises = []
+      for (const node of nodes) {
+        depositPromises.push(node.deposit(depositType, depositAmount))
+      }
+      Promise.all(depositPromises).catch((err) => {
+        console.log(err)
+      }).then((res) => {
+        // For some number of rounds, have every node send a random transaction
+        loopSendRandomTxs(8000, operator, nodes).then(() => {
+          console.log('THIS IS IT: Num txs queued', state.numTxsQueued)
+          console.log('THIS IS IT. Num txs added:', state.numTxsAdded)
           done()
         })
       })
@@ -82,15 +109,23 @@ async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
   }
 }
 
-let randomTxPromises
+async function loopSendRandomTxs (numTimes, operator, nodes) {
+  const blockNumber = await state.startNewBlock()
+  for (let i = 0; i < numTimes; i++) {
+    await sendRandomTransactions(operator, nodes, blockNumber, 1, 10)
+  }
+}
 
 function sendRandomTransactions (operator, nodes, blockNumber, rounds, maxSize) {
   if (rounds === undefined) rounds = 1
-  randomTxPromises = []
+  const randomTxPromises = []
   for (let i = 0; i < rounds; i++) {
     for (const node of nodes) {
+      debugger
       randomTxPromises.push(node.sendRandomTransaction(blockNumber, maxSize))
     }
+    log('Starting round:', i)
   }
+  // log('promises:', randomTxPromises)
   return Promise.all(randomTxPromises)
 }

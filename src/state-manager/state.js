@@ -7,6 +7,7 @@ const UnsignedTransaction = models.UnsignedTransaction
 const SignedTransaction = models.SignedTransaction
 const itNext = require('../utils.js').itNext
 const itEnd = require('../utils.js').itEnd
+const defer = require('../utils.js').defer
 
 const COIN_ID_PREFIX = require('../constants.js').COIN_ID_PREFIX
 const ADDRESS_PREFIX = require('../constants.js').ADDRESS_PREFIX
@@ -18,8 +19,8 @@ const DEPOSIT_TX_LENGTH = 73
 
 // ************* HELPER FUNCTIONS ************* //
 const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
-// const timeoutAmt = () => 0
-const timeoutAmt = () => Math.floor(Math.random() * 2)
+const timeoutAmt = () => 0
+// const timeoutAmt = () => Math.floor(Math.random() * 2)
 
 function decodeTransaction (encoding) {
   let tx
@@ -67,6 +68,9 @@ class State {
     this.txLogDirectory = txLogDirectory
     this.tmpTxLogFile = this.txLogDirectory + 'tmp-tx-log.bin'
     this.lock = {}
+    this.numTxsAdded = 0
+    this.numTxsQueued = 0
+    this.txQueue = []
   }
 
   async init () {
@@ -117,9 +121,12 @@ class State {
     return this.blockNumber
   }
 
-  attemptAcquireLocks (keywords) {
+  attemptAcquireLocks (k) {
+    const keywords = k.slice() // Make a copy of the array to make sure we don't pollute anything when we add the `all` keyword
+    log('Attempting to acquire lock for:', keywords)
     keywords.push('all')
     if (keywords.some((val) => { return this.lock.hasOwnProperty(val) })) {
+      log('Failed')
       // Failed to acquire locks
       return false
     }
@@ -188,35 +195,28 @@ class State {
   }
 
   async getTransactionLock (tx) {
-    const senders = tx.transfers.map((transfer) => transfer.sender)
-    // const senders = tx.transfers.map((transfer) => transfer.sender).concat(tx.transfers.map((transfer) => transfer.recipient))
-    while (!this.attemptAcquireLocks(senders)) {
-      // Wait before attempting again
-      await timeout(timeoutAmt())
-    }
+    // const senders = tx.transfers.map((transfer) => transfer.sender)
+    // while (!this.attemptAcquireLocks(senders)) {
+    //   // Wait before attempting again
+    //   await timeout(timeoutAmt())
+    // }
   }
 
   async releaseTransactionLock (tx) {
-    const senders = tx.transfers.map((transfer) => transfer.sender)
-    // const senders = tx.transfers.map((transfer) => transfer.sender).concat(tx.transfers.map((transfer) => transfer.recipient))
-    this.releaseLocks(senders)
+    // const senders = tx.transfers.map((transfer) => transfer.sender)
+    // this.releaseLocks(senders)
   }
 
   validateAffectedRanges (tx) {
-    // For all affected ranges, check all affected ranges are owned by the correct sender
+    // For all affected ranges, check all affected ranges are owned by the correct sender and blockNumber
     for (const tr of tx.transfers) {
       for (const ar of tr.affectedRanges) {
         if (tr.sender.toLowerCase() !== ar.decodedTx.tr.recipient.toLowerCase()) {
-          log('Transfer sender:', tr.sender.toLowerCase())
-          log('Affected range recipient:', ar.decodedTx.tr.recipient.toLowerCase())
-          log('Start:', ar.decodedTx.tr.start.toString(16), '--end:', ar.decodedTx.tr.end.toString(16))
-          debugger
           throw new Error('Affected range check failed! Transfer record sender =',
             tr.sender.toLowerCase(), 'and the affected range recipient =', ar.decodedTx.tr.recipient.toLowerCase())
         }
-        if (ar.decodedTx.block.eq(this.blockNumber) && ar.decodedTx.sender !== DEPOSIT_SENDER) {
-          throw new Error('Affected range check failed! Affected range block =',
-            ar.decodedTx.block.toString(), 'and this block =', this.blockNumber.toString())
+        if (ar.decodedTx.block.eq(this.blockNumber) && ar.decodedTx.tr.sender !== DEPOSIT_SENDER) {
+          throw new Error('Affected range check failed! Affected range block = ' + ar.decodedTx.block.toString() + ' and this block = ' + this.blockNumber.toString())
         }
       }
     }
@@ -227,30 +227,12 @@ class State {
     for (const tr of tx.transfers) {
       // For every transfer, get all of the DB operations we need to perform
       let batchOps
-      try {
-        batchOps = await this.getTransferBatchOps(tx, tr, tr.affectedRanges)
-      } catch (err) {
-        debugger
-      }
+      batchOps = await this.getTransferBatchOps(tx, tr, tr.affectedRanges)
       dbBatch = dbBatch.concat(batchOps)
     }
-    // Write the batch to the database
-    // for (const entry of dbBatch) {
-    //   log('starting:', entry.type, 'for', entry.key.toString('hex'))
-    //   try {
-    //     if (entry.type === 'put') {
-    //       await this.db.put(entry.key, entry.value)
-    //     } else {
-    //       await this.db.del(entry.key)
-    //     }
-    //     log('finished', entry.type)
-    //   } catch (err) {
-    //     debugger
-    //   }
-    // }
-    await this.db.batch(dbBatch)
     const txEncoding = tx.encoded
-    // Write the transaction to the tx log
+    // Write the transaction to the DB and tx log
+    await this.db.batch(dbBatch)
     this.writeStream.write(Buffer.from(txEncoding, 'hex'))
   }
 
@@ -268,15 +250,9 @@ class State {
     if (!ar.tr.start.eq(transfer.start)) {
       // Reduce the first affected range's end position. Eg: ##### becomes ###$$
       const arRecipient = Buffer.from(Web3.utils.hexToBytes(ar.tr.recipient))
-      ar.tr.end = transfer.start
-      ar.tr.args.end = transfer.start
+      ar.tr.end = ar.tr.args.end = transfer.start
       // Get the affectedTransaction so that when we create the new address->coin mapping we preserve the transaction
-      try {
-        await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
-      } catch (err) {
-        console.log('Failed to find entry at key:', arEntry.key.slice(1).toString('hex'))
-        debugger
-      }
+      await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
       const affectedTransaction = await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
       dbBatch.push({ type: 'put', key: getCoinToTxKey(ar.tr.token, ar.tr.end), value: Buffer.from(ar.encoded, 'hex') })
       dbBatch.push({ type: 'put', key: getAddressToCoinKey(arRecipient, ar.tr.token, ar.tr.end), value: affectedTransaction })
@@ -286,20 +262,11 @@ class State {
     if (!ar.tr.end.eq(transfer.end)) {
       // Increase the last affected range's start position. Eg: ##### becomes $$###
       const arRecipient = Buffer.from(Web3.utils.hexToBytes(ar.tr.recipient))
-      ar.tr.start = transfer.end
-      ar.tr.args.start = transfer.end
+      ar.tr.start = ar.tr.args.start = transfer.end
       // Get the affectedTransaction so that when we create the new address->coin mapping we preserve the transaction
-      try {
-        await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
-      } catch (err) {
-        debugger
-      }
+      await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
       const affectedTransaction = await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
       dbBatch.push({ type: 'put', key: affectedRanges[affectedRanges.length - 1].key, value: Buffer.from(ar.encoded, 'hex') })
-      // dbBatch.push({ type: 'put', key: getAddressToCoinKey(arRecipient, ar.tr.token, ar.tr.end), value: affectedTransaction })
-      // dbBatch.push({ type: 'put', key: 'poodle scoops!', value: 'oooodoe!' })
-      // log('This might be bad......', affectedRanges[affectedRanges.length - 1].key.toString('hex'))
-      // log('This is what we want....', Buffer.concat([ADDRESS_PREFIX, arRecipient, affectedRanges[affectedRanges.length - 1].key]).toString('hex'))
       dbBatch.push({ type: 'put', key: Buffer.concat([ADDRESS_PREFIX, arRecipient, affectedRanges[affectedRanges.length - 1].key.slice(1)]), value: affectedTransaction })
     }
     // Add our new transfer record
@@ -312,25 +279,53 @@ class State {
   }
 
   async addTransaction (tx) {
+    while (this.txQueue.length > 10000) {
+      await timeout(100)
+    }
+    const deferred = defer()
+    this.txQueue.push({
+      transaction: tx,
+      resolve: deferred.resolve
+    })
+    this.numTxsQueued++
+    log('Processing queue')
+    if (this.txQueue.length === 1) {
+      this._processTxQueue()
+    }
+    return deferred.promise
+  }
+
+  async _processTxQueue () {
+    let numTxsProcessed
+    for (numTxsProcessed = 0; numTxsProcessed < this.txQueue.length; numTxsProcessed++) {
+      this.txQueue[numTxsProcessed].result = await this._addTransaction(this.txQueue[numTxsProcessed].transaction)
+    }
+    const processedTxs = this.txQueue.splice(0, numTxsProcessed)
+    for (const processedTx of processedTxs) {
+      processedTx.resolve(processedTx.blockNumber)
+    }
+  }
+
+  async _addTransaction (tx) {
     // Check that the transaction is well formatted
     this.validateTransaction(tx)
     // Acquire lock on all of the transfer record senders
     await this.getTransactionLock(tx)
-    log('Attempting to add transaction from:', tx.transfers[0].sender)
+    log('Attempting to add transaction from:')
+    try {
       // Get the ranges which the transaction affects and attach them to the transaction object
       await this.addAffectedRangesToTx(tx)
       // Check that all of the affected ranges are valid
       await this.validateAffectedRanges(tx)
       // All checks have passed, now write to the DB
-    try {
       await this.writeTransactionToDB(tx)
     } catch (err) {
-      debugger
       this.releaseTransactionLock(tx)
       throw err
     }
     this.releaseTransactionLock(tx)
-    log('Added transaction from:', tx.transfers[0].sender)
+    log('Added transaction from:')
+    this.numTxsAdded++
     return true
   }
 
@@ -346,7 +341,6 @@ class State {
         throw new Error('No affected ranges!')
       }
       for (let i = 0; i < affectedRange.length; i++) {
-        log('an affected range key is:', affectedRange[i].key.toString('hex'))
         affectedRange[i].decodedTx = decodeTransaction(affectedRange[i].value)
       }
       tx.transfers[i].affectedRanges = affectedRange
