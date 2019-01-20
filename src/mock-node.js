@@ -2,8 +2,17 @@ const Web3 = require('web3')
 const BN = Web3.utils.BN
 const utils = require('../src/utils.js')
 const TYPE_BYTE_SIZE = require('../src/constants.js').TYPE_BYTE_SIZE
-const encoder = require('plasma-utils').encoder
+const models = require('plasma-utils').serialization.models
+const Transfer = models.Transfer
+const Signature = models.Signature
+const SignedTransaction = models.SignedTransaction
 const log = require('debug')('info:node')
+
+const fakeSig = {
+  v: 'ff',
+  r: '0000000000000000000000000000000000000000000000000000000000000000',
+  s: '0000000000000000000000000000000000000000000000000000000000000000'
+}
 
 class MockNode {
   constructor (operator, account, peerList) {
@@ -12,7 +21,6 @@ class MockNode {
     this.peerList = peerList
     this.ranges = []
     this.pendingRanges = []
-    this.addLog = []
   }
 
   processPendingRanges () {
@@ -24,9 +32,9 @@ class MockNode {
 
   async deposit (coinType, amount) {
     const deposit = await this.operator.addDeposit(Buffer.from(Web3.utils.hexToBytes(this.account.address)), coinType, amount)
-    const start = new BN(utils.getCoinId(deposit.type, deposit.start))
-    const end = new BN(utils.getCoinId(deposit.type, deposit.end))
-    log('Adding range from deposit with start:', deposit.start.toString(), '- end:', deposit.end.toString())
+    const start = new BN(utils.getCoinId(deposit.tr.token, deposit.tr.start))
+    const end = new BN(utils.getCoinId(deposit.tr.token, deposit.tr.end))
+    log('Adding range from deposit with start:', deposit.tr.start.toString(), '- end:', deposit.tr.end.toString())
     utils.addRange(this.ranges, start, end)
   }
 
@@ -67,18 +75,28 @@ class MockNode {
     while (recipient === this) {
       recipient = this.peerList[Math.floor(Math.random() * this.peerList.length)]
     }
-    const tx = this.makeTx(this.account.address, recipient.account.address, type, start, end, blockNumber)
+    const tx = this.makeTx(
+      [{ sender: this.account.address, recipient: recipient.account.address, token: type, start, end }],
+      [fakeSig],
+      blockNumber
+    )
     // Update ranges
     utils.subtractRange(this.ranges, startId, endId)
     recipient.pendingRanges.push([new BN(startId), new BN(endId)])
-    recipient.addLog.push([this.account.address, start, end])
     // Add transaction
     await this.operator.addTransaction(tx)
     log('sent a transaction!')
   }
 
-  makeTx (sender, recipient, type, start, end, blockNumber) {
-    return new encoder.Transaction([[sender, recipient, type, start, end, blockNumber]], [[0, 0, 0]])
+  makeTx (rawTrs, rawSigs, block) {
+    const trs = []
+    const sigs = []
+    for (let i = 0; i < rawTrs.length; i++) {
+      trs.push(new Transfer(rawTrs[i]))
+      sigs.push(new Signature(rawSigs[i]))
+    }
+    const tx = new SignedTransaction({transfers: trs, signatures: sigs, block: block})
+    return tx
   }
 }
 

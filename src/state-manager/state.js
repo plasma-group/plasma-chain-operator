@@ -4,6 +4,7 @@ const BN = Web3.utils.BN
 const log = require('debug')('info:state')
 const models = require('plasma-utils').serialization.models
 const UnsignedTransaction = models.UnsignedTransaction
+const SignedTransaction = models.SignedTransaction
 const itNext = require('../utils.js').itNext
 const itEnd = require('../utils.js').itEnd
 
@@ -13,13 +14,20 @@ const START_BYTE_SIZE = require('../constants.js').START_BYTE_SIZE
 const TYPE_BYTE_SIZE = require('../constants.js').TYPE_BYTE_SIZE
 const BLOCKNUMBER_BYTE_SIZE = require('../constants.js').BLOCKNUMBER_BYTE_SIZE
 const DEPOSIT_SENDER = '0x0000000000000000000000000000000000000000'
+const DEPOSIT_TX_LENGTH = 73
 
 // ************* HELPER FUNCTIONS ************* //
 const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
+// const timeoutAmt = () => 0
 const timeoutAmt = () => Math.floor(Math.random() * 2)
 
 function decodeTransaction (encoding) {
-  const tx = new UnsignedTransaction(encoding.toString('hex'))
+  let tx
+  if (encoding.length === DEPOSIT_TX_LENGTH) {
+    tx = new UnsignedTransaction(encoding.toString('hex'))
+  } else {
+    tx = new SignedTransaction(encoding.toString('hex'))
+  }
   tx.tr = tx.transfers[0]
   return tx
 }
@@ -181,6 +189,7 @@ class State {
 
   async getTransactionLock (tx) {
     const senders = tx.transfers.map((transfer) => transfer.sender)
+    // const senders = tx.transfers.map((transfer) => transfer.sender).concat(tx.transfers.map((transfer) => transfer.recipient))
     while (!this.attemptAcquireLocks(senders)) {
       // Wait before attempting again
       await timeout(timeoutAmt())
@@ -189,6 +198,7 @@ class State {
 
   async releaseTransactionLock (tx) {
     const senders = tx.transfers.map((transfer) => transfer.sender)
+    // const senders = tx.transfers.map((transfer) => transfer.sender).concat(tx.transfers.map((transfer) => transfer.recipient))
     this.releaseLocks(senders)
   }
 
@@ -197,6 +207,10 @@ class State {
     for (const tr of tx.transfers) {
       for (const ar of tr.affectedRanges) {
         if (tr.sender.toLowerCase() !== ar.decodedTx.tr.recipient.toLowerCase()) {
+          log('Transfer sender:', tr.sender.toLowerCase())
+          log('Affected range recipient:', ar.decodedTx.tr.recipient.toLowerCase())
+          log('Start:', ar.decodedTx.tr.start.toString(16), '--end:', ar.decodedTx.tr.end.toString(16))
+          debugger
           throw new Error('Affected range check failed! Transfer record sender =',
             tr.sender.toLowerCase(), 'and the affected range recipient =', ar.decodedTx.tr.recipient.toLowerCase())
         }
@@ -212,10 +226,28 @@ class State {
     let dbBatch = []
     for (const tr of tx.transfers) {
       // For every transfer, get all of the DB operations we need to perform
-      const batchOps = await this.getTransferBatchOps(tx, tr, tr.affectedRanges)
+      let batchOps
+      try {
+        batchOps = await this.getTransferBatchOps(tx, tr, tr.affectedRanges)
+      } catch (err) {
+        debugger
+      }
       dbBatch = dbBatch.concat(batchOps)
     }
     // Write the batch to the database
+    // for (const entry of dbBatch) {
+    //   log('starting:', entry.type, 'for', entry.key.toString('hex'))
+    //   try {
+    //     if (entry.type === 'put') {
+    //       await this.db.put(entry.key, entry.value)
+    //     } else {
+    //       await this.db.del(entry.key)
+    //     }
+    //     log('finished', entry.type)
+    //   } catch (err) {
+    //     debugger
+    //   }
+    // }
     await this.db.batch(dbBatch)
     const txEncoding = tx.encoded
     // Write the transaction to the tx log
@@ -237,7 +269,14 @@ class State {
       // Reduce the first affected range's end position. Eg: ##### becomes ###$$
       const arRecipient = Buffer.from(Web3.utils.hexToBytes(ar.tr.recipient))
       ar.tr.end = transfer.start
+      ar.tr.args.end = transfer.start
       // Get the affectedTransaction so that when we create the new address->coin mapping we preserve the transaction
+      try {
+        await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
+      } catch (err) {
+        console.log('Failed to find entry at key:', arEntry.key.slice(1).toString('hex'))
+        debugger
+      }
       const affectedTransaction = await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
       dbBatch.push({ type: 'put', key: getCoinToTxKey(ar.tr.token, ar.tr.end), value: Buffer.from(ar.encoded, 'hex') })
       dbBatch.push({ type: 'put', key: getAddressToCoinKey(arRecipient, ar.tr.token, ar.tr.end), value: affectedTransaction })
@@ -248,14 +287,25 @@ class State {
       // Increase the last affected range's start position. Eg: ##### becomes $$###
       const arRecipient = Buffer.from(Web3.utils.hexToBytes(ar.tr.recipient))
       ar.tr.start = transfer.end
+      ar.tr.args.start = transfer.end
       // Get the affectedTransaction so that when we create the new address->coin mapping we preserve the transaction
+      try {
+        await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
+      } catch (err) {
+        debugger
+      }
       const affectedTransaction = await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
       dbBatch.push({ type: 'put', key: affectedRanges[affectedRanges.length - 1].key, value: Buffer.from(ar.encoded, 'hex') })
-      dbBatch.push({ type: 'put', key: getAddressToCoinKey(arRecipient, ar.tr.token, ar.tr.end), value: affectedTransaction })
+      // dbBatch.push({ type: 'put', key: getAddressToCoinKey(arRecipient, ar.tr.token, ar.tr.end), value: affectedTransaction })
+      // dbBatch.push({ type: 'put', key: 'poodle scoops!', value: 'oooodoe!' })
+      // log('This might be bad......', affectedRanges[affectedRanges.length - 1].key.toString('hex'))
+      // log('This is what we want....', Buffer.concat([ADDRESS_PREFIX, arRecipient, affectedRanges[affectedRanges.length - 1].key]).toString('hex'))
+      dbBatch.push({ type: 'put', key: Buffer.concat([ADDRESS_PREFIX, arRecipient, affectedRanges[affectedRanges.length - 1].key.slice(1)]), value: affectedTransaction })
     }
     // Add our new transfer record
     const trRecipient = Buffer.from(Web3.utils.hexToBytes(transfer.recipient))
-    dbBatch.push({ type: 'put', key: getCoinToTxKey(transfer.token, transfer.end), value: Buffer.from(transfer.encoded, 'hex') })
+    const transferAsTx = new UnsignedTransaction({transfers: [transfer], block: transaction.block})
+    dbBatch.push({ type: 'put', key: getCoinToTxKey(transfer.token, transfer.end), value: Buffer.from(transferAsTx.encoded, 'hex') })
     dbBatch.push({ type: 'put', key: getAddressToCoinKey(trRecipient, transfer.token, transfer.end), value: Buffer.from(transaction.encoded, 'hex') })
     // And finally apply the batch operations
     return dbBatch
@@ -266,18 +316,21 @@ class State {
     this.validateTransaction(tx)
     // Acquire lock on all of the transfer record senders
     await this.getTransactionLock(tx)
-    try {
+    log('Attempting to add transaction from:', tx.transfers[0].sender)
       // Get the ranges which the transaction affects and attach them to the transaction object
       await this.addAffectedRangesToTx(tx)
       // Check that all of the affected ranges are valid
       await this.validateAffectedRanges(tx)
       // All checks have passed, now write to the DB
+    try {
       await this.writeTransactionToDB(tx)
     } catch (err) {
+      debugger
       this.releaseTransactionLock(tx)
       throw err
     }
     this.releaseTransactionLock(tx)
+    log('Added transaction from:', tx.transfers[0].sender)
     return true
   }
 
@@ -293,6 +346,7 @@ class State {
         throw new Error('No affected ranges!')
       }
       for (let i = 0; i < affectedRange.length; i++) {
+        log('an affected range key is:', affectedRange[i].key.toString('hex'))
         affectedRange[i].decodedTx = decodeTransaction(affectedRange[i].value)
       }
       tx.transfers[i].affectedRanges = affectedRange
@@ -326,13 +380,13 @@ class State {
       await timeout(timeoutAmt())
     }
     // Get the ranges
-    const addressBuffer = Buffer.concat([ADDRESS_PREFIX, Buffer.from(Web3.utils.hexToBytes(address))])
+    const addressBuffer = Buffer.from(Web3.utils.hexToBytes(address))
     const it = this.db.iterator({
       gt: getAddressToCoinKey(addressBuffer, new BN(0), new BN(0))
     })
     const ownedRanges = []
     let result = await itNext(it)
-    while (result.key && Buffer.compare(addressBuffer, result.key.slice(0, 21)) === 0) {
+    while (result.key && Buffer.compare(addressBuffer, result.key.slice(1, 21)) === 0) {
       ownedRanges.push(result)
       result = await itNext(it)
     }

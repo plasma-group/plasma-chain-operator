@@ -37,7 +37,7 @@ function makeTx (rawTrs, rawSigs, block) {
   return tx
 }
 
-describe.only('State', function () {
+describe('State', function () {
   let db
   let state
   const startNewDB = async () => {
