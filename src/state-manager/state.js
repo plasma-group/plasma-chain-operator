@@ -293,7 +293,7 @@ class State {
       throw err
     }
     this.releaseTransactionLock(tx)
-    log('Added transaction from:')
+    log('Added transaction from:', tx.transfers[0].recipient)
     return true
   }
 

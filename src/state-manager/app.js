@@ -7,7 +7,7 @@ const BN = Web3.utils.BN
 const log = require('debug')('info:state-app')
 const error = require('debug')('ERROR:state-app')
 const models = require('plasma-utils').serialization.models
-const Transaction = models.Transaction
+const SignedTransaction = models.SignedTransaction
 
 // Create global state object
 let state
@@ -39,8 +39,8 @@ process.on('message', async (m) => {
     process.send({ ipcID: m.ipcID, message: { deposit } })
     return
   } else if (m.message.method === constants.ADD_TX_METHOD) {
-    // New transaction!
-    const tx = new Transaction(m.message.params.encodedTx)
+    // New SignedTransaction!
+    const tx = new SignedTransaction(m.message.params.encodedTx)
     let txResponse
     try {
       const addTxResult = await state.addTransaction(tx)

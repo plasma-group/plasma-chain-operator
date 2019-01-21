@@ -22,7 +22,7 @@ let idCounter = 0
 // Operator object wrapper to query api
 const operator = {
   addTransaction: (tx) => {
-    const encodedTx = tx.encode()
+    const encodedTx = tx.encoded
     return new Promise((resolve, reject) => {
       chai.request(server.app)
         .post('/api')
@@ -46,7 +46,7 @@ const operator = {
         })
     })
   },
-  addDeposit: (recipient, type, amount) => {
+  addDeposit: (recipient, token, amount) => {
     return new Promise((resolve, reject) => {
       chai.request(server.app)
         .post('/api')
@@ -56,7 +56,7 @@ const operator = {
           id: idCounter++,
           params: {
             recipient: web3.utils.bytesToHex(recipient),
-            type: type.toString(16),
+            token: token.toString(16),
             amount: amount.toString(16)
           }
         })
@@ -64,13 +64,8 @@ const operator = {
           if (err) {
             throw err
           }
-          // Parse the response to return what the mock node expects
-          const deposit = res.body
-          deposit.type = new BN(deposit.type, 'hex')
-          deposit.start = new BN(deposit.start, 'hex')
-          deposit.end = new BN(deposit.end, 'hex')
           // Return the deposit
-          resolve(deposit)
+          resolve(res.body.deposit)
         })
     })
   },
@@ -95,7 +90,7 @@ const operator = {
   }
 }
 
-describe.skip('Server', function () {
+describe('Server', function () {
   before(async () => {
     // Startup with test config file
     const configFile = path.join(appRoot.toString(), 'test', 'config-test.json')
@@ -112,7 +107,7 @@ describe.skip('Server', function () {
           jsonrpc: '2.0',
           params: {
             recipient: accounts[0].address,
-            type: new BN(0).toString(16),
+            token: new BN(0).toString(16),
             amount: new BN(10).toString(16)
           }
         })
@@ -132,7 +127,7 @@ describe.skip('Server', function () {
             jsonrpc: '2.0',
             params: {
               recipient: accounts[0].address,
-              type: new BN(0).toString(16),
+              token: new BN(0).toString(16),
               amount: new BN(10).toString(16)
             }
           }))
