@@ -9,6 +9,8 @@ An operator for Plasma. Functionality includes:
 ## Setup
 
 ```
-$ npm install
-$ npm start
+$ npm install -g
+$ operator account new
+$ operator init
+$ operator start
 ```
