@@ -108,6 +108,7 @@ async function loopSendRandomTxs (numTimes, operator, nodes) {
   for (let i = 0; i < numTimes; i++) {
     await sendRandomTransactions(operator, nodes, blockNumber, 1, 10)
   }
+  await state.startNewBlock()
 }
 
 function sendRandomTransactions (operator, nodes, blockNumber, rounds, maxSize) {

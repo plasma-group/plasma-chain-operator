@@ -12,7 +12,7 @@ const Transfer = models.Transfer
 const Signature = models.Signature
 const SignedTransaction = models.SignedTransaction
 const BN = require('bn.js')
-const DT = require('./dummy-tx-utils')
+const dummyTxs = require('./dummy-tx-utils')
 
 const expect = chai.expect
 
@@ -28,12 +28,12 @@ TX1.TRIndex = TX2.TRIndex = TX3.TRIndex = 0
 function getTxBundle (txs) {
   const txBundle = []
   for (const tx of txs) {
-    txBundle.push([tx, tx.encode()])
+    txBundle.push([tx, Buffer.from(tx.encoded, 'hex')])
   }
   return txBundle
 }
 
-describe.skip('LevelDBSumTree', function () {
+describe('LevelDBSumTree', function () {
   let db
   let blockStore
   beforeEach(async () => {
@@ -65,7 +65,7 @@ describe.skip('LevelDBSumTree', function () {
 
   it('should return 0x0000000 as blockhash even if the entire DB is empty', async () => {
     // Ingest the required data to begin processing the block
-    const blockNumber = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    const blockNumber = Buffer.from([0, 0, 0, 0])
     // Create a new tree based on block 0's transactions
     const sumTree = new LevelDBSumTree(blockStore.db)
     await sumTree.parseLeaves(blockNumber)
@@ -77,7 +77,7 @@ describe.skip('LevelDBSumTree', function () {
     // Ingest the required data to begin processing the block
     const TXs = [TX1, TX2, TX3]
     const txBundle = getTxBundle(TXs)
-    const blockNumber = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    const blockNumber = Buffer.from([0, 0, 0, 0])
     blockStore.storeTransactions(blockNumber, txBundle)
     await Promise.all(blockStore.batchPromises)
     // Create a new tree based on block 0's transactions
@@ -86,14 +86,14 @@ describe.skip('LevelDBSumTree', function () {
     await sumTree.generateLevel(blockNumber, 0)
   })
 
-  it('should succeed in generating a tree of 100 ordered transactions', async () => {
-    const TXs = DT.genNSequentialTransactions(10000)
+  it('should succeed in generating a tree of x ordered transactions', async () => {
+    const TXs = dummyTxs.getSequentialTxs(1000, 10)
     const txBundle = getTxBundle(TXs)
-    const blockNumber = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    const blockNumber = Buffer.from([0, 0, 0, 0])
     blockStore.storeTransactions(blockNumber, txBundle)
     await Promise.all(blockStore.batchPromises)
     // TODO: Optimize this so that we don't spend so long hashing
     const sumTree = new LevelDBSumTree(blockStore.db)
-    await sumTree.parseLeaves(blockNumber)
+    await sumTree.generateTree(blockNumber)
   })
 })

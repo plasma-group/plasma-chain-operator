@@ -1,66 +1,66 @@
-const TS = require('plasma-utils').encoder
+const models = require('plasma-utils').serialization.models
+const Transaction = models.SignedTransaction
 const BN = require('web3').utils.BN
 
-const genRandomNByteBN = function (numBytes) { // returns an int not byte array
-  let arr = []
-  for (let i = 0; i < numBytes; i++) {
-    arr.push(Math.floor(Math.random() * (256)))
+const int32ToHex = (x) => {
+  x &= 0xFFFFFFFF
+  let hex = x.toString(16).toUpperCase()
+  return ('0000000000000000' + hex).slice(-16)
+}
+
+/**
+ * Returns a list of `n` sequential transactions.
+ * @param {*} n Number of sequential transactions to return.
+ * @return {*} A list of sequential transactions.
+ */
+const getSequentialTxs = (n, size) => {
+  let txs = []
+
+  for (let i = 0; i < n; i++) {
+    txs[i] = new Transaction({
+      block: 0,
+      transfers: [
+        {
+          sender: '0x000000000000000f000000000000000000000000', // random fs here because contract crashes on decoding bytes20 of all zeros to address
+          recipient: '0x000000000000f000000000000000000000000000',
+          token: 0,
+          start: i * size,
+          end: (i + 1) * size
+        }
+      ],
+      signatures: [
+        {
+          v: '1b',
+          r: 'd693b532a80fed6392b428604171fb32fdbf953728a3a7ecc7d4062b1652c042',
+          s: '24e9c602ac800b983b035700a14b23f78a253ab762deab5dc27e3555a750b354'
+        }
+      ]
+    })
   }
-  return new BN(arr)
+
+  return txs
 }
 
-const genRandomAddress = function () {
-  const addr = genRandomNByteBN(20)
-  return TS.decodeAddress(addr)
-}
-
-const genRandomSignature = function () {
-  const v = genRandomNByteBN(1)
-  const r = genRandomNByteBN(32)
-  const s = genRandomNByteBN(32)
-  return new TS.Sig([v, r, s])
-}
-
-const genSequentialTR = function (prevTR) {
-  const sender = genRandomAddress()
-  const recipient = genRandomAddress()
-  const start = prevTR.end.add(genRandomNByteBN(6))
-  const end = start.add(genRandomNByteBN(6)).add(new BN(1)) // add 1 in case 0 though lol never gonna happen
-  const block = 0
-  const type = 0
-  return new TS.TR([sender, recipient, type, start, end, block])
-}
-
-const genSequentialTransaction = function (prevTransaction) {
-  const TRList = new TS.TRList([genSequentialTR(prevTransaction.transferRecords.elements[0])])
-  return new TS.Transaction(TRList, [genRandomSignature()])
-}
-
-const genNSequentialTransactions = function (n) {
-  let TXList = []
-  //
-  TXList[0] = new TS.Transaction([['0x43aadf3d5b44290385fe4193a1b13f15ef3a4fd5', '0x43aadf3d5b44290385fe4193a1b13f15ef3a4fd5', 0, 0, 1, 0]], [genRandomSignature()])
-  TXList[0].TRIndex = 0
-  for (let i = 1; i < n; i++) {
-    TXList[i] = genSequentialTransaction(TXList[i - 1])
-    TXList[i].TRIndex = 0
+function genRandomTX (blockNum, senderAddress, recipientAddress, numTransfers) {
+  let randomTransfers = []
+  for (let i = 0; i < numTransfers; i++) {
+    // fuzz a random encoding to test decoding with
+    let randomVals = ''
+    for (let i = 0; i < 28; i++) { // random start, end, type = 12+12+4 bytes
+      const randHex = Math.floor(Math.random() * 256)
+      randomVals += new BN(randHex, 10).toString(16, 2)
+    }
+    randomTransfers +=
+      senderAddress.slice(2) +
+      recipientAddress.slice(2) +
+      randomVals
+    // can't have invalid addresses so ignore this partthe 33rd byte is the numTransfers which isn't random--it's 4
   }
-  return TXList
-}
-
-const genNSequentialTransactionsSpacedByOne = function (n) {
-  let TXList = []
-  //
-  TXList[0] = new TS.Transaction([['0x43aadf3d5b44290385fe4193a1b13f15ef3a4fd5', '0x43aadf3d5b44290385fe4193a1b13f15ef3a4fd5', 0, 0, 1, 0]], [genRandomSignature()])
-  TXList[0].TRIndex = 0
-  for (let i = 1; i < n; i++) {
-    TXList[i] = new TS.Transaction([['0x43aadf3d5b44290385fe4193a1b13f15ef3a4fd5', '0x43aadf3d5b44290385fe4193a1b13f15ef3a4fd5', 0, i, i + 1, 0]], [genRandomSignature()])
-    TXList[i].TRIndex = 0
-  }
-  return TXList
+  return new BN(blockNum).toString(16, 8) + new BN(numTransfers).toString(16, 2) + randomTransfers
 }
 
 module.exports = {
-  genNSequentialTransactions,
-  genNSequentialTransactionsSpacedByOne
+  int32ToHex: int32ToHex,
+  getSequentialTxs: getSequentialTxs,
+  genRandomTX: genRandomTX
 }

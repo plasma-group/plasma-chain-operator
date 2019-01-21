@@ -6,7 +6,9 @@ const BLOCK_TX_PREFIX = require('../constants.js').BLOCK_TX_PREFIX
 const BLOCK_INDEX_PREFIX = require('../constants.js').BLOCK_INDEX_PREFIX
 const NUM_LEVELS_PREFIX = require('../constants.js').BLOCK_TX_PREFIX
 const NODE_DB_PREFIX = require('../constants.js').NODE_DB_PREFIX
-const encoder = require('plasma-utils').encoder
+const models = require('plasma-utils').serialization.models
+const SignedTransaction = models.SignedTransaction
+const UnsignedTransaction = models.UnsignedTransaction
 const itNext = require('../utils.js').itNext
 const itEnd = require('../utils.js').itEnd
 
@@ -23,16 +25,22 @@ class LevelDBSumTree {
 
   async generateTree (blockNumber) {
     await this.parseLeaves(blockNumber)
-    await this.generateLevel(blockNumber, 0)
+    const rootHash = await this.generateLevel(blockNumber, 0)
+    return rootHash
   }
 
   getTransactionFromLeaf (value) {
     const index = value[0]
     const encoding = value.slice(1)
-    const transaction = new encoder.Transaction(encoding)
+    const transaction = new SignedTransaction(encoding.toString('hex'))
     transaction.trIndex = index
     transaction.encoding = encoding
     return transaction
+  }
+
+  getUnsignedTransaction (tx) {
+    const unsignedTx = new UnsignedTransaction({block: tx.block, transfers: tx.transfers})
+    return unsignedTx
   }
 
   /**
@@ -42,8 +50,8 @@ class LevelDBSumTree {
     const self = this
     return new Promise(async (resolve, reject) => {
       // Helper functions for getting properties of our transactions
-      const getTr = (tx) => tx.transferRecords.elements[tx.trIndex]
-      const typedStart = (tr) => new BN(tr.type.toString(16, 8) + tr.start.toString(16, 24), 16)
+      const getTr = (tx) => tx.transfers[tx.trIndex]
+      const typedStart = (tr) => new BN(tr.token.toString(16, 8) + tr.start.toString(16, 24), 16)
       // Store the min and max values which can exist for any range. This will be used as the bounds of our stream
       const minStart = Buffer.from('0'.repeat(COIN_ID_BYTE_SIZE * 2), 'hex')
       const maxEnd = Buffer.from('f'.repeat(COIN_ID_BYTE_SIZE * 2), 'hex')
@@ -71,16 +79,16 @@ class LevelDBSumTree {
         const transaction = self.getTransactionFromLeaf(data.value)
         transaction.sumStart = typedStart(getTr(transaction))
         const range = coinIdToBuffer(transaction.sumStart.sub(previousTransaction.sumStart))
-        const prevTxHash = web3.utils.hexToBytes(web3.utils.soliditySha3(Buffer.from(previousTransaction.transferRecords.encode())))
+        const prevTxHash = web3.utils.hexToBytes(web3.utils.soliditySha3(self.getUnsignedTransaction(previousTransaction).encoded))
         self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
-        self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encode()), previousTxIndex)
+        self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encoded, 'hex'), previousTxIndex)
         previousTxIndex = previousTxIndex.add(new BN(1))
         previousTransaction = transaction
       }).on('end', function (data) {
         const range = coinIdToBuffer(new BN(maxEnd).sub(previousTransaction.sumStart))
-        const prevTxHash = web3.utils.hexToBytes(web3.utils.soliditySha3(Buffer.from(previousTransaction.transferRecords.encode())))
+        const prevTxHash = web3.utils.hexToBytes(web3.utils.soliditySha3(self.getUnsignedTransaction(previousTransaction).encoded))
         self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
-        self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encode()), previousTxIndex)
+        self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encoded, 'hex'), previousTxIndex)
         resolve()
       }).on('error', function (err) {
         reject(err)

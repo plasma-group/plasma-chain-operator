@@ -3,8 +3,10 @@ const log = require('debug')('info:block-store')
 const BN = require('web3').utils.BN
 const makeBlockTxKey = require('../utils.js').makeBlockTxKey
 const LevelDBSumTree = require('./leveldb-sum-tree.js')
-const encoder = require('plasma-utils').encoder
+const models = require('plasma-utils').serialization.models
+const SignedTransaction = models.SignedTransaction
 const BLOCK_TX_PREFIX = require('../constants.js').BLOCK_TX_PREFIX
+const BLOCK_ROOT_HASH_PREFIX = require('../constants.js').BLOCK_ROOT_HASH_PREFIX
 const BLOCKNUMBER_BYTE_SIZE = require('../constants.js').BLOCKNUMBER_BYTE_SIZE
 const TRANSFER_BYTE_SIZE = require('../constants.js').TRANSFER_BYTE_SIZE
 const SIGNATURE_BYTE_SIZE = require('../constants.js').SIGNATURE_BYTE_SIZE
@@ -20,7 +22,7 @@ class BlockStore {
     this.txLogDir = txLogDir
     this.partialChunk = null
     this.batchPromises = []
-    this.blockNumberBN = new BN(-1) // Set block number to be -1 so that the first block is block 0
+    this.blockNumberBN = new BN(0) // Set block number to be -1 so that the first block is block 0
     this.newBlockQueue = []
   }
 
@@ -52,8 +54,10 @@ class BlockStore {
       throw new Error('Expected block number to be ' + this.blockNumberBN.add(new BN(1)).toString() + ' not ' + blockNumberBN.toString())
     }
     await this.ingestBlock(blockNumber, this.txLogDir + txLogFile)
-    await this.sumTree.generateTree(blockNumber)
+    const rootHash = await this.sumTree.generateTree(blockNumber)
+    this.db.put(Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber]), rootHash)
     this.blockNumberBN = this.blockNumberBN.addn(1)
+    log('Adding block number:', this.blockNumberBN.toString(), 'with root hash:', Buffer.from(rootHash).toString('hex'))
     return blockNumber
   }
 
@@ -104,13 +108,13 @@ class BlockStore {
   }
 
   async getProofsFor (blockNumber, type, start, end) {
-    const getTr = (tx) => tx.transferRecords.elements[tx.trIndex]
+    const getTr = (tx) => tx.transfers[tx.trIndex]
     const numLevels = await this.sumTree.getNumLevels(blockNumber)
     const leaves = await this.getLeavesAt(blockNumber, type, start, end)
     const allProofs = []
     for (const leaf of leaves) {
       const tx = this.sumTree.getTransactionFromLeaf(leaf.value)
-      const trEncoding = Buffer.from(getTr(tx).encode())
+      const trEncoding = Buffer.from(getTr(tx).encoded, 'hex')
       const index = await this.sumTree.getIndex(blockNumber, trEncoding)
       const branch = await this.getInclusionProof(blockNumber, numLevels, new BN(index))
       const proof = [tx, tx.trIndex, [index, branch]]
@@ -195,25 +199,22 @@ class BlockStore {
   }
 
   readNextTransaction (cursor, chunk) {
-    const numElements = new BN(chunk.slice(cursor, cursor + 1)).toNumber()
+    const numElements = new BN(chunk.slice(cursor + 4, cursor + 5)).toNumber()
     const transferSize = numElements * TRANSFER_BYTE_SIZE
     const signatureSize = numElements * SIGNATURE_BYTE_SIZE
-    const txSize = transferSize + signatureSize + 8 // We have two length identifiers, both length 4, so add 8
+    const txSize = BLOCKNUMBER_BYTE_SIZE + transferSize + signatureSize + 2 // We have two length identifiers, so plus 2
     // Check if this transaction is the very last in our chunk
     if (cursor + txSize > chunk.length) {
       // Set partial tx
       this.partialChunk = chunk.slice(cursor)
       return [null]
     }
-    const trStart = cursor
-    const trEnd = trStart + 4 + transferSize
-    const sigStart = trEnd
-    const sigEnd = sigStart + 4 + signatureSize
+    const txStart = cursor
+    const txEnd = txStart + txSize
     // Make the transaction object
-    const trList = new encoder.TRList([...chunk.slice(trStart, trEnd)])
-    const sigList = new encoder.SigList([...chunk.slice(sigStart, sigEnd)])
-    const nextTransaction = new encoder.Transaction(trList, sigList)
-    return [cursor + txSize, nextTransaction, chunk.slice(cursor, sigEnd)]
+    const nextTransaction = new SignedTransaction(chunk.slice(txStart, txEnd).toString('hex'))
+    log('Read new transaction')
+    return [cursor + txSize, nextTransaction, chunk.slice(cursor, txEnd)]
   }
 
   parseTxBinary (blockNumber, chunk) {
@@ -233,10 +234,11 @@ class BlockStore {
     // Ingest these transactions, into levelDB as `blocknum + typedStart +
     const dbBatch = []
     for (const tx of txBundle) {
-      for (const [i, tr] of tx[0].transferRecords.elements.entries()) {
+      for (const [i, tr] of tx[0].transfers.entries()) {
+        log('Storing tx at:', makeBlockTxKey(blockNumber, tr.token, tr.start))
         dbBatch.push({
           type: 'put',
-          key: makeBlockTxKey(blockNumber, tr.type, tr.start),
+          key: makeBlockTxKey(blockNumber, tr.token, tr.start),
           value: Buffer.concat([Buffer.from([i]), Buffer.from(tx[1])]) // Store as index of the TR & then transaction
         })
       }

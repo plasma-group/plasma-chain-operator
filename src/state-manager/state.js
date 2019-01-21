@@ -77,8 +77,8 @@ class State {
       log('Block number found! Starting at: ' + this.blockNumber)
     } catch (err) {
       if (err.notFound) {
-        log('No blockNumber found! Starting from block 0.')
-        this.blockNumber = new BN(0)
+        log('No blockNumber found! Starting from block 1.')
+        this.blockNumber = new BN(1)
         await this.db.put(Buffer.from('blockNumber'), this.blockNumber.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE))
       } else { throw err }
     }
@@ -141,7 +141,7 @@ class State {
   }
 
   async addDeposit (recipient, token, amount) {
-    while (!this.attemptAcquireLocks([token])) {
+    while (!this.attemptAcquireLocks([token.toString(16)])) {
       // Wait before attempting again
       await timeout(timeoutAmt())
     }
@@ -158,20 +158,21 @@ class State {
     // Put the updated totalDeposits and owned coin ranges
     const newTotalDeposits = oldTotalDeposits.add(amount)
     const deposit = getDepositTransaction(Web3.utils.bytesToHex(recipient), token, oldTotalDeposits, newTotalDeposits, this.blockNumber)
+    const depositEncoded = deposit.encoded
     try {
       // Put the new owned coin range and the new total deposits
       const ops = [
-        { type: 'put', key: getAddressToCoinKey(recipient, token, deposit.tr.end), value: Buffer.from(deposit.encoded, 'hex') },
-        { type: 'put', key: getCoinToTxKey(token, deposit.tr.end), value: Buffer.from(deposit.encoded, 'hex') },
+        { type: 'put', key: getAddressToCoinKey(recipient, token, deposit.tr.end), value: Buffer.from(depositEncoded, 'hex') },
+        { type: 'put', key: getCoinToTxKey(token, deposit.tr.end), value: Buffer.from(depositEncoded, 'hex') },
         { type: 'put', key: getTotalDepositsKey(token), value: newTotalDeposits.toArrayLike(Buffer, 'big', TYPE_BYTE_SIZE) }
       ]
       await this.db.batch(ops)
     } catch (err) {
       throw err
     }
-    this.releaseLocks([recipient, token])
+    this.releaseLocks([recipient, token.toString(16)])
     log('Added deposit with token type:', token.toString(), 'and amount:', amount.toString())
-    return deposit
+    return depositEncoded
   }
 
   validateTransaction (tx) {

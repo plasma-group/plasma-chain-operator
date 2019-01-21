@@ -5,6 +5,7 @@ const TYPE_BYTE_SIZE = require('../src/constants.js').TYPE_BYTE_SIZE
 const models = require('plasma-utils').serialization.models
 const Transfer = models.Transfer
 const Signature = models.Signature
+const UnsignedTransaction = require('plasma-utils').serialization.models.UnsignedTransaction
 const SignedTransaction = models.SignedTransaction
 const log = require('debug')('info:node')
 
@@ -31,10 +32,12 @@ class MockNode {
   }
 
   async deposit (coinType, amount) {
-    const deposit = await this.operator.addDeposit(Buffer.from(Web3.utils.hexToBytes(this.account.address)), coinType, amount)
-    const start = new BN(utils.getCoinId(deposit.tr.token, deposit.tr.start))
-    const end = new BN(utils.getCoinId(deposit.tr.token, deposit.tr.end))
-    log('Adding range from deposit with start:', deposit.tr.start.toString(), '- end:', deposit.tr.end.toString())
+    const encodedDeposit = await this.operator.addDeposit(Buffer.from(Web3.utils.hexToBytes(this.account.address)), coinType, amount)
+    const deposit = new UnsignedTransaction(encodedDeposit).transfers[0]
+
+    const start = new BN(utils.getCoinId(deposit.token, deposit.start))
+    const end = new BN(utils.getCoinId(deposit.token, deposit.end))
+    log('Adding range from deposit with start:', deposit.start.toString(), '- end:', deposit.end.toString())
     utils.addRange(this.ranges, start, end)
   }
 

@@ -16,12 +16,12 @@ const expect = chai.expect
 function getTxBundle (txs) {
   const txBundle = []
   for (const tx of txs) {
-    txBundle.push([tx, Buffer.from(tx.encode())])
+    txBundle.push([tx, Buffer.from(tx.encoded, 'hex')])
   }
   return txBundle
 }
 
-describe.skip('BlockStore', function () {
+describe('BlockStore', function () {
   let db
   let blockStore
   beforeEach(async () => {
@@ -40,7 +40,7 @@ describe.skip('BlockStore', function () {
   })
 
   it('ingests a block without fail', async () => {
-    await blockStore.addBlock('000000000000')
+    await blockStore.addBlock('0001')
     // await blockStore.ingestBlock('00000000000000000000000000000002')
     expect(blockStore).to.not.equal(undefined)
   })
@@ -58,15 +58,15 @@ describe.skip('BlockStore', function () {
 
   it('gets transaction leaves over a number of blocks correctly', async () => {
     // add some blocks
-    for (let i = 0; i < 3; i++) {
-      const TXs = dummyTxs.genNSequentialTransactionsSpacedByOne(100)
+    for (let i = 1; i < 4; i++) {
+      const TXs = dummyTxs.getSequentialTxs(100, 1)
       const txBundle = getTxBundle(TXs)
       const blockNumber = new BN(i).toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
       blockStore.storeTransactions(blockNumber, txBundle)
       blockStore.blockNumberBN = blockStore.blockNumberBN.add(new BN(1))
     }
     // begin test
-    const rangeSinceBlockZero = await blockStore.getTransactions(new BN(0), blockStore.blockNumberBN, new BN(0), new BN(1), new BN(2))
+    const rangeSinceBlockZero = await blockStore.getTransactions(new BN(1), blockStore.blockNumberBN, new BN(0), new BN(1), new BN(2))
     for (const range of rangeSinceBlockZero) {
       for (const r of range) { log(r) }
     }
@@ -74,8 +74,8 @@ describe.skip('BlockStore', function () {
 
   it('generates history proofs correctly', async () => {
     // add some blocks
-    for (let i = 0; i < 3; i++) {
-      const TXs = dummyTxs.genNSequentialTransactionsSpacedByOne(10)
+    for (let i = 1; i < 4; i++) {
+      const TXs = dummyTxs.getSequentialTxs(10, 1)
       const txBundle = getTxBundle(TXs)
       const blockNumber = new BN(i).toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
       // Store the transactions
@@ -86,7 +86,7 @@ describe.skip('BlockStore', function () {
       blockStore.blockNumberBN = blockStore.blockNumberBN.add(new BN(1))
     }
     // // begin test
-    const history = await blockStore.getHistory(new BN(0), new BN(2), new BN(0), new BN(3), new BN(8))
+    const history = await blockStore.getHistory(new BN(1), new BN(2), new BN(0), new BN(3), new BN(8))
     log('Returned history!', history)
   })
 })

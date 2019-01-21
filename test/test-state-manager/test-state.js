@@ -90,7 +90,7 @@ describe('State', function () {
       expect(totalEthDeposits).to.deep.equal(new BN(10).toArrayLike(Buffer, 'big', constants.TYPE_BYTE_SIZE))
       // Increment the blockNumber
       await state.startNewBlock()
-      expect(state.blockNumber).to.deep.equal(new BN(1))
+      expect(state.blockNumber).to.deep.equal(new BN(2))
     })
     it('should lock deposits while changing blockNumber', async () => {
       const addr0 = Buffer.from(web3.utils.hexToBytes(accounts[0].address))
@@ -110,7 +110,7 @@ describe('State', function () {
       expect(totalEthDeposits).to.deep.equal(new BN(10).toArrayLike(Buffer, 'big', constants.TYPE_BYTE_SIZE))
       // Increment the blockNumber
       await state.startNewBlock()
-      expect(state.blockNumber).to.deep.equal(new BN(1))
+      expect(state.blockNumber).to.deep.equal(new BN(2))
     })
   })
 
@@ -170,8 +170,6 @@ describe('State', function () {
       await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
       await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[1].address)), ethType, depositAmount)
       await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[1].address)), ethType, depositAmount)
-      // Start a new block
-      await state.startNewBlock()
       // Create some transfer records & trList
       const tx = makeTx([
         {sender: accounts[0].address, recipient: accounts[1].address, token: ethType, start: 0, end: 12},

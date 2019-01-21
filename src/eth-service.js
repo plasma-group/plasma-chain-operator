@@ -1,5 +1,6 @@
 const path = require('path')
 const fs = require('fs')
+const colors = require('colors') // eslint-disable-line no-unused-vars
 const plasmaChainCompiled = require('plasma-contracts').plasmaChainCompiled
 const plasmaRegistryCompiled = require('plasma-contracts').plasmaRegistryCompiled
 const Web3 = require('web3')
