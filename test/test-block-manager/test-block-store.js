@@ -15,7 +15,10 @@ const path = require('path')
 const BLOCKNUMBER_BYTE_SIZE = require('../../src/constants.js').BLOCKNUMBER_BYTE_SIZE
 // const constants = require('../../src/constants.js')
 const models = require('plasma-utils').serialization.models
+const PlasmaMerkleSumTree = require('plasma-utils').PlasmaMerkleSumTree
 const UnsignedTransaction = models.UnsignedTransaction
+const SignedTransaction = models.SignedTransaction
+const TransactionProof = models.TransactionProof
 const TransferProof = models.TransferProof
 
 const expect = chai.expect
@@ -33,15 +36,15 @@ function getUnsignedTransaction (tx) {
   return unsignedTx
 }
 
-function getHexStringProof (proof) {
+function getHexStringProof (proof) { // TODO: Remove this and instead support buffers by default
   let inclusionProof = []
   for (const sibling of proof) {
-    inclusionProof.push(sibling.hash.toString('hex') + sibling.sum.toString('hex', 32))
+    inclusionProof.push(sibling.toString('hex'))
   }
   return inclusionProof
 }
 
-describe.skip('BlockStore', function () {
+describe('BlockStore', function () {
   let db
   let web3
   let plasmaChain
@@ -103,11 +106,11 @@ describe.skip('BlockStore', function () {
     }
   })
 
-  it('generates history proofs correctly', async () => {
+  it.only('generates history proofs correctly', async () => {
     // add some blocks
     const roots = []
-    for (let i = 1; i < 4; i++) {
-      const TXs = dummyTxs.getSequentialTxs(50, 10, i)
+    for (let i = 1; i < 2; i++) {
+      const TXs = dummyTxs.getSequentialTxs(50, 2, i)
       const txBundle = getTxBundle(TXs)
       const blockNumber = new BN(i).toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
       // Store the transactions
@@ -122,15 +125,40 @@ describe.skip('BlockStore', function () {
       expect(reciept.events.SubmitBlockEvent.returnValues['1']).to.equal('0x' + Buffer.from(rootHash).toString('hex'))
       roots.push('0x' + Buffer.from(rootHash).toString('hex'))
     }
-    const history = await blockStore.getHistory(new BN(1), new BN(1), new BN(0), new BN(0), new BN(1))
-    const trProof = history[0][0]
-    trProof.inclusionProof = getHexStringProof(trProof.inclusionProof) // Convert the proof to the format which is technically desired...
-    const unsignedTx = getUnsignedTransaction(trProof.transaction)
-    await plasmaChain.methods.checkTransferProofAndGetBounds(
-      web3.utils.soliditySha3('0x' + unsignedTx.encoded),
-      unsignedTx.block.toString(),
-      '0x' + new TransferProof(trProof).encoded // txindex only works here if all single-sends
-    ).call({gas: 5000000})
-    // Expect this call does not cause an ERROR
+    log('Roots:', roots)
+    // Check proofs for the first block
+    const start = new BN(3)
+    const end = new BN(50)
+    // Get the tx proofs for the range
+    const txsAndProofs = await blockStore.getTxsWithProofs(new BN(1), new BN(1), new BN(0), start, end)
+    // For all blocks...
+    for (const blockNumber of Object.keys(txsAndProofs)) {
+      // For all transactions in each block...
+      for (const txAndProof of txsAndProofs[blockNumber]) {
+        const transaction = txAndProof.transaction
+        const unsignedTx = getUnsignedTransaction(transaction)
+        // For all transfers in each transaction in each block....
+        for (const [i, trProofDecoded] of txAndProof.transactionProof.transferProofs.entries()) {
+          // Actually check inclusion. LOL
+          trProofDecoded.inclusionProof = getHexStringProof(trProofDecoded.inclusionProof)
+          const transferProof = new TransferProof(trProofDecoded)
+          for (const hash of transferProof.inclusionProof) {
+            log('Inclusion Proof:', hash.toString('hex'))
+          }
+          debugger
+          const res = await plasmaChain.methods.checkTransferProofAndGetBounds(
+            web3.utils.soliditySha3('0x' + unsignedTx.encoded),
+            unsignedTx.block.toString(),
+            '0x' + transferProof.encoded
+          ).call({gas: 5000000}) // This should not revert!
+          log('Result:', res)
+          // Check the Plasma Utils transfer checker
+          const result = PlasmaMerkleSumTree.checkTransferProof(unsignedTx, i, transferProof, roots[0].slice(2) + 'ffffffffffffffffffffffffffffffff')
+          expect(result).to.not.equal(false)
+        }
+        // Check transaction proof in utils... TODO: Assert that it's true
+        // PlasmaMerkleSumTree.checkTransactionProof(transaction, anotherTxProof, roots[0].slice(2) + 'ffffffffffffffffffffffffffffffff')
+      }
+    }
   })
 })

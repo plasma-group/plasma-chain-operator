@@ -6,6 +6,7 @@ const LevelDBSumTree = require('./leveldb-sum-tree.js')
 const models = require('plasma-utils').serialization.models
 const SignedTransaction = models.SignedTransaction
 const Transfer = models.Transfer
+const TransactionProof = models.TransactionProof
 const BLOCK_TX_PREFIX = require('../constants.js').BLOCK_TX_PREFIX
 const BLOCK_ROOT_HASH_PREFIX = require('../constants.js').BLOCK_ROOT_HASH_PREFIX
 const BLOCKNUMBER_BYTE_SIZE = require('../constants.js').BLOCKNUMBER_BYTE_SIZE
@@ -14,6 +15,15 @@ const SIGNATURE_BYTE_SIZE = require('../constants.js').SIGNATURE_BYTE_SIZE
 const itNext = require('../utils.js').itNext
 const itEnd = require('../utils.js').itEnd
 const defer = require('../utils.js').defer
+
+/* ******** HELPER FUNCTIONS ********** */
+function getHexStringProof (proof) { // TODO: Remove this and instead support buffers by default
+  let inclusionProof = []
+  for (const sibling of proof) {
+    inclusionProof.push(sibling.hash.toString('hex') + sibling.sum.toString('hex', 32))
+  }
+  return inclusionProof
+}
 
 class BlockStore {
   constructor (db, txLogDir) {
@@ -108,44 +118,63 @@ class BlockStore {
     while (blockNumberBN.lte(endBlockNumberBN)) {
       const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
       const ranges = await this.getLeavesAt(blockNumberKey, type, start, end)
-      relevantTransactions.push(ranges)
+      for (const r of ranges) {
+        const tx = await this.sumTree.getTransactionFromLeaf(r.value)
+        relevantTransactions.push(tx)
+      }
       blockNumberBN = blockNumberBN.add(new BN(1))
     }
     return relevantTransactions
   }
 
-  async getProofsFor (blockNumber, type, start, end) {
-    const getTr = (tx) => new Transfer(tx.transfers[tx.trIndex])
+  async getTxsWithProofsFor (blockNumber, type, start, end) {
     const numLevels = await this.sumTree.getNumLevels(blockNumber)
     const leaves = await this.getLeavesAt(blockNumber, type, start, end)
-    const allProofs = []
+    const txProofs = []
     for (const leaf of leaves) {
-      const tx = this.sumTree.getTransactionFromLeaf(leaf.value)
-      const trEncoding = Buffer.from(getTr(tx).encoded, 'hex')
-      const index = await this.sumTree.getIndex(blockNumber, trEncoding)
-      const inclusionProof = await this.getTransferInclusionProof(blockNumber, numLevels, new BN(index))
-      const transferProof = {
-        parsedSum: new BN(inclusionProof.includedNode.sum),
-        transaction: tx,
-        leafIndex: tx.trIndex,
-        signature: tx.signatures[tx.trIndex],
-        inclusionProof: inclusionProof.proof
-      }
-      allProofs.push(transferProof)
+      const transaction = this.sumTree.getTransactionFromLeaf(leaf.value)
+      const transactionProof = await this.getTransactionInclusionProof(transaction, blockNumber, numLevels)
+      txProofs.push({
+        transaction,
+        transactionProof
+      })
     }
-    return allProofs
+    return txProofs
   }
 
-  async getHistory (startBlockNumberBN, endBlockNumberBN, type, start, end) {
+  async getTxsWithProofs (startBlockNumberBN, endBlockNumberBN, type, start, end) {
     let blockNumberBN = startBlockNumberBN
-    const history = []
+    const transactionProofs = {}
     while (blockNumberBN.lte(endBlockNumberBN)) {
       const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
-      const proofs = await this.getProofsFor(blockNumberKey, type, start, end)
-      history.push(proofs)
+      const proofs = await this.getTxsWithProofsFor(blockNumberKey, type, start, end)
+      transactionProofs[blockNumberBN.toString()] = proofs
       blockNumberBN = blockNumberBN.add(new BN(1))
     }
-    return history
+    return transactionProofs
+  }
+
+  async getTransactionInclusionProof (transaction, blockNumber, numLevels) {
+    const getTr = (tx, trIndex) => new Transfer(tx.transfers[trIndex])
+    const transferProofs = []
+    // For all transfers in our transaction, get transfer proof
+    for (let i = 0; i < transaction.transfers.length; i++) {
+      // First we need the index in the merkle sum tree of this leaf
+      const trEncoding = Buffer.from(getTr(transaction, i).encoded, 'hex')
+      const leafIndex = await this.sumTree.getIndex(blockNumber, trEncoding)
+      // Now get the transfer inclusion proof
+      const inclusionProof = await this.getTransferInclusionProof(blockNumber, numLevels, new BN(leafIndex))
+      const trProof = {
+        parsedSum: new BN(inclusionProof.includedNode.sum),
+        transaction: transaction,
+        leafIndex,
+        signature: transaction.signatures[i],
+        inclusionProof: getHexStringProof(inclusionProof.proof)
+      }
+      // Add it to our transaction proof
+      transferProofs.push(trProof)
+    }
+    return new TransactionProof({transferProofs})
   }
 
   async getTransferInclusionProof (blockNumber, numLevels, index) {
@@ -154,6 +183,7 @@ class BlockStore {
     // Included node
     const includedNodeValue = await this.sumTree.getNode(blockNumber, 0, index)
     const includedNode = this.sumTree.parseNodeValue(includedNodeValue)
+    log('Included node hash:', includedNode.hash.toString('hex'), '--sum:', includedNode.sum.toString(16))
 
     let parentIndex
     let nodeValue
