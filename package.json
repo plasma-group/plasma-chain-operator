@@ -7,8 +7,8 @@
     "start": "node src/index.js",
     "clean": "rm -rf db",
     "interactive": "node",
-    "test": "env CONFIG='./config-test.json' NODE_ENV='test' mocha --timeout 15000 --recursive",
-    "test-debug": "env CONFIG='./config-test.json' NODE_ENV='test' mocha debug --timeout 15000 --recursive"
+    "test": "env CONFIG='./config-test.json' NODE_ENV='test' mocha --timeout 20000 --recursive",
+    "test-debug": "env CONFIG='./config-test.json' NODE_ENV='test' mocha debug --timeout 20000 --recursive"
   },
   "bin": {
     "operator": "./bin/operator.js"
@@ -51,7 +51,7 @@
     "leveldown": "^4.0.1",
     "levelup": "^3.1.1",
     "lodash": "^4.17.11",
-    "plasma-contracts": "git+ssh://git@github.com/karlfloersch/plasma-contracts.git",
+    "plasma-contracts": "git+ssh://git@github.com:karlfloersch/plasma-contracts.git",
     "plasma-utils": "git+ssh://git@github.com:plasma-group/plasma-utils.git",
     "web3": "^1.0.0-beta.37"
   }

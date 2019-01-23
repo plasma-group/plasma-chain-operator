@@ -9,8 +9,10 @@ const NODE_DB_PREFIX = require('../constants.js').NODE_DB_PREFIX
 const models = require('plasma-utils').serialization.models
 const SignedTransaction = models.SignedTransaction
 const UnsignedTransaction = models.UnsignedTransaction
+const Transfer = models.Transfer
 const itNext = require('../utils.js').itNext
 const itEnd = require('../utils.js').itEnd
+const sha3 = require('../utils.js').sha3
 
 const INDEX_BYTES_SIZE = 4
 
@@ -26,6 +28,7 @@ class LevelDBSumTree {
   async generateTree (blockNumber) {
     await this.parseLeaves(blockNumber)
     const rootHash = await this.generateLevel(blockNumber, 0)
+    log('Generating tree for block:', blockNumber.toString('hex'), 'with root:', Buffer.from(rootHash).toString('hex'))
     return rootHash
   }
 
@@ -50,7 +53,7 @@ class LevelDBSumTree {
     const self = this
     return new Promise(async (resolve, reject) => {
       // Helper functions for getting properties of our transactions
-      const getTr = (tx) => tx.transfers[tx.trIndex]
+      const getTr = (tx) => new Transfer(tx.transfers[tx.trIndex])
       const typedStart = (tr) => new BN(tr.token.toString(16, 8) + tr.start.toString(16, 24), 16)
       // Store the min and max values which can exist for any range. This will be used as the bounds of our stream
       const minStart = Buffer.from('0'.repeat(COIN_ID_BYTE_SIZE * 2), 'hex')
@@ -79,14 +82,14 @@ class LevelDBSumTree {
         const transaction = self.getTransactionFromLeaf(data.value)
         transaction.sumStart = typedStart(getTr(transaction))
         const range = coinIdToBuffer(transaction.sumStart.sub(previousTransaction.sumStart))
-        const prevTxHash = web3.utils.hexToBytes(web3.utils.soliditySha3(self.getUnsignedTransaction(previousTransaction).encoded))
+        const prevTxHash = sha3(Buffer.from(self.getUnsignedTransaction(previousTransaction).encoded, 'hex'))
         self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
         self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encoded, 'hex'), previousTxIndex)
         previousTxIndex = previousTxIndex.add(new BN(1))
         previousTransaction = transaction
       }).on('end', function (data) {
         const range = coinIdToBuffer(new BN(maxEnd).sub(previousTransaction.sumStart))
-        const prevTxHash = web3.utils.hexToBytes(web3.utils.soliditySha3(self.getUnsignedTransaction(previousTransaction).encoded))
+        const prevTxHash = sha3(Buffer.from(self.getUnsignedTransaction(previousTransaction).encoded, 'hex'))
         self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
         self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encoded, 'hex'), previousTxIndex)
         resolve()
@@ -138,14 +141,14 @@ class LevelDBSumTree {
 
   async writeNode (blockNumber, level, index, hash, sum) {
     const newNodeKey = this.makeNodeKey(blockNumber, level, index)
-    log('Writing new node\nKey:', newNodeKey, '\nValue:', Buffer.concat([Buffer.from(hash), sum]))
+    log('Writing new node\nKey:', newNodeKey.toString('hex'), '\nValue:', Buffer.concat([Buffer.from(hash), sum]).toString('hex'))
     await this.db.put(newNodeKey, Buffer.concat([Buffer.from(hash), sum]))
   }
 
   async writeTrToIndex (blockNumber, trEncoding, index) {
     const newTrKey = this.makeTrToIndexKey(blockNumber, trEncoding)
     const indexBuff = index.toArrayLike(Buffer, 'big', INDEX_BYTES_SIZE)
-    log('Writing new tr -> index\nKey:', newTrKey, '\nValue:', indexBuff)
+    log('Writing new tr -> index\nKey:', newTrKey.toString('hex'), '\nValue:', indexBuff.toString('hex'))
     await this.db.put(newTrKey, indexBuff)
   }
 
@@ -173,7 +176,9 @@ class LevelDBSumTree {
   }
 
   getParent (left, right) {
-    const parentHash = web3.utils.hexToBytes(web3.utils.soliditySha3(Buffer.concat([left.hash, right.hash])))
+    const leftSum = left.sum.toArrayLike(Buffer, 'big', 16)
+    const rightSum = right.sum.toArrayLike(Buffer, 'big', 16)
+    const parentHash = sha3(Buffer.concat([left.hash, leftSum, right.hash, rightSum]))
     return {
       hash: parentHash,
       sum: left.sum.add(right.sum).toArrayLike(Buffer, 'big', COIN_ID_BYTE_SIZE)
@@ -181,7 +186,7 @@ class LevelDBSumTree {
   }
 
   async generateLevel (blockNumber, level) {
-    log('Starting to generate level:', level)
+    log('Starting to generate level:', level, 'for block:', blockNumber.toString('hex'))
     const self = this
     const parentLevel = level + 1
     // Check that there is at least one node at this level--if not it might be an empty block
@@ -204,7 +209,7 @@ class LevelDBSumTree {
       let parentIndex = new BN(0)
       let parentNode
       readStream.on('data', (data) => {
-        log('Processing child:', data.key)
+        log('Processing child:', data.key.toString('hex'))
         numChildren = numChildren.add(new BN(1))
         // If this is the left child store it and move on
         if (leftChild === null) {
@@ -220,7 +225,7 @@ class LevelDBSumTree {
       }).on('end', async () => {
         // Check if there was only one node--that means we hit the root
         if (numChildren.eq(new BN(2))) {
-          log('Returning root hash:', parentNode.hash.toString('hex'))
+          log('Returning root hash:', Buffer.from(parentNode.hash).toString('hex'))
           await self.writeNumLevels(blockNumber, parentLevel)
           resolve(parentNode.hash)
           return

@@ -247,7 +247,7 @@ class State {
     if (!ar.tr.start.eq(transfer.start)) {
       // Reduce the first affected range's end position. Eg: ##### becomes ###$$
       const arRecipient = Buffer.from(Web3.utils.hexToBytes(ar.tr.recipient))
-      ar.tr.end = ar.tr.args.end = transfer.start
+      ar.tr.end = transfer.start
       // Get the affectedTransaction so that when we create the new address->coin mapping we preserve the transaction
       await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
       const affectedTransaction = await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
@@ -259,7 +259,7 @@ class State {
     if (!ar.tr.end.eq(transfer.end)) {
       // Increase the last affected range's start position. Eg: ##### becomes $$###
       const arRecipient = Buffer.from(Web3.utils.hexToBytes(ar.tr.recipient))
-      ar.tr.start = ar.tr.args.start = transfer.end
+      ar.tr.start = transfer.end
       // Get the affectedTransaction so that when we create the new address->coin mapping we preserve the transaction
       await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
       const affectedTransaction = await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))

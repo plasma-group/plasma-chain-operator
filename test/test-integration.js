@@ -20,7 +20,7 @@ let idCounter = 0
 // Operator object wrapper to query api
 const operator = {
   addTransaction: (tx) => {
-    const encodedTx = tx.encode()
+    const encodedTx = tx.encoded
     return new Promise((resolve, reject) => {
       chai.request(server.app)
         .post('/api')
@@ -85,7 +85,7 @@ describe.skip('Server', function () {
     const config = readConfigFile(configFile, 'test')
     await server.safeStartup(config)
   })
-  it.skip('Nodes are able to deposit and send transactions', (done) => {
+  it('Nodes are able to deposit and send transactions', (done) => {
     const depositType = new BN(0)
     const depositAmount = new BN(10000)
     const nodes = []

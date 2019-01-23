@@ -13,12 +13,15 @@ const int32ToHex = (x) => {
  * @param {*} n Number of sequential transactions to return.
  * @return {*} A list of sequential transactions.
  */
-const getSequentialTxs = (n, size) => {
+const getSequentialTxs = (n, size, blockNumber) => {
+  if (blockNumber === undefined) {
+    blockNumber = 1
+  }
   let txs = []
 
   for (let i = 0; i < n; i++) {
     txs[i] = new Transaction({
-      block: 0,
+      block: blockNumber,
       transfers: [
         {
           sender: '0x000000000000000f000000000000000000000000', // random fs here because contract crashes on decoding bytes20 of all zeros to address

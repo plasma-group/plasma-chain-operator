@@ -5,6 +5,7 @@ const makeBlockTxKey = require('../utils.js').makeBlockTxKey
 const LevelDBSumTree = require('./leveldb-sum-tree.js')
 const models = require('plasma-utils').serialization.models
 const SignedTransaction = models.SignedTransaction
+const Transfer = models.Transfer
 const BLOCK_TX_PREFIX = require('../constants.js').BLOCK_TX_PREFIX
 const BLOCK_ROOT_HASH_PREFIX = require('../constants.js').BLOCK_ROOT_HASH_PREFIX
 const BLOCKNUMBER_BYTE_SIZE = require('../constants.js').BLOCKNUMBER_BYTE_SIZE
@@ -34,6 +35,12 @@ class BlockStore {
       this._processNewBlockQueue()
     }
     return deferred.promise
+  }
+
+  async getRootHash (blockNumberBN) {
+    const blockNumber = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
+    const rootHash = await this.db.get(Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber]))
+    return rootHash
   }
 
   async _processNewBlockQueue () {
@@ -108,7 +115,7 @@ class BlockStore {
   }
 
   async getProofsFor (blockNumber, type, start, end) {
-    const getTr = (tx) => tx.transfers[tx.trIndex]
+    const getTr = (tx) => new Transfer(tx.transfers[tx.trIndex])
     const numLevels = await this.sumTree.getNumLevels(blockNumber)
     const leaves = await this.getLeavesAt(blockNumber, type, start, end)
     const allProofs = []
@@ -116,9 +123,15 @@ class BlockStore {
       const tx = this.sumTree.getTransactionFromLeaf(leaf.value)
       const trEncoding = Buffer.from(getTr(tx).encoded, 'hex')
       const index = await this.sumTree.getIndex(blockNumber, trEncoding)
-      const branch = await this.getInclusionProof(blockNumber, numLevels, new BN(index))
-      const proof = [tx, tx.trIndex, [index, branch]]
-      allProofs.push(proof)
+      const inclusionProof = await this.getTransferInclusionProof(blockNumber, numLevels, new BN(index))
+      const transferProof = {
+        parsedSum: new BN(inclusionProof.includedNode.sum),
+        transaction: tx,
+        leafIndex: tx.trIndex,
+        signature: tx.signatures[tx.trIndex],
+        inclusionProof: inclusionProof.proof
+      }
+      allProofs.push(transferProof)
     }
     return allProofs
   }
@@ -135,24 +148,18 @@ class BlockStore {
     return history
   }
 
-  async getInclusionProof (blockNumber, numLevels, index) {
-    const branch = []
+  async getTransferInclusionProof (blockNumber, numLevels, index) {
+    const proof = []
 
-    // Initial node
-    const initialNodeValue = await this.sumTree.getNode(blockNumber, 0, index)
-    const initialNode = this.sumTree.parseNodeValue(initialNodeValue)
-
-    // User needs to be given this extra information.
-    branch.push({
-      hash: initialNode.hash,
-      sum: initialNode.sum
-    })
+    // Included node
+    const includedNodeValue = await this.sumTree.getNode(blockNumber, 0, index)
+    const includedNode = this.sumTree.parseNodeValue(includedNodeValue)
 
     let parentIndex
     let nodeValue
     let node
     let siblingIndex = index.addn((index.mod(new BN(2)).eq(new BN(0)) ? 1 : -1))
-    for (let i = 0; i < numLevels - 1; i++) {
+    for (let i = 0; i < numLevels; i++) {
       try {
         nodeValue = await this.sumTree.getNode(blockNumber, i, siblingIndex)
         node = this.sumTree.parseNodeValue(nodeValue)
@@ -163,7 +170,7 @@ class BlockStore {
           node = this.sumTree.emptyNode()
         } else throw err
       }
-      branch.push({
+      proof.push({
         hash: node.hash,
         sum: node.sum
       })
@@ -172,7 +179,10 @@ class BlockStore {
       parentIndex = siblingIndex.eq(new BN(0)) ? new BN(0) : siblingIndex.divn(2)
       siblingIndex = parentIndex.addn((parentIndex.mod(new BN(2)).eq(new BN(0)) ? 1 : -1))
     }
-    return branch
+    return {
+      includedNode,
+      proof
+    }
   }
 
   /*

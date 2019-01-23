@@ -2,6 +2,7 @@ const START_BYTE_SIZE = require('./constants.js').START_BYTE_SIZE
 const TYPE_BYTE_SIZE = require('./constants.js').TYPE_BYTE_SIZE
 const BLOCK_TX_PREFIX = require('./constants.js').BLOCK_TX_PREFIX
 const TEST_DB_DIR = require('./constants.js').TEST_DB_DIR
+const soliditySha3 = require('web3').utils.soliditySha3
 const fs = require('fs')
 const _ = require('lodash')
 
@@ -155,6 +156,13 @@ function _generateNewDbTestDir () {
   return TEST_DB_DIR + +new Date()
 }
 
+function sha3 (value) {
+  // Requires '0x' + becuase web3 only interprets strings as bytes if they start with 0x
+  const hashString = '0x' + value.toString('hex')
+  const solidityHash = soliditySha3(hashString)
+  return Buffer.from(solidityHash.slice(2), 'hex') // Slice 2 to remove the dumb 0x
+}
+
 module.exports = {
   addRange,
   subtractRange,
@@ -164,5 +172,6 @@ module.exports = {
   itEnd,
   getCoinId,
   readConfigFile,
+  sha3,
   makeBlockTxKey
 }
