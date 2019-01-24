@@ -7,8 +7,8 @@
     "start": "node src/index.js",
     "clean": "rm -rf db",
     "interactive": "node",
-    "test": "env CONFIG='./config-test.json' NODE_ENV='test' mocha --timeout 20000 --recursive",
-    "test-debug": "env CONFIG='./config-test.json' NODE_ENV='test' mocha debug --timeout 20000 --recursive"
+    "test": "env CONFIG='./config-test.json' NODE_ENV='test' mocha --timeout 200000 --recursive",
+    "test-debug": "env CONFIG='./config-test.json' NODE_ENV='test' mocha debug --timeout 200000 --recursive"
   },
   "bin": {
     "operator": "./bin/operator.js"

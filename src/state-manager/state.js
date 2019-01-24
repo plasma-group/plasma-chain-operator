@@ -57,10 +57,6 @@ function getCoinToTxKey (token, start) {
   return Buffer.concat(buffers)
 }
 
-function getTotalDepositsKey (token) {
-  return token.toArrayLike(Buffer, 'big', TYPE_BYTE_SIZE)
-}
-
 class State {
   constructor (db, txLogDirectory) {
     this.db = db
@@ -158,7 +154,7 @@ class State {
       throw err
     }
     this.releaseLocks([recipient, token.toString(16)])
-    log('Added deposit with token type:', token.toString(), ', start:', start.toString('hex'), 'and end:', end.toString('hex'))
+    log('Added deposit with token type:', token.toString('hex'), ', start:', start.toString('hex'), 'and end:', end.toString('hex'))
     return depositEncoded
   }
 
@@ -343,11 +339,15 @@ class State {
     this.releaseLocks([address])
     return ownedRanges
   }
+
+  async getTransactions (address) {
+    const ownedRanges = await this.getOwnedRanges(address)
+    const transactions = new Set()
+    for (const range of ownedRanges) {
+      transactions.add(range.value)
+    }
+    return transactions
+  }
 }
 
-module.exports = {
-  State,
-  getAddressToCoinKey,
-  getCoinToTxKey,
-  getTotalDepositsKey
-}
+module.exports = State

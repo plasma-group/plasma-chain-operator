@@ -34,11 +34,10 @@ class MockNode {
   async deposit (coinType, amount) {
     const encodedDeposit = await this.operator.addDeposit(Buffer.from(Web3.utils.hexToBytes(this.account.address)), coinType, amount)
     const deposit = new UnsignedTransaction(encodedDeposit).transfers[0]
-
     const start = new BN(utils.getCoinId(deposit.token, deposit.start))
-    const end = new BN(utils.getCoinId(deposit.token, deposit.end)).subn(1)
-    log(this.account.address, 'adding range from deposit with start:', deposit.start.toString('hex'), '- end:', deposit.end.toString('hex'))
-    utils.addRange(this.ranges, start, end)
+    const end = new BN(utils.getCoinId(deposit.token, deposit.end))
+    log(this.account.address, 'adding range from deposit with start:', start.toString('hex'), '- end:', end.toString('hex'))
+    utils.addRange(this.ranges, new BN(start), new BN(end))
   }
 
   getRandomSubrange (startBound, endBound, maxSize) {
@@ -85,7 +84,14 @@ class MockNode {
     )
     // Update ranges
     log(this.account.address, 'trying to send a transaction with', 'start:', new BN(startId).toString('hex'), '-- end', new BN(endId).toString('hex'))
-    utils.subtractRange(this.ranges, startId, endId)
+    // TODO: Move this over to the range manager code in `core`
+    try {
+      utils.subtractRange(this.ranges, startId, endId)
+    } catch (err) {
+      console.log('WARNING: squashing subtract range error')
+      return
+      // throw err
+    }
     recipient.pendingRanges.push([new BN(startId), new BN(endId)])
     // Add transaction
     await this.operator.addTransaction(tx)

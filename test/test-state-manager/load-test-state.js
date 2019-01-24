@@ -14,10 +14,19 @@ const MockNode = require('../../src/mock-node.js')
 const expect = chai.expect // eslint-disable-line no-unused-vars
 
 let state
+let totalDeposits
 
 const operator = {
   addDeposit: (address, tokenType, amount) => {
-    return state.addDeposit(address, tokenType, amount)
+    const tokenTypeKey = tokenType.toString()
+    if (totalDeposits[tokenTypeKey] === undefined) {
+      log('Adding new token type to our total deposits store')
+      totalDeposits[tokenTypeKey] = new BN(0)
+    }
+    const start = new BN(totalDeposits[tokenTypeKey])
+    totalDeposits[tokenTypeKey] = new BN(totalDeposits[tokenTypeKey].add(amount))
+    const end = new BN(totalDeposits[tokenTypeKey])
+    return state.addDeposit(address, tokenType, start, end)
   },
   addTransaction: (tx) => {
     return state.addTransaction(tx)
@@ -37,7 +46,8 @@ describe('State', function () {
     const txLogDirectory = dbDir + +new Date() + '-tx-log/'
     fs.mkdirSync(txLogDirectory)
     // Create state object
-    state = new State.State(db, txLogDirectory, () => true)
+    state = new State(db, txLogDirectory, () => true)
+    totalDeposits = {}
     await state.init()
   }
   beforeEach(startNewDB)
@@ -71,7 +81,7 @@ describe('State', function () {
       const nodes = []
       for (const acct of accounts) {
       // for (const acct of accts) {
-        nodes.push(new MockNode(state, acct, nodes))
+        nodes.push(new MockNode(operator, acct, nodes))
       }
       // Add deposits from 100 different accounts
       const depositPromises = []

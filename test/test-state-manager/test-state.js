@@ -3,7 +3,6 @@
 const fs = require('fs')
 const chai = require('chai')
 const chaiHttp = require('chai-http')
-const constants = require('../../src/constants.js')
 const accounts = require('../mock-accounts.js').accounts
 const web3 = require('web3')
 const BN = web3.utils.BN
@@ -14,6 +13,7 @@ const models = require('plasma-utils').serialization.models
 const Transfer = models.Transfer
 const Signature = models.Signature
 const SignedTransaction = models.SignedTransaction
+const UnsignedTransaction = models.UnsignedTransaction
 const log = require('debug')('test:info:test-state')
 
 const expect = chai.expect
@@ -24,6 +24,26 @@ const fakeSig = {
   v: '1b',
   r: '0000000000000000000000000000000000000000000000000000000000000000',
   s: '0000000000000000000000000000000000000000000000000000000000000000'
+}
+
+let state
+let totalDeposits
+
+const operator = {
+  addDeposit: (address, tokenType, amount) => {
+    const tokenTypeKey = tokenType.toString()
+    if (totalDeposits[tokenTypeKey] === undefined) {
+      log('Adding new token type to our total deposits store')
+      totalDeposits[tokenTypeKey] = new BN(0)
+    }
+    const start = new BN(totalDeposits[tokenTypeKey])
+    totalDeposits[tokenTypeKey] = new BN(totalDeposits[tokenTypeKey].add(amount))
+    const end = new BN(totalDeposits[tokenTypeKey])
+    return state.addDeposit(address, tokenType, start, end)
+  },
+  addTransaction: (tx) => {
+    return state.addTransaction(tx)
+  }
 }
 
 function makeTx (rawTrs, rawSigs, block) {
@@ -39,7 +59,6 @@ function makeTx (rawTrs, rawSigs, block) {
 
 describe('State', function () {
   let db
-  let state
   const startNewDB = async () => {
     const dbDir = './db-test/'
     if (!fs.existsSync(dbDir)) {
@@ -51,30 +70,26 @@ describe('State', function () {
     const txLogDirectory = dbDir + +new Date() + '-tx-log/'
     fs.mkdirSync(txLogDirectory)
     // Create state object
-    state = new State.State(db, txLogDirectory, () => true)
+    state = new State(db, txLogDirectory, () => true)
+    totalDeposits = {}
     await state.init()
   }
   beforeEach(startNewDB)
 
   describe('addDeposit', () => {
-    it('increments total deposits by the deposit amount', async () => {
+    it('adds the deposit in the expected location', async () => {
       const addr0 = Buffer.from(web3.utils.hexToBytes(accounts[0].address))
-      const ethType = new BN(0)
+      const tokenType = new BN(999)
       const depositAmount = new BN(10)
-      // There should be no total deposits record
-      try {
-        await db.get(State.getTotalDepositsKey(ethType))
-        // If this succeeded something is going wrong
-        throw new Error('Expected no entry for this type')
-      } catch (err) {
-        if (!err.notFound) throw err
-        // Otherwise we (correctly) have no total_deposits record for this type
-      }
       // Add a deposit
-      await state.addDeposit(addr0, ethType, depositAmount)
-      let totalEthDeposits = await db.get(State.getTotalDepositsKey(ethType))
-      // Check that our total deposits equal 10
-      expect(totalEthDeposits).to.deep.equal(new BN(10).toArrayLike(Buffer, 'big', constants.TYPE_BYTE_SIZE))
+      await operator.addDeposit(addr0, tokenType, depositAmount)
+      // Check that our account has a record
+      const transactions = await state.getTransactions(accounts[0].address)
+      // Get the first record of the set
+      const depositTransfer = new UnsignedTransaction(transactions.values().next().value.toString('hex')).transfers[0]
+      expect(depositTransfer.token.toString()).to.equal('999')
+      expect(depositTransfer.start.toString()).to.equal('0')
+      expect(depositTransfer.end.toString()).to.equal('10')
     })
   })
 
@@ -84,10 +99,7 @@ describe('State', function () {
       const ethType = new BN(0)
       const depositAmount = new BN(10)
       // Add a deposit
-      await state.addDeposit(addr0, ethType, depositAmount)
-      let totalEthDeposits = await db.get(State.getTotalDepositsKey(ethType))
-      // Check that our total deposits equal 10
-      expect(totalEthDeposits).to.deep.equal(new BN(10).toArrayLike(Buffer, 'big', constants.TYPE_BYTE_SIZE))
+      await operator.addDeposit(addr0, ethType, depositAmount)
       // Increment the blockNumber
       await state.startNewBlock()
       expect(state.blockNumber).to.deep.equal(new BN(2))
@@ -97,17 +109,13 @@ describe('State', function () {
       const ethType = new BN(0)
       const depositAmount = new BN(10)
       // Add a deposit
-      await state.addDeposit(addr0, ethType, depositAmount)
+      await operator.addDeposit(addr0, ethType, depositAmount)
       // Now add a bunch of conflicting deposits. This will trigger a bunch of locks
       for (let i = 0; i < 20; i++) {
-        state.addDeposit(addr0, ethType, depositAmount).then((res) => {
+        operator.addDeposit(addr0, ethType, depositAmount).then((res) => {
           log('Added deposit')
         })
       }
-      let totalEthDeposits = await db.get(State.getTotalDepositsKey(ethType))
-      log('this is our total deposits:' + new BN(totalEthDeposits))
-      // Check that our total deposits equal 10
-      expect(totalEthDeposits).to.deep.equal(new BN(10).toArrayLike(Buffer, 'big', constants.TYPE_BYTE_SIZE))
       // Increment the blockNumber
       await state.startNewBlock()
       expect(state.blockNumber).to.deep.equal(new BN(2))
@@ -121,7 +129,7 @@ describe('State', function () {
       const depositAmount = new BN(16)
       // Now add a bunch of deposits.
       for (let i = 0; i < 20; i++) {
-        await state.addDeposit(addr0, ethType, depositAmount)
+        await operator.addDeposit(addr0, ethType, depositAmount)
       }
       const test = await state._getAffectedRanges(new BN(0), new BN(0), new BN(50))
       log(test)
@@ -131,7 +139,7 @@ describe('State', function () {
   describe('addTransaction', () => {
     it('should return false if the block already contains a transfer for the range', async () => {
       // Add deposits for us to later send
-      await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), new BN(0), new BN(10))
+      await operator.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), new BN(0), new BN(10))
       // Create a transfer record which touches the same range which we just deposited
       const tx = makeTx([{sender: accounts[0].address, recipient: accounts[1].address, token: 1, start: 0, end: 12}], [fakeSig], 1)
       try {
@@ -144,7 +152,7 @@ describe('State', function () {
       const ethType = new BN(0)
       const depositAmount = new BN(10)
       // Add deposits for us to later send
-      await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
+      await operator.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
       // Start a new block
       await state.startNewBlock()
       // Create some transfer records & trList
@@ -166,10 +174,10 @@ describe('State', function () {
       const ethType = new BN(0)
       const depositAmount = new BN(10)
       // Add deposits for us to later send
-      await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
-      await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
-      await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[1].address)), ethType, depositAmount)
-      await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[1].address)), ethType, depositAmount)
+      await operator.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
+      await operator.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
+      await operator.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[1].address)), ethType, depositAmount)
+      await operator.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[1].address)), ethType, depositAmount)
       // Create some transfer records & trList
       const tx = makeTx([
         {sender: accounts[0].address, recipient: accounts[1].address, token: ethType, start: 0, end: 12},
@@ -188,7 +196,7 @@ describe('State', function () {
       const depositAmount = new BN(10)
       // Add 100 deposits of value 10 from 100 different accounts
       for (let i = 0; i < 5; i++) {
-        await state.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
+        await operator.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
       }
       const ownedRanges = await state.getOwnedRanges(accounts[0].address)
       expect(ownedRanges.length).to.equal(5)

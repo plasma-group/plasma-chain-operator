@@ -85,7 +85,7 @@ const operator = {
   }
 }
 
-describe.only('Server', function () {
+describe('Server', function () {
   before(async () => {
     // Startup with test config file
     const configFile = path.join(appRoot.toString(), 'test', 'config-test.json')

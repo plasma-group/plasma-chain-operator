@@ -1,6 +1,6 @@
 const levelup = require('levelup')
 const leveldown = require('leveldown')
-const State = require('./state.js').State
+const State = require('./state.js')
 const Web3 = require('web3')
 const constants = require('../constants.js')
 const BN = Web3.utils.BN
@@ -35,9 +35,9 @@ process.on('message', async (m) => {
   } else if (m.message.method === constants.DEPOSIT_METHOD) {
     const deposit = await newDepositCallback(null, {
       recipient: Buffer.from(Web3.utils.hexToBytes(m.message.params.recipient)),
-      token: new BN(Buffer.from(m.message.params.token)),
-      start: new BN(Buffer.from(m.message.params.start)),
-      end: new BN(Buffer.from(m.message.params.end))
+      token: new BN(Buffer.from(m.message.params.token, 'hex')),
+      start: new BN(Buffer.from(m.message.params.start, 'hex')),
+      end: new BN(Buffer.from(m.message.params.end, 'hex'))
     })
     log('OUTGOING new deposit with rpcID:', m.message.id)
     process.send({ ipcID: m.ipcID, message: { deposit } })
