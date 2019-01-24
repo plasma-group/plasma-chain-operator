@@ -62,11 +62,10 @@ async function startup (config) {
   if (started) {
     throw alreadyStartedError
   }
-  // Begin listening for connections
   // Make a new db directory if it doesn't exist.
   if (!fs.existsSync(config.dbDir)) {
     log('Creating a new db directory because it does not exist')
-    fs.mkdirSync(config.dbDir)
+    fs.mkdirSync(config.dbDir, { recursive: true })
     fs.mkdirSync(config.ethDBDir)
   }
   try {
