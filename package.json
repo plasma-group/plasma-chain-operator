@@ -2,9 +2,9 @@
   "name": "plasma-operator",
   "version": "1.0.0",
   "description": "Plasma operator & simple REST server",
-  "main": "src/index.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node src/run-server.js",
     "clean": "rm -rf db",
     "interactive": "node",
     "test": "env CONFIG='./config-test.json' NODE_ENV='test' mocha --timeout 200000 --recursive",
