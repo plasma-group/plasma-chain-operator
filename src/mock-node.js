@@ -36,8 +36,8 @@ class MockNode {
     const deposit = new UnsignedTransaction(encodedDeposit).transfers[0]
 
     const start = new BN(utils.getCoinId(deposit.token, deposit.start))
-    const end = new BN(utils.getCoinId(deposit.token, deposit.end))
-    log('Adding range from deposit with start:', deposit.start.toString(), '- end:', deposit.end.toString())
+    const end = new BN(utils.getCoinId(deposit.token, deposit.end)).subn(1)
+    log(this.account.address, 'adding range from deposit with start:', deposit.start.toString('hex'), '- end:', deposit.end.toString('hex'))
     utils.addRange(this.ranges, start, end)
   }
 
@@ -84,6 +84,7 @@ class MockNode {
       blockNumber
     )
     // Update ranges
+    log(this.account.address, 'trying to send a transaction with', 'start:', new BN(startId).toString('hex'), '-- end', new BN(endId).toString('hex'))
     utils.subtractRange(this.ranges, startId, endId)
     recipient.pendingRanges.push([new BN(startId), new BN(endId)])
     // Add transaction

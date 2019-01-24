@@ -140,38 +140,25 @@ class State {
     }
   }
 
-  async addDeposit (recipient, token, amount) {
+  async addDeposit (recipient, token, start, end) {
     while (!this.attemptAcquireLocks([token.toString(16)])) {
       // Wait before attempting again
       await timeout(timeoutAmt())
     }
-    // Get total deposits for this coin token
-    let oldTotalDeposits = new BN(0)
-    try {
-      const tdBuffer = await this.db.get(getTotalDepositsKey(token))
-      oldTotalDeposits = new BN(tdBuffer)
-    } catch (err) {
-      if (err.notFound) {
-        log('No total deposits found for token type:', token, '! Starting from 0.')
-      } else { throw err }
-    }
-    // Put the updated totalDeposits and owned coin ranges
-    const newTotalDeposits = oldTotalDeposits.add(amount)
-    const deposit = getDepositTransaction(Web3.utils.bytesToHex(recipient), token, oldTotalDeposits, newTotalDeposits, this.blockNumber)
+    const deposit = getDepositTransaction(Web3.utils.bytesToHex(recipient), token, start, end, this.blockNumber)
     const depositEncoded = deposit.encoded
     try {
       // Put the new owned coin range and the new total deposits
       const ops = [
         { type: 'put', key: getAddressToCoinKey(recipient, token, deposit.tr.end), value: Buffer.from(depositEncoded, 'hex') },
-        { type: 'put', key: getCoinToTxKey(token, deposit.tr.end), value: Buffer.from(depositEncoded, 'hex') },
-        { type: 'put', key: getTotalDepositsKey(token), value: newTotalDeposits.toArrayLike(Buffer, 'big', TYPE_BYTE_SIZE) }
+        { type: 'put', key: getCoinToTxKey(token, deposit.tr.end), value: Buffer.from(depositEncoded, 'hex') }
       ]
       await this.db.batch(ops)
     } catch (err) {
       throw err
     }
     this.releaseLocks([recipient, token.toString(16)])
-    log('Added deposit with token type:', token.toString(), 'and amount:', amount.toString())
+    log('Added deposit with token type:', token.toString(), ', start:', start.toString('hex'), 'and end:', end.toString('hex'))
     return depositEncoded
   }
 

@@ -8,6 +8,7 @@ const bodyParser = require('body-parser')
 const log = require('debug')('info:api-app')
 const EthService = require('./eth-service.js')
 const appRoot = require('app-root-path')
+const BN = require('web3').utils.BN
 
 // Set up express
 const app = express()
@@ -76,7 +77,7 @@ async function startup (config) {
     blockManager = cp.fork(appRoot + '/src/block-manager/app.js')
     stateManager.on('message', resolveMessage)
     blockManager.on('message', resolveMessage)
-    // Now send a message
+    // Now send an init message
     await sendMessage(stateManager, jsonrpc(constants.INIT_METHOD, {
       stateDBDir: config.stateDBDir,
       txLogDir: config.txLogDir
@@ -85,6 +86,9 @@ async function startup (config) {
       blockDBDir: config.blockDBDir,
       txLogDir: config.txLogDir
     }))
+    // Set up the eth event watchers
+    log('Registering Ethereum event watcher for `DepositEvent(address,uint256)`')
+    EthService.eventWatchers['DepositEvent(address,uint256,uint256,uint256)'].subscribe(_submitDeposits)
   } catch (err) {
     throw err
   }
@@ -105,6 +109,28 @@ async function safeStartup (config) {
       throw err
     }
     log('Startup has already been run... skipping...')
+  }
+}
+
+async function _submitDeposits (err, depositEvents) {
+  if (err) {
+    throw err
+  }
+  for (const e of depositEvents) {
+    // Decode the event...
+    const depositEvent = e.returnValues
+    const recipient = depositEvent.depositer
+    const token = new BN(depositEvent.start).toArrayLike(Buffer, 'big', 16).slice(0, 4)
+    const start = new BN(depositEvent.start).toArrayLike(Buffer, 'big', 16).slice(4)
+    const end = new BN(depositEvent.end).toArrayLike(Buffer, 'big', 16).slice(4)
+    // Send the deposit to the state manager
+    await sendMessage(stateManager, jsonrpc(constants.DEPOSIT_METHOD, {
+      id: e.id,
+      recipient,
+      token,
+      start,
+      end
+    }))
   }
 }
 

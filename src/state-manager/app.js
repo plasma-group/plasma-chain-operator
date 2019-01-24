@@ -20,26 +20,30 @@ async function startup (options) {
 
 process.on('message', async (m) => {
   log('INCOMING request with method:', m.message.method, 'and rpcID:', m.message.id)
+  // ******* INIT ******* //
   if (m.message.method === constants.INIT_METHOD) {
     await startup(m.message.params)
     process.send({ ipcID: m.ipcID, message: {startup: 'SUCCESS'} })
     return
+  // ******* NEW_BLOCK ******* //
   } else if (m.message.method === constants.NEW_BLOCK_METHOD) {
     const blockNumber = await state.startNewBlock()
     log('OUTGOING new block success with rpcID:', m.message.id)
     process.send({ ipcID: m.ipcID, message: {newBlockNumber: blockNumber.toString()} })
     return
+  // ******* DEPOSIT ******* //
   } else if (m.message.method === constants.DEPOSIT_METHOD) {
     const deposit = await newDepositCallback(null, {
       recipient: Buffer.from(Web3.utils.hexToBytes(m.message.params.recipient)),
-      token: new BN(m.message.params.token, 16),
-      amount: new BN(m.message.params.amount, 16)
+      token: new BN(Buffer.from(m.message.params.token)),
+      start: new BN(Buffer.from(m.message.params.start)),
+      end: new BN(Buffer.from(m.message.params.end))
     })
     log('OUTGOING new deposit with rpcID:', m.message.id)
     process.send({ ipcID: m.ipcID, message: { deposit } })
     return
+  // ******* ADD_TX ******* //
   } else if (m.message.method === constants.ADD_TX_METHOD) {
-    // New SignedTransaction!
     const tx = new SignedTransaction(m.message.params.encodedTx)
     let txResponse
     try {
@@ -56,9 +60,9 @@ process.on('message', async (m) => {
   throw new Error('RPC method not recognized!')
 })
 
-async function newDepositCallback (err, depositEvent) {
+async function newDepositCallback (err, deposit) {
   if (err) {
     throw err
   }
-  return state.addDeposit(depositEvent.recipient, depositEvent.token, depositEvent.amount)
+  return state.addDeposit(deposit.recipient, deposit.token, deposit.start, deposit.end)
 }
