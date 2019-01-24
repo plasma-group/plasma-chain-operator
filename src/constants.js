@@ -2,6 +2,7 @@
 const INIT_METHOD = 'init'
 const DEPOSIT_METHOD = 'deposit'
 const ADD_TX_METHOD = 'addTransaction'
+const GET_TXS_METHOD = 'getTransactions'
 const NEW_BLOCK_METHOD = 'newBlock'
 const ADDRESS_BYTE_SIZE = 20
 const START_BYTE_SIZE = 12
@@ -30,6 +31,7 @@ module.exports = {
   DEPOSIT_METHOD,
   NEW_BLOCK_METHOD,
   ADD_TX_METHOD,
+  GET_TXS_METHOD,
   START_BYTE_SIZE,
   TYPE_BYTE_SIZE,
   COIN_ID_BYTE_SIZE,
