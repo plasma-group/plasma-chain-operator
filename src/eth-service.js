@@ -7,15 +7,18 @@ const Web3 = require('web3')
 const ganache = require('ganache-cli')
 const log = require('debug')('info:eth')
 const ETH_DB_FILENAME = require('./constants.js').ETH_DB_FILENAME
+const EventWatcher = require('./event-watcher.js')
 
 const DEPLOY_REGISTRY = 'DEPLOY'
 
 // ES short for EthService
 // `web3` & `plasmaChain` start as uninitialized because the startup script must be run before we can interact meaningfully with our node
+const UNINITIALIZED = 'UNINITIALIZED'
 const es = {
-  web3: 'UNINITIALIZED',
-  plasmaChain: 'UNINITIALIZED',
-  operatorAddress: 'UNINITIALIZED',
+  web3: UNINITIALIZED,
+  plasmaChain: UNINITIALIZED,
+  operatorAddress: UNINITIALIZED,
+  eventWatchers: UNINITIALIZED,
   ethDB: {}
 }
 
@@ -34,8 +37,24 @@ async function startup (config) {
   }
   // Create our plasma chain es.web3 object, this will point to an existing Ethereum smart contract
   es.plasmaChain = new es.web3.eth.Contract(plasmaChainCompiled.abi, es.ethDB.plasmaChainAddress, {from: es.operatorAddress})
+  // Load our event handlers
+  es.eventWatchers = _getEventWatchers(config)
   console.log('Plasma Registry address:', es.ethDB.plasmaRegistryAddress.yellow)
   console.log('Plasma Chain address:', es.ethDB.plasmaChainAddress.yellow)
+}
+
+function _getEventWatchers (config) {
+  const eventWatchers = {}
+  for (const ethEvent of Object.keys(es.plasmaChain.events)) {
+    if (ethEvent.slice(0, 2) === '0x' || !ethEvent.includes('(')) {
+      // Filter out all of the events that are not of the form `DepositEvent(address,uint256)`
+      continue
+    }
+    log('Creating event watcher for event:', ethEvent)
+    const topic = es.web3.utils.soliditySha3(ethEvent) // Topic is the event function & params hashed together
+    eventWatchers[ethEvent] = new EventWatcher(es.web3, es.plasmaChain, topic, config.finalityDepth)
+  }
+  return eventWatchers
 }
 
 function loadEthDB (config) {
@@ -81,7 +100,7 @@ async function initializeTestingEnv (config) {
 async function deployNewPlasmaRegistry (config) {
   // Deploy a new PlasmaRegistry. This requires first deploying a dummy Plasma Chain
   // We have the compiled contracts, let's create objects for them...
-  const plasmaChainCt = new es.web3.eth.Contract(plasmaChainCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 5302132, gasPrice: '300000'})
+  const plasmaChainCt = new es.web3.eth.Contract(plasmaChainCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 6302132, gasPrice: '300000'})
   const plasmaRegistryCt = new es.web3.eth.Contract(plasmaRegistryCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 4000000, gasPrice: '300000'})
   // To set up the Plasma Network, we need to first deploy a Plasma Chain contract
   const plasmaChain = await plasmaChainCt.deploy({ data: plasmaChainCompiled.bytecode }).send()
