@@ -4,6 +4,8 @@ const leveldown = require('leveldown')
 const BlockStore = require('./block-store.js')
 const log = require('debug')('info:block-app')
 const constants = require('../constants.js')
+const error = require('debug')('ERROR:block-manager-app')
+const BN = require('web3').utils.BN
 
 // Create global state object
 let blockStore
@@ -34,12 +36,29 @@ process.on('message', async (m) => {
     await startup(m.message.params)
     process.send({ ipcID: m.ipcID, message: {startup: 'SUCCESS'} })
     return
+  // ******* NEW_BLOCK ******* //
   } else if (m.message.method === constants.NEW_BLOCK_METHOD) {
     const isSuccessfullyStarted = await blockStore.ingestBlock(m.message)
     if (!isSuccessfullyStarted) {
       process.send({ ipcID: m.ipcID, message: 'FAIL' })
       return
     } else throw new Error('BlockStore failed to ingest block!')
+  // ******* GET_HISTORY_PROOF ******* //
+  } else if (m.message.method === constants.GET_HISTORY_PROOF) {
+    const startBlockBN = new BN(m.message.params.startBlock, 'hex')
+    const endBlockBN = new BN(m.message.params.endBlock, 'hex')
+    const tokenType = new BN(m.message.params.token, 'hex')
+    const start = new BN(m.message.params.start, 'hex')
+    const end = new BN(m.message.params.end, 'hex')
+    let txsAndProofs
+    try {
+      txsAndProofs = await blockStore.getTxsWithProofs(startBlockBN, endBlockBN, tokenType, start, end)
+    } catch (err) {
+      error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
+      txsAndProofs = { error: err }
+    }
+    log('OUTGOING getHistoryProof with rpcID:', m.message.id)
+    process.send({ ipcID: m.ipcID, message: { txsAndProofs } })
   }
   throw new Error('RPC method not recognized!')
 })
