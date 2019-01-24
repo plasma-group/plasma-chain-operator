@@ -12,6 +12,10 @@ const EthService = require('../src/eth-service.js')
 const appRoot = require('app-root-path')
 const readConfigFile = require('../src/utils.js').readConfigFile
 const path = require('path')
+const UnsignedTransaction = require('plasma-utils').serialization.models.UnsignedTransaction
+const DEPOSIT_SENDER = '0x0000000000000000000000000000000000000000'
+
+const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 chai.use(chaiHttp)
 
@@ -46,16 +50,19 @@ const operator = {
   },
   addDeposit: async (recipient, type, amount) => {
     // Construct deposit transaction
+    // TODO: change this to actually use the right type and amount
     const reciept = await EthService.plasmaChain.methods.submitDeposit().send({
       from: EthService.web3.utils.bytesToHex(recipient),
-      value: '1000000000000000000', // send 1 eth
+      value: new BN('100000000', 'hex').toString(),
       gas: 3500000,
       gasPrice: '300000'
     })
-    log(reciept.events.NewDeposit.returnValues)
-    // recipient: Buffer.from(Web3.utils.hexToBytes(m.message.params.recipient)),
-    // type: new BN(m.message.params.type, 16),
-    // amount: new BN(m.message.params.amount, 16)
+    const depositEvent = reciept.events.DepositEvent.returnValues
+    const tokenType = new BN(depositEvent.start).toArrayLike(Buffer, 'big', 16).slice(0, 4)
+    const start = new BN(depositEvent.start).toArrayLike(Buffer, 'big', 16).slice(4)
+    const end = new BN(depositEvent.end).toArrayLike(Buffer, 'big', 16).slice(4)
+    const deposit = new UnsignedTransaction({block: depositEvent.block, transfers: [{sender: DEPOSIT_SENDER, recipient: depositEvent.depositer, tokenType, start, end}]})
+    return deposit
   },
   startNewBlock: () => {
     return new Promise((resolve, reject) => {
@@ -78,7 +85,7 @@ const operator = {
   }
 }
 
-describe.skip('Server', function () {
+describe.only('Server', function () {
   before(async () => {
     // Startup with test config file
     const configFile = path.join(appRoot.toString(), 'test', 'config-test.json')
@@ -86,26 +93,29 @@ describe.skip('Server', function () {
     await server.safeStartup(config)
   })
   it('Nodes are able to deposit and send transactions', (done) => {
-    const depositType = new BN(0)
-    const depositAmount = new BN(10000)
+    // const accts = accounts.slice(0, 5)
     const nodes = []
+    // for (const acct of accts) {
     for (const acct of accounts) {
       nodes.push(new MockNode(operator, acct, nodes))
     }
-    const depositPromises = []
-    // Add deposits from 100 different accounts
-    for (const node of nodes) {
-      depositPromises.push(node.deposit(depositType, depositAmount))
-    }
-    Promise.all(depositPromises).then((res) => {
+    bigIntegrationTest(nodes, operator).then(() => {
       done()
-      // Send txs!
-      mineAndLoopSendRandomTxs(5, operator, nodes).then(() => {
-        done()
-      })
     })
   })
 })
+
+async function bigIntegrationTest (nodes, operator) {
+  // Add deposits from 100 different accounts
+  const depositType = new BN(0)
+  const depositAmount = new BN(10000, 'hex')
+  for (const node of nodes) {
+    await node.deposit(depositType, depositAmount)
+    log('Submitted deposit')
+  }
+  // Now mine and send random transactions
+  await mineAndLoopSendRandomTxs(5, operator, nodes)
+}
 
 async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
   await operator.startNewBlock()
@@ -113,29 +123,15 @@ async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
     log('Starting new block...')
     const blockNumberResponse = await operator.startNewBlock()
     const blockNumber = new BN(blockNumberResponse.newBlockNumber)
+    log('Waiting before starting block:', blockNumber.toString() + '...')
+    await timeout(500)
     log('Sending new txs for block number:', blockNumber.toString())
     for (const node of nodes) {
       node.processPendingRanges()
     }
-    await sendRandomTransactions(operator, nodes, blockNumber)
-  }
-}
-
-let randomTxPromises
-let promisesAndTestIds = []
-
-function sendRandomTransactions (operator, nodes, blockNumber, rounds, maxSize) {
-  if (rounds === undefined) rounds = 1
-  randomTxPromises = []
-  for (let i = 0; i < rounds; i++) {
+    // await sendRandomTransactions(operator, nodes, blockNumber)
     for (const node of nodes) {
-      randomTxPromises.push(node.sendRandomTransaction(blockNumber, maxSize))
-      promisesAndTestIds.push({
-        promise: randomTxPromises[randomTxPromises.length - 1],
-        id: idCounter
-      })
+      await node.sendRandomTransaction(blockNumber, 1024)
     }
   }
-  Promise.all(randomTxPromises).then(() => { promisesAndTestIds = [] })
-  return Promise.all(randomTxPromises)
 }
