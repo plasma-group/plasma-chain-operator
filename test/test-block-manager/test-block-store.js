@@ -17,8 +17,6 @@ const BLOCKNUMBER_BYTE_SIZE = require('../../src/constants.js').BLOCKNUMBER_BYTE
 const models = require('plasma-utils').serialization.models
 const PlasmaMerkleSumTree = require('plasma-utils').PlasmaMerkleSumTree
 const UnsignedTransaction = models.UnsignedTransaction
-const SignedTransaction = models.SignedTransaction
-const TransactionProof = models.TransactionProof
 const TransferProof = models.TransferProof
 
 const expect = chai.expect
@@ -44,7 +42,7 @@ function getHexStringProof (proof) { // TODO: Remove this and instead support bu
   return inclusionProof
 }
 
-describe('BlockStore', function () {
+describe.skip('BlockStore', function () {
   let db
   let web3
   let plasmaChain
@@ -106,7 +104,7 @@ describe('BlockStore', function () {
     }
   })
 
-  it.only('generates history proofs correctly', async () => {
+  it('generates history proofs correctly', async () => {
     // add some blocks
     const roots = []
     for (let i = 1; i < 2; i++) {
@@ -145,7 +143,6 @@ describe('BlockStore', function () {
           for (const hash of transferProof.inclusionProof) {
             log('Inclusion Proof:', hash.toString('hex'))
           }
-          debugger
           const res = await plasmaChain.methods.checkTransferProofAndGetBounds(
             web3.utils.soliditySha3('0x' + unsignedTx.encoded),
             unsignedTx.block.toString(),
