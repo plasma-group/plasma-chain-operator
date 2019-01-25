@@ -2,6 +2,7 @@ const fs = require('fs')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
 const BlockStore = require('./block-store.js')
+const SignedTransaction = require('plasma-utils').models.SignedTransaction
 const log = require('debug')('info:block-app')
 const constants = require('../constants.js')
 const error = require('debug')('ERROR:block-manager-app')
@@ -47,12 +48,10 @@ process.on('message', async (m) => {
   } else if (m.message.method === constants.GET_HISTORY_PROOF) {
     const startBlockBN = new BN(m.message.params.startBlock, 'hex')
     const endBlockBN = new BN(m.message.params.endBlock, 'hex')
-    const tokenType = new BN(m.message.params.token, 'hex')
-    const start = new BN(m.message.params.start, 'hex')
-    const end = new BN(m.message.params.end, 'hex')
+    const transaction = new SignedTransaction(m.message.params.transaction)
     let txsAndProofs
     try {
-      txsAndProofs = await blockStore.getTxsWithProofs(startBlockBN, endBlockBN, tokenType, start, end)
+      txsAndProofs = await blockStore.getTxsWithProofs(startBlockBN, endBlockBN, transaction)
     } catch (err) {
       error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
       txsAndProofs = { error: err }

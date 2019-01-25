@@ -81,9 +81,9 @@ class BlockStore {
   /*
    * History proof logic
    */
-  async getLeavesAt (blockNumber, type, start, end) {
-    const startKey = makeBlockTxKey(blockNumber, type, start)
-    const endKey = makeBlockTxKey(blockNumber, type, end)
+  async getLeavesAt (blockNumber, token, start, end) {
+    const startKey = makeBlockTxKey(blockNumber, token, start)
+    const endKey = makeBlockTxKey(blockNumber, token, end)
     const it = this.db.iterator({
       lt: endKey,
       reverse: true
@@ -112,12 +112,12 @@ class BlockStore {
     return result
   }
 
-  async getTransactions (startBlockNumberBN, endBlockNumberBN, type, start, end) {
+  async getTransactions (startBlockNumberBN, endBlockNumberBN, token, start, end) {
     let blockNumberBN = startBlockNumberBN
     const relevantTransactions = []
     while (blockNumberBN.lte(endBlockNumberBN)) {
       const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
-      const ranges = await this.getLeavesAt(blockNumberKey, type, start, end)
+      const ranges = await this.getLeavesAt(blockNumberKey, token, start, end)
       for (const r of ranges) {
         const tx = await this.sumTree.getTransactionFromLeaf(r.value)
         relevantTransactions.push(tx)
@@ -127,9 +127,9 @@ class BlockStore {
     return relevantTransactions
   }
 
-  async getTxsWithProofsFor (blockNumber, type, start, end) {
+  async getTxsWithProofsFor (blockNumber, token, start, end) {
     const numLevels = await this.sumTree.getNumLevels(blockNumber)
-    const leaves = await this.getLeavesAt(blockNumber, type, start, end)
+    const leaves = await this.getLeavesAt(blockNumber, token, start, end)
     const txProofs = []
     for (const leaf of leaves) {
       const transaction = this.sumTree.getTransactionFromLeaf(leaf.value)
@@ -142,12 +142,29 @@ class BlockStore {
     return txProofs
   }
 
-  async getTxsWithProofs (startBlockNumberBN, endBlockNumberBN, type, start, end) {
+  async getTxsWithProofs (startBlockNumberBN, endBlockNumberBN, token, start, end) {
     let blockNumberBN = startBlockNumberBN
     const transactionProofs = {}
     while (blockNumberBN.lte(endBlockNumberBN)) {
       const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
-      const proofs = await this.getTxsWithProofsFor(blockNumberKey, type, start, end)
+      const proofs = await this.getTxsWithProofsFor(blockNumberKey, token, start, end)
+      transactionProofs[blockNumberBN.toString()] = proofs
+      blockNumberBN = blockNumberBN.add(new BN(1))
+    }
+    return transactionProofs
+  }
+
+  async getTxHistory (startBlockNumberBN, endBlockNumberBN, transaction) {
+    let blockNumberBN = startBlockNumberBN
+    const transactionProofs = {}
+    while (blockNumberBN.lte(endBlockNumberBN)) {
+      const proofs = []
+      for (const transfer of transaction.transfers) {
+        // For each one of the transfer records get the proofs
+        const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
+        const rangeTxProof = await this.getTxsWithProofsFor(blockNumberKey, transfer.token, transfer.start, transfer.end)
+        proofs.concat(rangeTxProof)
+      }
       transactionProofs[blockNumberBN.toString()] = proofs
       blockNumberBN = blockNumberBN.add(new BN(1))
     }
