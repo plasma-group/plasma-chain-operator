@@ -1,11 +1,11 @@
+const log = require('debug')('info:block-app')
+const error = require('debug')('ERROR:block-manager-app')
 const fs = require('fs')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
 const BlockStore = require('./block-store.js')
 const SignedTransaction = require('plasma-utils').serialization.models.SignedTransaction
-const log = require('debug')('info:block-app')
 const constants = require('../constants.js')
-const error = require('debug')('ERROR:block-manager-app')
 const BN = require('web3').utils.BN
 
 // Create global state object
@@ -44,6 +44,10 @@ process.on('message', async (m) => {
       process.send({ ipcID: m.ipcID, message: 'FAIL' })
       return
     } else throw new Error('BlockStore failed to ingest block!')
+  // ******* DEPOSIT ******* //
+  } else if (m.message.method === constants.DEPOSIT_METHOD) {
+    log('Got new deposit! Message:', m.message)
+    return
   // ******* GET_HISTORY_PROOF ******* //
   } else if (m.message.method === constants.GET_HISTORY_PROOF) {
     const startBlockBN = new BN(m.message.params.startBlock, 'hex')

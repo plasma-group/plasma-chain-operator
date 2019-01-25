@@ -130,6 +130,14 @@ async function _submitDeposits (err, depositEvents) {
       start,
       end
     }))
+    // Send the deposit to the block manager
+    await sendMessage(blockManager, jsonrpc(constants.DEPOSIT_METHOD, {
+      id: e.id,
+      recipient,
+      token,
+      start,
+      end
+    }))
   }
 }
 
