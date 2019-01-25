@@ -51,16 +51,16 @@ const operator = {
   addDeposit: async (recipient, type, amount) => {
     // Construct deposit transaction
     // TODO: change this to actually use the right type and amount
-    const reciept = await EthService.plasmaChain.methods.submitDeposit().send({
+    const reciept = await EthService.plasmaChain.methods.depositETH().send({
       from: EthService.web3.utils.bytesToHex(recipient),
       value: new BN('100000000', 'hex').toString(),
       gas: 3500000,
       gasPrice: '300000'
     })
     const depositEvent = reciept.events.DepositEvent.returnValues
-    const tokenType = new BN(depositEvent.start).toArrayLike(Buffer, 'big', 16).slice(0, 4)
-    const start = new BN(depositEvent.start).toArrayLike(Buffer, 'big', 16).slice(4)
-    const end = new BN(depositEvent.end).toArrayLike(Buffer, 'big', 16).slice(4)
+    const tokenType = new BN(depositEvent.tokenType, 10)
+    const start = new BN(depositEvent.untypedStart, 10)
+    const end = new BN(depositEvent.untypedEnd, 10)
     const deposit = new UnsignedTransaction({block: depositEvent.block, transfers: [{sender: DEPOSIT_SENDER, recipient: depositEvent.depositer, tokenType, start, end}]})
     return deposit
   },

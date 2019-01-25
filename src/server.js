@@ -86,7 +86,7 @@ async function startup (config) {
       txLogDir: config.txLogDir
     }))
     // Set up the eth event watchers
-    log('Registering Ethereum event watcher for `DepositEvent(address,uint256)`')
+    log('Registering Ethereum event watcher for `DepositEvent(address,uint256,uint256,uint256)`')
     EthService.eventWatchers['DepositEvent(address,uint256,uint256,uint256)'].subscribe(_submitDeposits)
   } catch (err) {
     throw err
@@ -119,9 +119,9 @@ async function _submitDeposits (err, depositEvents) {
     // Decode the event...
     const depositEvent = e.returnValues
     const recipient = depositEvent.depositer
-    const token = new BN(depositEvent.start).toArrayLike(Buffer, 'big', 16).slice(0, 4)
-    const start = new BN(depositEvent.start).toArrayLike(Buffer, 'big', 16).slice(4)
-    const end = new BN(depositEvent.end).toArrayLike(Buffer, 'big', 16).slice(4)
+    const token = new BN(depositEvent.tokenType, 10)
+    const start = new BN(depositEvent.untypedStart, 10)
+    const end = new BN(depositEvent.untypedEnd, 10)
     // Send the deposit to the state manager
     await sendMessage(stateManager, jsonrpc(constants.DEPOSIT_METHOD, {
       id: e.id,

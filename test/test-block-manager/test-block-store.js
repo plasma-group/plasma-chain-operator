@@ -42,7 +42,7 @@ function getHexStringProof (proof) { // TODO: Remove this and instead support bu
   return inclusionProof
 }
 
-describe('BlockStore', function () {
+describe.skip('BlockStore', function () {
   let db
   let web3
   let plasmaChain
@@ -104,7 +104,7 @@ describe('BlockStore', function () {
     }
   })
 
-  it.only('generates history proofs correctly', async () => {
+  it('generates history proofs correctly', async () => {
     // add some blocks
     const roots = []
     for (let i = 1; i < 2; i++) {
@@ -132,7 +132,7 @@ describe('BlockStore', function () {
     await verifyTxsAndProofs(txsAndProofs, web3, plasmaChain, roots)
   })
 
-  it.only('generates history proofs correctly when given a particular transaction', async () => {
+  it('generates history proofs correctly when given a particular transaction', async () => {
     // add some blocks
     const roots = []
     let TXs
