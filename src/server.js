@@ -1,3 +1,4 @@
+const path = require('path')
 const fs = require('fs')
 const cp = require('child_process')
 const constants = require('./constants.js')
@@ -7,7 +8,6 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const log = require('debug')('info:api-app')
 const EthService = require('./eth-service.js')
-const appRoot = require('app-root-path')
 const BN = require('web3').utils.BN
 
 // Set up express
@@ -72,8 +72,8 @@ async function startup (config) {
     // Setup web3
     await EthService.startup(config)
     // Setup our child processes -- stateManager & blockManager
-    stateManager = cp.fork(appRoot + '/src/state-manager/app.js')
-    blockManager = cp.fork(appRoot + '/src/block-manager/app.js')
+    stateManager = cp.fork(path.join(__dirname, '/state-manager/app.js'))
+    blockManager = cp.fork(path.join(__dirname, '/block-manager/app.js'))
     stateManager.on('message', resolveMessage)
     blockManager.on('message', resolveMessage)
     // Now send an init message

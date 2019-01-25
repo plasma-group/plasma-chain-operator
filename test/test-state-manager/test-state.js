@@ -1,5 +1,6 @@
 /* eslint-env mocha */
 
+const log = require('debug')('test:info:test-state')
 const fs = require('fs')
 const chai = require('chai')
 const chaiHttp = require('chai-http')
@@ -14,7 +15,7 @@ const Transfer = models.Transfer
 const Signature = models.Signature
 const SignedTransaction = models.SignedTransaction
 const UnsignedTransaction = models.UnsignedTransaction
-const log = require('debug')('test:info:test-state')
+const TEST_DB_DIR = require('../../src/constants.js').TEST_DB_DIR
 
 const expect = chai.expect
 
@@ -60,7 +61,7 @@ function makeTx (rawTrs, rawSigs, block) {
 describe('State', function () {
   let db
   const startNewDB = async () => {
-    const dbDir = './db-test/'
+    const dbDir = TEST_DB_DIR
     if (!fs.existsSync(dbDir)) {
       log('Creating a new db directory because it does not exist')
       fs.mkdirSync(dbDir)

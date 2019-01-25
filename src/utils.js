@@ -1,3 +1,5 @@
+const path = require('path')
+const appRoot = require('app-root-path')
 const START_BYTE_SIZE = require('./constants.js').START_BYTE_SIZE
 const TYPE_BYTE_SIZE = require('./constants.js').TYPE_BYTE_SIZE
 const BLOCK_TX_PREFIX = require('./constants.js').BLOCK_TX_PREFIX
@@ -136,6 +138,11 @@ function makeBlockTxKey (blockNumber, type, start) {
 
 function readConfigFile (configFilePath, mode) {
   const config = JSON.parse(fs.readFileSync(configFilePath, 'utf8'))
+  setConfigDefaults(config, mode)
+  return config
+}
+
+function setConfigDefaults (config, mode) {
   const setIfUndefined = (config, key, value) => {
     if (config[key] === undefined) {
       config[key] = value
@@ -144,12 +151,12 @@ function readConfigFile (configFilePath, mode) {
   if (mode === 'test') {
     config.dbDir = _generateNewDbTestDir()
   }
+  config.dbDir = path.join(appRoot.toString(), config.dbDir)
   // Set db sub directories defaults if they don't exist
   setIfUndefined(config, 'txLogDir', config.dbDir + '/tx-log/')
   setIfUndefined(config, 'stateDBDir', config.dbDir + '/state-db/')
   setIfUndefined(config, 'blockDBDir', config.dbDir + '/block-db/')
   setIfUndefined(config, 'ethDBDir', config.dbDir + '/eth-db/')
-  return config
 }
 
 function _generateNewDbTestDir () {

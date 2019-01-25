@@ -13,6 +13,7 @@ const Signature = models.Signature
 const SignedTransaction = models.SignedTransaction
 const BN = require('bn.js')
 const dummyTxs = require('./dummy-tx-utils')
+const TEST_DB_DIR = require('../../src/constants.js').TEST_DB_DIR
 
 const expect = chai.expect
 
@@ -37,7 +38,7 @@ describe('LevelDBSumTree', function () {
   let db
   let blockStore
   beforeEach(async () => {
-    const rootDBDir = './db-test/'
+    const rootDBDir = TEST_DB_DIR
     if (!fs.existsSync(rootDBDir)) {
       log('Creating a new db directory because it does not exist')
       fs.mkdirSync(rootDBDir)

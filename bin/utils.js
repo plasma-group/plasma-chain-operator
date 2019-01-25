@@ -4,9 +4,10 @@ const colors = require('colors') // eslint-disable-line no-unused-vars
 const inquirer = require('inquirer')
 const appRoot = require('app-root-path')
 const Web3 = require('web3')
+const KEYSTORE_DIR = require('../src/constants.js').KEYSTORE_DIR
 
 const web3 = new Web3()
-const keystoreDirectory = path.join(appRoot.toString(), 'keystore')
+const keystoreDirectory = path.join(appRoot.toString(), KEYSTORE_DIR)
 
 async function getAccount () {
   if (!fs.existsSync(keystoreDirectory)) {

@@ -25,7 +25,8 @@ const NUM_LEVELS_PREFIX = Buffer.from([252]) // The number of levels in a partic
 const NODE_DB_PREFIX = Buffer.from([251])
 // DB
 const ETH_DB_FILENAME = 'eth-config.json'
-const TEST_DB_DIR = './db-test/'
+const TEST_DB_DIR = './operator-db-test/'
+const KEYSTORE_DIR = 'operator-keystore'
 
 module.exports = {
   INIT_METHOD,
@@ -48,5 +49,6 @@ module.exports = {
   NODE_DB_PREFIX,
   SIGNATURE_BYTE_SIZE,
   ETH_DB_FILENAME,
+  KEYSTORE_DIR,
   TEST_DB_DIR
 }

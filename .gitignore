@@ -1,9 +1,9 @@
 # Database
-db
-db-test
+operator-db
+operator-db-test
 history-db
 state-db
-keystore
+operator-keystore
 
 # Vim
 *.swp

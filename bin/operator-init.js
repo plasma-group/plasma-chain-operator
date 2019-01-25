@@ -3,9 +3,8 @@ const path = require('path')
 const program = require('commander')
 const colors = require('colors') // eslint-disable-line no-unused-vars
 const getAccount = require('./utils.js').getAccount
-const appRoot = require('app-root-path')
-const ethService = require(appRoot + '/src/eth-service.js')
-const readConfigFile = require(appRoot + '/src/utils.js').readConfigFile
+const ethService = require('../src/eth-service.js')
+const readConfigFile = require('../src/utils.js').readConfigFile
 
 program
   .description('starts the operator using the first account')
@@ -16,7 +15,7 @@ program
       return
     }
     // Initialize a new Plasma Chain
-    const configFile = (process.env.CONFIG) ? process.env.CONFIG : path.join(appRoot.toString(), 'config.json')
+    const configFile = (process.env.CONFIG) ? process.env.CONFIG : path.join(__dirname, '..', 'config.json')
     const config = readConfigFile(configFile)
     config.privateKey = account.privateKey
     if (cmd.newRegistry === true) {

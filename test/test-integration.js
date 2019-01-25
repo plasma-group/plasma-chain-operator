@@ -9,7 +9,6 @@ const BN = require('web3').utils.BN
 const log = require('debug')('test:info:test-integration')
 const MockNode = require('../src/mock-node.js')
 const EthService = require('../src/eth-service.js')
-const appRoot = require('app-root-path')
 const readConfigFile = require('../src/utils.js').readConfigFile
 const path = require('path')
 const UnsignedTransaction = require('plasma-utils').serialization.models.UnsignedTransaction
@@ -88,7 +87,7 @@ const operator = {
 describe('Server', function () {
   before(async () => {
     // Startup with test config file
-    const configFile = path.join(appRoot.toString(), 'test', 'config-test.json')
+    const configFile = path.join(__dirname, 'config-test.json')
     const config = readConfigFile(configFile, 'test')
     await server.safeStartup(config)
   })

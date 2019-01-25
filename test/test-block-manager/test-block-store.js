@@ -9,7 +9,6 @@ const BlockStore = require('../../src/block-manager/block-store.js')
 const BN = require('web3').utils.BN
 const dummyTxs = require('./dummy-tx-utils')
 const EthService = require('../../src/eth-service.js')
-const appRoot = require('app-root-path')
 const readConfigFile = require('../../src/utils.js').readConfigFile
 const path = require('path')
 const BLOCKNUMBER_BYTE_SIZE = require('../../src/constants.js').BLOCKNUMBER_BYTE_SIZE
@@ -51,7 +50,7 @@ describe.skip('BlockStore', function () {
 
   beforeEach(async () => {
     // Startup with test config file
-    const configFile = path.join(appRoot.toString(), 'test', 'config-test.json')
+    const configFile = path.join(__dirname, '..', 'config-test.json')
     config = readConfigFile(configFile, 'test')
     // Create dbDir and ethDB dir directory
     if (!fs.existsSync(config.dbDir)) {
@@ -62,7 +61,7 @@ describe.skip('BlockStore', function () {
     }
     // Copy a sample tx log to the dbDir
     const TEST_BLOCK_FILENAME = 'test-block-0001.bin'
-    fs.copyFileSync(appRoot + '/test/test-block-manager/tx-log/' + TEST_BLOCK_FILENAME, config.txLogDir + '0001')
+    fs.copyFileSync(path.join(__dirname, 'tx-log', TEST_BLOCK_FILENAME), config.txLogDir + '0001')
     // Start up a new chain
     await EthService.startup(config)
     web3 = EthService.web3

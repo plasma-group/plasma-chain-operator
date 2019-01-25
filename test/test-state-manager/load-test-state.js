@@ -10,6 +10,7 @@ const levelup = require('levelup')
 const leveldown = require('leveldown')
 const log = require('debug')('test:info:load-test-state')
 const MockNode = require('../../src/mock-node.js')
+const TEST_DB_DIR = require('../../src/constants.js').TEST_DB_DIR
 
 const expect = chai.expect // eslint-disable-line no-unused-vars
 
@@ -36,7 +37,7 @@ const operator = {
 describe('State', function () {
   let db
   const startNewDB = async () => {
-    const dbDir = './db-test/'
+    const dbDir = TEST_DB_DIR
     if (!fs.existsSync(dbDir)) {
       log('Creating a new db directory because it does not exist')
       fs.mkdirSync(dbDir)
