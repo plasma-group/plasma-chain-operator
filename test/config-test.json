@@ -2,6 +2,5 @@
   "dbDir": "./db-test/",
   "operatorIpAddress": "0.0.0.0",
   "port": "3000",
-  "finalityDepth": "0",
-  "web3Provider": ""
+  "finalityDepth": "0"
 }

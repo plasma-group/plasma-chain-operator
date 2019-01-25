@@ -53,7 +53,7 @@ function _getEventWatchers (config) {
     }
     log('Creating event watcher for event:', ethEvent)
     const topic = es.web3.utils.soliditySha3(ethEvent) // Topic is the event function & params hashed together
-    eventWatchers[ethEvent] = new EventWatcher(es.web3, es.plasmaChain, topic, config.finalityDepth)
+    eventWatchers[ethEvent] = new EventWatcher(es.web3, es.plasmaChain, topic, config.finalityDepth, config.ethPollInterval)
   }
   return eventWatchers
 }
@@ -185,8 +185,7 @@ async function _setupGanache (web3, config) {
   } else {
     // No port given, so run as local library
     web3.setProvider(ganache.provider(providerOptions))
-    web3.currentProvider.setMaxListeners(300)
-    // TODO: Remove this as it is squashing errors. See https://github.com/ethereum/web3.js/issues/1648
+    web3.currentProvider.setMaxListeners(300) // TODO: Remove this as it is squashing errors. See https://github.com/ethereum/web3.js/issues/1648
   }
 }
 
