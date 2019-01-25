@@ -7,6 +7,7 @@ const UnsignedTransaction = models.UnsignedTransaction
 const SignedTransaction = models.SignedTransaction
 const itNext = require('../utils.js').itNext
 const itEnd = require('../utils.js').itEnd
+const colors = require('colors') // eslint-disable-line no-unused-vars
 
 const COIN_ID_PREFIX = require('../constants.js').COIN_ID_PREFIX
 const ADDRESS_PREFIX = require('../constants.js').ADDRESS_PREFIX
@@ -84,7 +85,12 @@ class State {
       fs.mkdirSync(this.txLogDirectory)
     }
     // Open a write stream for our tx log
-    this.writeStream = fs.createWriteStream(this.tmpTxLogFile, { flags: 'w' })
+    if (fs.existsSync(this.tmpTxLogFile)) {
+      console.log('WARNING:'.yellow, `Partially complete transaction log detected.
+        Starting from where we left off but note that for extra security you may want to
+        start from scratch & reingest only the finalized blocks in the transaction log.`)
+    }
+    this.writeStream = fs.createWriteStream(this.tmpTxLogFile, { flags: 'a' })
   }
 
   async startNewBlock () {
