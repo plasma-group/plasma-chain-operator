@@ -13,8 +13,8 @@ const COIN_ID_PREFIX = require('../constants.js').COIN_ID_PREFIX
 const ADDRESS_PREFIX = require('../constants.js').ADDRESS_PREFIX
 const START_BYTE_SIZE = require('../constants.js').START_BYTE_SIZE
 const TYPE_BYTE_SIZE = require('../constants.js').TYPE_BYTE_SIZE
+const DEPOSIT_SENDER = require('../constants.js').DEPOSIT_SENDER
 const BLOCKNUMBER_BYTE_SIZE = require('../constants.js').BLOCKNUMBER_BYTE_SIZE
-const DEPOSIT_SENDER = '0x0000000000000000000000000000000000000000'
 const DEPOSIT_TX_LENGTH = 73
 
 // ************* HELPER FUNCTIONS ************* //
