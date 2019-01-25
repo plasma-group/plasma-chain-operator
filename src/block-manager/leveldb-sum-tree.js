@@ -224,7 +224,7 @@ class LevelDBSumTree {
         leftChild = null
       }).on('end', async () => {
         // Check if there was only one node--that means we hit the root
-        if (parentIndex.eq(new BN(1))) {
+        if (numChildren.eq(new BN(2))) {
           log('Returning root hash:', Buffer.from(parentNode.hash).toString('hex'))
           await self.writeNumLevels(blockNumber, parentLevel)
           resolve(parentNode.hash)
