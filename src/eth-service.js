@@ -16,6 +16,7 @@ const DEPLOY_REGISTRY = 'DEPLOY'
 const UNINITIALIZED = 'UNINITIALIZED'
 const es = {
   web3: UNINITIALIZED,
+  ganacheServer: UNINITIALIZED,
   plasmaChain: UNINITIALIZED,
   operatorAddress: UNINITIALIZED,
   eventWatchers: UNINITIALIZED,
@@ -88,7 +89,7 @@ function initializeWallet (web3, privateKey) {
 
 async function initializeTestingEnv (config) {
   // First get our es.web3 object which we will use. This comes with some wallets that have $ in them
-  _setupTestProvider(es.web3)
+  await _setupGanache(es.web3, config)
   // Deploy a new Plasma Registry
   await deployNewPlasmaRegistry(config)
   // Deploy our new Plasma Chain and save it in a file
@@ -158,7 +159,13 @@ function _addTestWalletsToWeb3 (web3) {
   }
 }
 
-function _setupTestProvider (web3) {
+async function _startGanacheServer (server, port) {
+  return new Promise((resolve) => {
+    server.listen(port, resolve)
+  })
+}
+
+async function _setupGanache (web3, config) {
   const ganacheAccounts = []
   for (let i = 0; i < web3.eth.accounts.wallet.length; i++) {
     ganacheAccounts.push({
@@ -168,9 +175,19 @@ function _setupTestProvider (web3) {
   }
   // For all provider options, see: https://github.com/trufflesuite/ganache-cli#library
   const providerOptions = {'accounts': ganacheAccounts, 'gasLimit': '0x669F82', 'locked': false, 'logger': { log }}
-  web3.setProvider(ganache.provider(providerOptions))
-  // TODO: Remove this as it is squashing errors. See https://github.com/ethereum/web3.js/issues/1648
-  web3.currentProvider.setMaxListeners(300)
+  // If we are given an HttpProvider, use a ganache server instead of as a local library
+  if (config.testHttpProviderPort !== undefined) {
+    es.ganacheServer = ganache.server(providerOptions)
+    log('starting server')
+    await _startGanacheServer(es.ganacheServer, config.testHttpProviderPort)
+    log('done?')
+    web3.setProvider(new Web3.providers.HttpProvider('http://localhost:' + config.testHttpProviderPort))
+  } else {
+    // No port given, so run as local library
+    web3.setProvider(ganache.provider(providerOptions))
+    web3.currentProvider.setMaxListeners(300)
+    // TODO: Remove this as it is squashing errors. See https://github.com/ethereum/web3.js/issues/1648
+  }
 }
 
 // Set functions which we will export as well
