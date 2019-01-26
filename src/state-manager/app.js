@@ -44,7 +44,7 @@ process.on('message', async (m) => {
     return
   // ******* ADD_TX ******* //
   } else if (m.message.method === constants.ADD_TX_METHOD) {
-    const tx = new SignedTransaction(m.message.params.encodedTx)
+    const tx = new SignedTransaction(m.message.params[0])
     let txResponse
     try {
       const addTxResult = await state.addTransaction(tx)
@@ -58,16 +58,17 @@ process.on('message', async (m) => {
     return
   // ******* GET_TXS ******* //
   } else if (m.message.method === constants.GET_TXS_METHOD) {
-    const address = m.message.params.address
-    let getTxResult
+    const address = m.message.params[0]
+    let response
     try {
-      getTxResult = await state.getTransactions(address)
+      const getTxResult = Array.from(await state.getTransactions(address))
+      response = { result: getTxResult }
     } catch (err) {
       error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
-      getTxResult = { error: err }
+      response = { error: err }
     }
     log('OUTGOING getTransactions response with rpcID:', m.message.id)
-    process.send({ ipcID: m.ipcID, message: getTxResult })
+    process.send({ ipcID: m.ipcID, message: response })
     return
   }
   throw new Error('RPC method not recognized!')
