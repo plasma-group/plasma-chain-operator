@@ -278,7 +278,7 @@ class State {
     }
     this.releaseTransactionLock(tx)
     log('Added transaction from:', tx.transfers[0].recipient)
-    return true
+    return new UnsignedTransaction(tx).encoded
   }
 
   isCorrectTokenType (tokenType, coinID) {

@@ -60,14 +60,14 @@ process.on('message', async (m) => {
     return
   // ******* GET_HISTORY_PROOF ******* //
   } else if (m.message.method === constants.GET_HISTORY_PROOF) {
-    const startBlockBN = new BN(m.message.params.startBlock, 'hex')
-    const endBlockBN = new BN(m.message.params.endBlock, 'hex')
-    const transaction = new SignedTransaction(m.message.params.transaction)
+    const startBlockBN = new BN(m.message.params[0], 'hex')
+    const endBlockBN = new BN(m.message.params[1], 'hex')
+    const transaction = new SignedTransaction(m.message.params[2])
     let txsAndProofs
     try {
       txsAndProofs = await blockStore.getTxHistory(startBlockBN, endBlockBN, transaction)
     } catch (err) {
-      error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
+      console.error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
       txsAndProofs = { error: err }
     }
     log('OUTGOING getHistoryProof with rpcID:', m.message.id)

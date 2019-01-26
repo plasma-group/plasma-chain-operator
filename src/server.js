@@ -46,14 +46,16 @@ app.post('/api', function (req, res) {
   log('INCOMING RPC request with method:', req.body.method, 'and rpcID:', req.body.id)
   if (req.body.method === constants.DEPOSIT_METHOD ||
       req.body.method === constants.ADD_TX_METHOD ||
-      req.body.method === constants.NEW_BLOCK_METHOD) {
+      req.body.method === constants.NEW_BLOCK_METHOD ||
+      req.body.method === constants.GET_TXS_METHOD) {
     sendMessage(stateManager, req.body).then((response) => {
       log('OUTGOING response to RPC request with method:', req.body.method, 'and rpcID:', req.body.id)
       res.send(response.message)
     })
-  } else if (req.body.method === 'NOT YET IMPLEMENTED') {
+  } else if (req.body.method === constants.GET_HISTORY_PROOF) {
     sendMessage(blockManager, req.body).then((response) => {
-      res.send('POST request success from block manager')
+      log('OUTGOING response to RPC request with method:', req.body.method, 'and rpcID:', req.body.id)
+      res.send(response.message)
     })
   }
 })
