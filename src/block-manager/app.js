@@ -6,6 +6,7 @@ const leveldown = require('leveldown')
 const BlockStore = require('./block-store.js')
 const SignedTransaction = require('plasma-utils').serialization.models.SignedTransaction
 const constants = require('../constants.js')
+const getDepositTransaction = require('../utils.js').getDepositTransaction
 const BN = require('web3').utils.BN
 
 // Create global state object
@@ -46,7 +47,16 @@ process.on('message', async (m) => {
     } else throw new Error('BlockStore failed to ingest block!')
   // ******* DEPOSIT ******* //
   } else if (m.message.method === constants.DEPOSIT_METHOD) {
-    log('Got new deposit! Message:', m.message)
+    let addDepositRes
+    try {
+      // owner, token, start, end, block
+      const depositTx = getDepositTransaction(m.message.params.recipient, m.message.params.token, m.message.start, m.message.end)
+      addDepositRes = await blockStore.addDeposit(depositTx)
+    } catch (err) {
+      error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
+      addDepositRes = { error: err }
+    }
+    process.send({ ipcID: m.ipcID, message: { addDepositRes } })
     return
   // ******* GET_HISTORY_PROOF ******* //
   } else if (m.message.method === constants.GET_HISTORY_PROOF) {
@@ -55,7 +65,7 @@ process.on('message', async (m) => {
     const transaction = new SignedTransaction(m.message.params.transaction)
     let txsAndProofs
     try {
-      txsAndProofs = await blockStore.getTxsWithProofs(startBlockBN, endBlockBN, transaction)
+      txsAndProofs = await blockStore.getTxHistory(startBlockBN, endBlockBN, transaction)
     } catch (err) {
       error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
       txsAndProofs = { error: err }

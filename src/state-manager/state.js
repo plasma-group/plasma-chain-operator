@@ -7,6 +7,7 @@ const UnsignedTransaction = models.UnsignedTransaction
 const SignedTransaction = models.SignedTransaction
 const itNext = require('../utils.js').itNext
 const itEnd = require('../utils.js').itEnd
+const getDepositTransaction = require('../utils.js').getDepositTransaction
 const colors = require('colors') // eslint-disable-line no-unused-vars
 
 const COIN_ID_PREFIX = require('../constants.js').COIN_ID_PREFIX
@@ -29,12 +30,6 @@ function decodeTransaction (encoding) {
   } else {
     tx = new SignedTransaction(encoding.toString('hex'))
   }
-  tx.tr = tx.transfers[0]
-  return tx
-}
-
-function getDepositTransaction (owner, token, start, end, block) {
-  const tx = new UnsignedTransaction({block, transfers: [{sender: DEPOSIT_SENDER, recipient: owner, token, start, end}]})
   tx.tr = tx.transfers[0]
   return tx
 }

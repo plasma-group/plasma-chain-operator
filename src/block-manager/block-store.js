@@ -4,10 +4,12 @@ const BN = require('web3').utils.BN
 const makeBlockTxKey = require('../utils.js').makeBlockTxKey
 const LevelDBSumTree = require('./leveldb-sum-tree.js')
 const models = require('plasma-utils').serialization.models
+const UnsignedTransaction = models.UnsignedTransaction
 const SignedTransaction = models.SignedTransaction
 const Transfer = models.Transfer
 const TransactionProof = models.TransactionProof
 const BLOCK_TX_PREFIX = require('../constants.js').BLOCK_TX_PREFIX
+const BLOCK_DEPOSIT_PREFIX = require('../constants.js').BLOCK_DEPOSIT_PREFIX
 const BLOCK_ROOT_HASH_PREFIX = require('../constants.js').BLOCK_ROOT_HASH_PREFIX
 const BLOCKNUMBER_BYTE_SIZE = require('../constants.js').BLOCKNUMBER_BYTE_SIZE
 const TRANSFER_BYTE_SIZE = require('../constants.js').TRANSFER_BYTE_SIZE
@@ -15,6 +17,7 @@ const SIGNATURE_BYTE_SIZE = require('../constants.js').SIGNATURE_BYTE_SIZE
 const itNext = require('../utils.js').itNext
 const itEnd = require('../utils.js').itEnd
 const defer = require('../utils.js').defer
+const getCoinId = require('../utils.js').getCoinId
 
 /* ******** HELPER FUNCTIONS ********** */
 function getHexStringProof (proof) { // TODO: Remove this and instead support buffers by default
@@ -23,6 +26,10 @@ function getHexStringProof (proof) { // TODO: Remove this and instead support bu
     inclusionProof.push(sibling.hash.toString('hex') + sibling.sum.toString('hex', 32))
   }
   return inclusionProof
+}
+
+function makeDepositKey (type, start) {
+  return Buffer.concat([BLOCK_DEPOSIT_PREFIX, getCoinId(type, start)])
 }
 
 class BlockStore {
@@ -45,6 +52,12 @@ class BlockStore {
       this._processNewBlockQueue()
     }
     return deferred.promise
+  }
+
+  async addDeposit (depositTx) {
+    log('Adding new deposit for', depositTx.tr.recipient, 'with start:', depositTx.tr.start.toString(16), 'and end:', depositTx.tr.end.toString(16))
+    // Store the deposit in our database in a similar way that we store normal transactions, by start position
+    await this.db.put(makeDepositKey(depositTx.tr.token, depositTx.tr.start), Buffer.from(depositTx.encoded, 'hex'))
   }
 
   async getRootHash (blockNumberBN) {
@@ -112,6 +125,42 @@ class BlockStore {
     return result
   }
 
+  async getDepositsAt (token, start, end) {
+    const startKey = makeDepositKey(token, start)
+    const endKey = makeDepositKey(token, end)
+    const it = this.db.iterator({
+      lt: endKey,
+      reverse: true
+    })
+    let [result, deposit] = await this._getNextDeposit(it)
+    const deposits = [deposit]
+    let earliestBlock = new BN(deposit.block)
+    // Make sure that we returned values that we expect
+    while (result.key > startKey) {
+      [result, deposit] = await this._getNextDeposit(it)
+      deposits.push(deposit)
+      if (earliestBlock.gt(deposit.block)) {
+        earliestBlock = new BN(deposit.block)
+      }
+    }
+    await itEnd(it)
+    return [ deposits, earliestBlock ]
+  }
+
+  async _getNextDeposit (it) {
+    const result = await itNext(it)
+    if (result.key === undefined) {
+      await itEnd(it)
+      throw new Error('getDepositsAt iterator returned undefined!')
+    }
+    if (result.key[0] !== BLOCK_DEPOSIT_PREFIX[0]) {
+      await itEnd(it)
+      throw new Error('Expected BLOCK_DEPOSIT_PREFIX instead of ' + result.key[0])
+    }
+    const deposit = new UnsignedTransaction(result.value.toString('hex'))
+    return [result, deposit]
+  }
+
   async getTransactions (startBlockNumberBN, endBlockNumberBN, token, start, end) {
     let blockNumberBN = startBlockNumberBN
     const relevantTransactions = []
@@ -156,19 +205,36 @@ class BlockStore {
 
   async getTxHistory (startBlockNumberBN, endBlockNumberBN, transaction) {
     let blockNumberBN = startBlockNumberBN
-    const transactionProofs = {}
+    // First get all of the deposits for each transaction
+    let deposits = []
+    const earliestBlocks = []
+    for (const transfer of transaction.transfers) {
+      const [transferDeposits, earliestBlock] = await this.getDepositsAt(transfer.token, transfer.start, transfer.end)
+      // Get the earliest deposit & set the transfer `earliestDeposit` field to it
+      deposits = deposits.concat(transferDeposits)
+      earliestBlocks.push(earliestBlock)
+    }
+    const transactionHistory = {}
     while (blockNumberBN.lte(endBlockNumberBN)) {
       const proofs = []
-      for (const transfer of transaction.transfers) {
+      for (const [i, transfer] of transaction.transfers.entries()) {
+        if (blockNumberBN.lte(earliestBlocks[i])) {
+          log('Reached deposit end for transfer', i)
+          // Stop retrieving proofs if we have reached the block which got the deposit for the transaction
+          continue
+        }
         // For each one of the transfer records get the proofs
         const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
         const rangeTxProof = await this.getTxsWithProofsFor(blockNumberKey, transfer.token, transfer.start, transfer.end)
         proofs.concat(rangeTxProof)
       }
-      transactionProofs[blockNumberBN.toString()] = proofs
+      transactionHistory[blockNumberBN.toString()] = proofs
       blockNumberBN = blockNumberBN.add(new BN(1))
     }
-    return transactionProofs
+    return {
+      deposits,
+      transactionHistory
+    }
   }
 
   async getTransactionInclusionProof (transaction, blockNumber, numLevels) {

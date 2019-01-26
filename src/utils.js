@@ -4,7 +4,9 @@ const START_BYTE_SIZE = require('./constants.js').START_BYTE_SIZE
 const TYPE_BYTE_SIZE = require('./constants.js').TYPE_BYTE_SIZE
 const BLOCK_TX_PREFIX = require('./constants.js').BLOCK_TX_PREFIX
 const TEST_DB_DIR = require('./constants.js').TEST_DB_DIR
+const DEPOSIT_SENDER = require('./constants.js').DEPOSIT_SENDER
 const soliditySha3 = require('web3').utils.soliditySha3
+const UnsignedTransaction = require('plasma-utils').serialization.models.UnsignedTransaction
 const fs = require('fs')
 const _ = require('lodash')
 
@@ -170,6 +172,12 @@ function sha3 (value) {
   return Buffer.from(solidityHash.slice(2), 'hex') // Slice 2 to remove the dumb 0x
 }
 
+function getDepositTransaction (owner, token, start, end, block) {
+  const tx = new UnsignedTransaction({block, transfers: [{sender: DEPOSIT_SENDER, recipient: owner, token, start, end}]})
+  tx.tr = tx.transfers[0]
+  return tx
+}
+
 module.exports = {
   addRange,
   subtractRange,
@@ -180,5 +188,6 @@ module.exports = {
   getCoinId,
   readConfigFile,
   sha3,
+  getDepositTransaction,
   makeBlockTxKey
 }

@@ -17,6 +17,7 @@ const models = require('plasma-utils').serialization.models
 const PlasmaMerkleSumTree = require('plasma-utils').PlasmaMerkleSumTree
 const UnsignedTransaction = models.UnsignedTransaction
 const TransferProof = models.TransferProof
+const getDepositTransaction = require('../../src/utils.js').getDepositTransaction
 
 const expect = chai.expect
 
@@ -41,7 +42,7 @@ function getHexStringProof (proof) { // TODO: Remove this and instead support bu
   return inclusionProof
 }
 
-describe.skip('BlockStore', function () {
+describe('BlockStore', function () {
   let db
   let web3
   let plasmaChain
@@ -104,10 +105,12 @@ describe.skip('BlockStore', function () {
   })
 
   it('generates history proofs correctly', async () => {
+    const numTxs = 50
+    const txAmt = 2
     // add some blocks
     const roots = []
-    for (let i = 1; i < 2; i++) {
-      const TXs = dummyTxs.getSequentialTxs(50, 2, i)
+    for (let i = 1; i < 3; i++) {
+      const TXs = dummyTxs.getSequentialTxs(numTxs, txAmt, i)
       const txBundle = getTxBundle(TXs)
       const blockNumber = new BN(i).toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
       // Store the transactions
@@ -128,14 +131,24 @@ describe.skip('BlockStore', function () {
     const end = new BN(50)
     // Get the tx proofs for the range
     const txsAndProofs = await blockStore.getTxsWithProofs(new BN(1), new BN(1), new BN(0), start, end)
-    await verifyTxsAndProofs(txsAndProofs, web3, plasmaChain, roots)
+    log(txsAndProofs)
+    // await verifyTxsAndProofs(txsAndProofs, web3, plasmaChain, roots)
   })
 
-  it('generates history proofs correctly when given a particular transaction', async () => {
+  it.only('generates history proofs correctly when given a particular transaction', async () => {
+    const numTxs = 50
+    const txAmt = 2
+    // First add some deposits
+    const depositTxs = dummyTxs.getSequentialTxs(numTxs, txAmt, 0)
+    for (let i = 0; i < depositTxs.length; i++) {
+      const tr = depositTxs[i].transfers[0]
+      depositTxs[i] = getDepositTransaction(tr.recipient, tr.token, tr.start, tr.end, new BN(i))
+      await blockStore.addDeposit(depositTxs[i])
+    }
     // add some blocks
     const roots = []
     let TXs
-    for (let i = 1; i < 5; i++) {
+    for (let i = 1; i < 100; i++) {
       TXs = dummyTxs.getSequentialTxs(50, 2, i)
       const txBundle = getTxBundle(TXs)
       const blockNumber = new BN(i).toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
@@ -152,11 +165,11 @@ describe.skip('BlockStore', function () {
       roots.push('0x' + Buffer.from(rootHash).toString('hex'))
     }
     log('Roots:', roots)
-    // Check proofs for our transaction
-    let proofTx = TXs[0]
+    // Check proofs for our transaction. This tx will not be real but instead span over a bunch of txs
+    let proofTx = dummyTxs.getSequentialTxs(1, 20, 99)[0]
     // Get the tx proofs for the range
-    const txsAndProofs = await blockStore.getTxHistory(new BN(1), new BN(3), proofTx)
-    await verifyTxsAndProofs(txsAndProofs, web3, plasmaChain, roots)
+    const txsAndProofs = await blockStore.getTxHistory(new BN(1), new BN(99), proofTx)
+    await verifyTxsAndProofs(txsAndProofs.transactionHistory, web3, plasmaChain, roots)
   })
 })
 
