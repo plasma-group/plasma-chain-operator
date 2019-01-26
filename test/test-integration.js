@@ -31,9 +31,9 @@ const operator = {
           method: constants.ADD_TX_METHOD,
           jsonrpc: '2.0',
           id: idCounter++,
-          params: {
+          params: [
             encodedTx
-          }
+          ]
         })
         .end((err, res) => {
           if (err) {

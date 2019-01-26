@@ -186,8 +186,9 @@ describe('State', function () {
       ], [
         fakeSig, fakeSig
       ], 1)
+      // Should not throw an error
       const result = await state.addTransaction(tx)
-      expect(result).to.equal(true)
+      expect(result).to.not.equal(undefined)
     })
   })
 

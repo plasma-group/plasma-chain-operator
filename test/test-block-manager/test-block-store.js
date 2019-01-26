@@ -135,7 +135,7 @@ describe('BlockStore', function () {
     // await verifyTxsAndProofs(txsAndProofs, web3, plasmaChain, roots)
   })
 
-  it.only('generates history proofs correctly when given a particular transaction', async () => {
+  it('generates history proofs correctly when given a particular transaction', async () => {
     const numTxs = 50
     const txAmt = 2
     // First add some deposits
