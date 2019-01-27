@@ -69,11 +69,11 @@ class BlockStore {
   async _processNewBlockQueue () {
     let numBlocksProcessed
     for (numBlocksProcessed = 0; numBlocksProcessed < this.newBlockQueue.length; numBlocksProcessed++) {
-      this.newBlockQueue[numBlocksProcessed].blockNumber = await this._processBlock(this.newBlockQueue[numBlocksProcessed].txLogFile)
+      this.newBlockQueue[numBlocksProcessed].newBlock = await this._processBlock(this.newBlockQueue[numBlocksProcessed].txLogFile)
     }
     const processedBlocks = this.newBlockQueue.splice(0, numBlocksProcessed)
     for (const processedBlock of processedBlocks) {
-      processedBlock.resolve(processedBlock.blockNumber)
+      processedBlock.resolve(processedBlock.newBlock)
     }
   }
 
@@ -88,7 +88,10 @@ class BlockStore {
     this.db.put(Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber]), rootHash)
     this.blockNumberBN = this.blockNumberBN.addn(1)
     log('Adding block number:', this.blockNumberBN.toString(), 'with root hash:', Buffer.from(rootHash).toString('hex'))
-    return blockNumber
+    return {
+      blockNumber,
+      rootHash
+    }
   }
 
   /*

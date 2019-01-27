@@ -39,6 +39,12 @@ function sendMessage (process, message) {
 
 function resolveMessage (m) {
   log('Resolving message with ipcID', m.ipcID)
+  if (m.ipcID === -1) {
+    // If this is a message directly from a child, it must be the root hash from the block-store
+    log('Got new block root:', m.message.rootHash, '- submitting to Ethereum')
+    EthService.submitRootHash(m.message.rootHash)
+    return
+  }
   messageQueue[m.ipcID].resolve(m)
   delete messageQueue[m.ipcID]
 }

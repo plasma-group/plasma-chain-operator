@@ -23,11 +23,13 @@ async function startup (options) {
       return
     }
     log('Adding new block:', filename)
-    const isSuccessfullyStarted = await blockStore.addBlock(filename)
-    if (isSuccessfullyStarted) {
+    try {
+      const newBlock = await blockStore.addBlock(filename)
       log('Successfully added block:', filename)
-    } else {
-      log('FAILED to add block:', filename)
+      process.send({ ipcID: -1, message: { rootHash: Buffer.from(newBlock.rootHash, 'hex').toString('hex') } })
+    } catch (err) {
+      log('FAILED to add block:', filename, 'with error:', err)
+      throw err
     }
   })
 }
