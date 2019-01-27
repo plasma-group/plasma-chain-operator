@@ -1,0 +1,94 @@
+#!/usr/bin/env node
+const path = require('path')
+const program = require('commander')
+const colors = require('colors') // eslint-disable-line no-unused-vars
+const appRoot = require('app-root-path')
+const constants = require('../src/constants.js')
+const UnsignedTransaction = require('plasma-utils').serialization.models.UnsignedTransaction
+const Web3 = require('web3')
+const BN = require('web3').utils.BN
+const readConfigFile = require(appRoot + '/src/utils.js').readConfigFile
+const axios = require('axios')
+const accounts = require('../test/mock-accounts.js').accounts
+const MockNode = require('../src/mock-node.js')
+
+const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
+
+// Get the config
+const configFile = (process.env.CONFIG) ? process.env.CONFIG : path.join(appRoot.toString(), 'config.json')
+const config = readConfigFile(configFile)
+const http = axios.create({
+  baseURL: 'http://localhost:' + config.port
+})
+
+let idCounter
+let totalDeposits = {}
+
+// Operator object wrapper to query api
+const operator = {
+  addTransaction: async (tx) => {
+    const encodedTx = tx.encoded
+    let txResponse
+    txResponse = await http.post('/api', {
+      method: constants.ADD_TX_METHOD,
+      jsonrpc: '2.0',
+      id: idCounter++,
+      params: [
+        encodedTx
+      ]
+    })
+    return txResponse.body
+  },
+  addDeposit: async (recipient, token, amount) => {
+    // First calculate start and end from token amount
+    const tokenTypeKey = token.toString()
+    if (totalDeposits[tokenTypeKey] === undefined) {
+      totalDeposits[tokenTypeKey] = new BN(0)
+    }
+    const start = new BN(totalDeposits[tokenTypeKey])
+    totalDeposits[tokenTypeKey] = new BN(totalDeposits[tokenTypeKey].add(amount))
+    const end = new BN(totalDeposits[tokenTypeKey])
+    let txResponse
+    txResponse = await http.post('/api', {
+      method: constants.DEPOSIT_METHOD,
+      jsonrpc: '2.0',
+      id: idCounter++,
+      params: {
+        recipient: Web3.utils.bytesToHex(recipient),
+        token: token.toString(16),
+        start: start.toString(16),
+        end: end.toString(16)
+      }
+    })
+    return new UnsignedTransaction(txResponse.data.deposit)
+  }
+}
+
+program
+  .command('*')
+  .description('starts a swarm of test nodes for load testing')
+  .action(async (none, cmd) => {
+    const nodes = []
+    for (const acct of accounts) {
+      nodes.push(new MockNode(operator, acct, nodes))
+    }
+    // Add deposits
+    const depositType = new BN(999)
+    const depositAmount = new BN(10000000, 'hex')
+    for (const node of nodes) {
+      await node.deposit(depositType, depositAmount)
+    }
+    const startTime = +new Date()
+    // Transact on a loooop!
+    for (let i = 0; i < 100; i++) {
+      const promises = []
+      for (const node of nodes) {
+        promises.push(node.sendRandomTransaction(new BN(1), 2, true))
+      }
+      await Promise.all(promises)
+      // timeout(500)
+    }
+    console.log('total time:', +new Date() - startTime)
+  })
+
+program.parse(process.argv)
