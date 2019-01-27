@@ -9,6 +9,8 @@ const bodyParser = require('body-parser')
 const log = require('debug')('info:api-app')
 const EthService = require('./eth-service.js')
 const BN = require('web3').utils.BN
+const models = require('plasma-utils').serialization.models
+const SignedTransaction = models.SignedTransaction
 
 // Set up express
 const app = express()
@@ -48,6 +50,15 @@ app.post('/api', function (req, res) {
       req.body.method === constants.ADD_TX_METHOD ||
       req.body.method === constants.NEW_BLOCK_METHOD ||
       req.body.method === constants.GET_TXS_METHOD) {
+    if (req.body.method === constants.ADD_TX_METHOD) {
+      // For performance, check sigs here
+      try {
+        const tx = new SignedTransaction(req.body.params[0])
+        if (tx.checkSigs() === false) {
+          throw new Error('Invalid signature on tx!')
+        }
+      } catch (err) {}
+    }
     sendMessage(stateManager, req.body).then((response) => {
       log('OUTGOING response to RPC request with method:', req.body.method, 'and rpcID:', req.body.id)
       res.send(response.message)
@@ -90,6 +101,11 @@ async function startup (config) {
     // Set up the eth event watchers
     log('Registering Ethereum event watcher for `DepositEvent(address,uint256,uint256,uint256)`')
     EthService.eventWatchers['DepositEvent(address,uint256,uint256,uint256)'].subscribe(_submitDeposits)
+    // Set up auto new block creator
+    if (config.blockTimeInSeconds !== undefined) {
+      const blockTimeInMiliseconds = parseInt(config.blockTimeInSeconds) * 1000
+      setTimeout(() => newBlockTrigger(blockTimeInMiliseconds), blockTimeInMiliseconds)
+    }
   } catch (err) {
     throw err
   }
@@ -142,6 +158,15 @@ async function _submitDeposits (err, depositEvents) {
       end
     }))
   }
+}
+
+async function newBlockTrigger (blockTime) {
+  const newBlockReq = {
+    method: constants.NEW_BLOCK_METHOD
+  }
+  const response = await sendMessage(stateManager, newBlockReq)
+  log('New block created with blocknumber:', response.message.newBlockNumber)
+  setTimeout(() => newBlockTrigger(blockTime), blockTime)
 }
 
 module.exports = {

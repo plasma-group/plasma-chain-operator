@@ -3,8 +3,7 @@ const BN = Web3.utils.BN
 const utils = require('../src/utils.js')
 const TYPE_BYTE_SIZE = require('../src/constants.js').TYPE_BYTE_SIZE
 const models = require('plasma-utils').serialization.models
-const Transfer = models.Transfer
-const Signature = models.Signature
+const Signature = require('plasma-utils').serialization.models.Signature
 const UnsignedTransaction = require('plasma-utils').serialization.models.UnsignedTransaction
 const SignedTransaction = models.SignedTransaction
 const log = require('debug')('info:node')
@@ -13,6 +12,10 @@ const fakeSig = {
   v: 'ff',
   r: '0000000000000000000000000000000000000000000000000000000000000000',
   s: '0000000000000000000000000000000000000000000000000000000000000000'
+}
+
+const sign = (data, key) => {
+  return web3Utils.sign(data, key)
 }
 
 class MockNode {
@@ -49,7 +52,7 @@ class MockNode {
     return [start, end]
   }
 
-  async sendRandomTransaction (blockNumber, maxSize) {
+  async sendRandomTransaction (blockNumber, maxSize, isSigned) {
     if (this.ranges.length === 0) {
       log('got no money to send!')
       return
@@ -78,9 +81,9 @@ class MockNode {
       recipient = this.peerList[Math.floor(Math.random() * this.peerList.length)]
     }
     const tx = this.makeTx(
-      [{ sender: this.account.address, recipient: recipient.account.address, token: type, start, end }],
-      [fakeSig],
-      blockNumber
+      { sender: this.account.address, recipient: recipient.account.address, token: type, start, end },
+      blockNumber,
+      isSigned
     )
     // Update ranges
     log(this.account.address, 'trying to send a transaction with', 'start:', new BN(startId).toString('hex'), '-- end', new BN(endId).toString('hex'))
@@ -98,14 +101,16 @@ class MockNode {
     log('sent a transaction!')
   }
 
-  makeTx (rawTrs, rawSigs, block) {
-    const trs = []
-    const sigs = []
-    for (let i = 0; i < rawTrs.length; i++) {
-      trs.push(new Transfer(rawTrs[i]))
-      sigs.push(new Signature(rawSigs[i]))
+  makeTx (tr, block, isSigned) {
+    let sig
+    if (isSigned) {
+      const txHash = new UnsignedTransaction({ block, transfers: [tr] }).hash
+      const encodedSig = this.account.sign(txHash)
+      sig = new Signature(encodedSig)
+    } else {
+      sig = fakeSig
     }
-    const tx = new SignedTransaction({transfers: trs, signatures: sigs, block: block})
+    const tx = new SignedTransaction({transfers: [tr], signatures: [sig], block: block})
     return tx
   }
 }

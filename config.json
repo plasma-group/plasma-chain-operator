@@ -4,6 +4,7 @@
   "operatorIpAddress": "0.0.0.0",
   "port": "3000",
   "finalityDepth": "6",
+  "blockTimeInSeconds": "15",
   "ethPollInterval": "30000",
   "web3HttpProvider": "http://localhost:8545"
 }

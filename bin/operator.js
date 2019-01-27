@@ -7,6 +7,7 @@ program
   .description('Welcome to the Plasma Operator!'.rainbow)
   .command('init', 'initalize a new plasma chain')
   .command('start', 'start the operator')
+  .command('testSwarm', 'start a swarm of test nodes')
   .command('account [cmd]', 'manage accounts')
   .action((command) => {
   })
