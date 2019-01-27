@@ -13,6 +13,7 @@ const Transfer = models.Transfer
 const itNext = require('../utils.js').itNext
 const itEnd = require('../utils.js').itEnd
 const sha3 = require('../utils.js').sha3
+const Decimal = require('decimal.js-light')
 
 const INDEX_BYTES_SIZE = 4
 
@@ -26,8 +27,15 @@ class LevelDBSumTree {
   }
 
   async generateTree (blockNumber) {
-    await this.parseLeaves(blockNumber)
-    const rootHash = await this.generateLevel(blockNumber, 0)
+    const numLeaves = await this.parseLeaves(blockNumber)
+    let heightOfTree
+    if (numLeaves === undefined) {
+      heightOfTree = 0
+    } else {
+      // TODO: Replace this and instead detect heightOfTree in generateLevel
+      heightOfTree = Math.ceil(new Decimal(numLeaves.toString(10)).log(2).toNumber())
+    }
+    const rootHash = await this.generateLevel(blockNumber, 0, heightOfTree)
     log('Generating tree for block:', blockNumber.toString('hex'), 'with root:', Buffer.from(rootHash).toString('hex'))
     return rootHash
   }
@@ -92,7 +100,8 @@ class LevelDBSumTree {
         const prevTxHash = sha3(Buffer.from(self.getUnsignedTransaction(previousTransaction).encoded, 'hex'))
         self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
         self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encoded, 'hex'), previousTxIndex)
-        resolve()
+        // Return the total number of leaves
+        resolve(previousTxIndex.addn(1))
       }).on('error', function (err) {
         reject(err)
       })
@@ -185,7 +194,7 @@ class LevelDBSumTree {
     }
   }
 
-  async generateLevel (blockNumber, level) {
+  async generateLevel (blockNumber, level, height) {
     log('Starting to generate level:', level, 'for block:', blockNumber.toString('hex'))
     const self = this
     const parentLevel = level + 1
@@ -223,11 +232,11 @@ class LevelDBSumTree {
         parentIndex = parentIndex.add(new BN(1))
         leftChild = null
       }).on('end', async () => {
-        // Check if there was only one node--that means we hit the root
-        if (parentIndex.eq(new BN(1))) {
-          log('Returning root hash:', Buffer.from(parentNode.hash).toString('hex'))
-          await self.writeNumLevels(blockNumber, parentLevel)
-          resolve(parentNode.hash)
+        // If level equals height, we have reached the root node.
+        if (level === height) {
+          log('Returning root hash:', Buffer.from(leftChild.hash).toString('hex'))
+          await self.writeNumLevels(blockNumber, level)
+          resolve(leftChild.hash)
           return
         }
         // Check if we ended on an element that wasn't a right node. If so fill it in with a blank node
@@ -237,7 +246,7 @@ class LevelDBSumTree {
           const parentNode = this.getParent(leftChild, rightChild)
           self.writeNode(blockNumber, parentLevel, parentIndex, parentNode.hash, parentNode.sum)
         }
-        resolve(await self.generateLevel(blockNumber, parentLevel))
+        resolve(await self.generateLevel(blockNumber, parentLevel, height))
       }).on('error', (err) => {
         reject(err)
       })

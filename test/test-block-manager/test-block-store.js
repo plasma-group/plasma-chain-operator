@@ -149,7 +149,7 @@ describe('BlockStore', function () {
     const roots = []
     let TXs
     for (let i = 1; i < 100; i++) {
-      TXs = dummyTxs.getSequentialTxs(50, 2, i)
+      TXs = dummyTxs.getSequentialTxs(i, 2, i)
       const txBundle = getTxBundle(TXs)
       const blockNumber = new BN(i).toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
       // Store the transactions
@@ -163,6 +163,9 @@ describe('BlockStore', function () {
       expect(reciept.events.SubmitBlockEvent.returnValues['0']).to.equal(blockStore.blockNumberBN.toString())
       expect(reciept.events.SubmitBlockEvent.returnValues['1']).to.equal('0x' + Buffer.from(rootHash).toString('hex'))
       roots.push('0x' + Buffer.from(rootHash).toString('hex'))
+      // Check that the tree root from utils matches the tree root from the sumTree
+      const plasmaUtilsTree = new PlasmaMerkleSumTree(txBundle.map((value) => value[0]))
+      expect(plasmaUtilsTree.root().hash).to.equal(Buffer.from(rootHash).toString('hex'))
     }
     log('Roots:', roots)
     // Check proofs for our transaction. This tx will not be real but instead span over a bunch of txs
