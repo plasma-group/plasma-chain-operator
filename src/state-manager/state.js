@@ -193,8 +193,7 @@ class State {
     for (const tr of tx.transfers) {
       for (const ar of tr.affectedRanges) {
         if (tr.sender.toLowerCase() !== ar.decodedTx.tr.recipient.toLowerCase()) {
-          throw new Error('Affected range check failed! Transfer record sender =',
-            tr.sender.toLowerCase(), 'and the affected range recipient =', ar.decodedTx.tr.recipient.toLowerCase())
+          throw new Error('Affected range check failed! Transfer record sender = ' + tr.sender.toLowerCase() + 'and the affected range recipient = ' + ar.decodedTx.tr.recipient.toLowerCase())
         }
         if (ar.decodedTx.block.eq(this.blockNumber) && ar.decodedTx.tr.sender !== DEPOSIT_SENDER) {
           throw new Error('Affected range check failed! Affected range block = ' + ar.decodedTx.block.toString() + ' and this block = ' + this.blockNumber.toString())
@@ -264,7 +263,7 @@ class State {
     this.validateTransaction(tx)
     // Acquire lock on all of the transfer record senders
     await this.getTransactionLock(tx)
-    log('Attempting to add transaction from:')
+    log('Attempting to add transaction from:', tx.transfers[0].sender)
     try {
       // Get the ranges which the transaction affects and attach them to the transaction object
       await this.addAffectedRangesToTx(tx)

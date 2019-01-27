@@ -120,10 +120,11 @@ async function _submitDeposits (err, depositEvents) {
   for (const e of depositEvents) {
     // Decode the event...
     const depositEvent = e.returnValues
+    log('Detected deposit event with start:', depositEvent.untypedStart, '- & end:', depositEvent.untypedEnd, 'and id:', e.id)
     const recipient = depositEvent.depositer
-    const token = new BN(depositEvent.tokenType, 10)
-    const start = new BN(depositEvent.untypedStart, 10)
-    const end = new BN(depositEvent.untypedEnd, 10)
+    const token = new BN(depositEvent.tokenType, 10).toString('hex')
+    const start = new BN(depositEvent.untypedStart, 10).toString('hex')
+    const end = new BN(depositEvent.untypedEnd, 10).toString('hex')
     // Send the deposit to the state manager
     await sendMessage(stateManager, jsonrpc(constants.DEPOSIT_METHOD, {
       id: e.id,

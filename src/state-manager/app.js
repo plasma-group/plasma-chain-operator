@@ -35,9 +35,9 @@ process.on('message', async (m) => {
   } else if (m.message.method === constants.DEPOSIT_METHOD) {
     const deposit = await newDepositCallback(null, {
       recipient: Buffer.from(Web3.utils.hexToBytes(m.message.params.recipient)),
-      token: new BN(Buffer.from(m.message.params.token, 'hex')),
-      start: new BN(Buffer.from(m.message.params.start, 'hex')),
-      end: new BN(Buffer.from(m.message.params.end, 'hex'))
+      token: new BN(m.message.params.token, 16),
+      start: new BN(m.message.params.start, 16),
+      end: new BN(m.message.params.end, 16)
     })
     log('OUTGOING new deposit with rpcID:', m.message.id)
     process.send({ ipcID: m.ipcID, message: { deposit } })

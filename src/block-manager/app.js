@@ -50,7 +50,7 @@ process.on('message', async (m) => {
     let addDepositRes
     try {
       // owner, token, start, end, block
-      const depositTx = getDepositTransaction(m.message.params.recipient, m.message.params.token, m.message.start, m.message.end)
+      const depositTx = getDepositTransaction(m.message.params.recipient, new BN(m.message.params.token, 16), new BN(m.message.start, 16), new BN(m.message.end, 16))
       addDepositRes = await blockStore.addDeposit(depositTx)
     } catch (err) {
       error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
