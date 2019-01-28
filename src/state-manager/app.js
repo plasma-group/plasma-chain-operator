@@ -78,6 +78,19 @@ process.on('message', async (m) => {
     log('OUTGOING getTransactions response with rpcID:', m.message.id)
     process.send({ ipcID: m.ipcID, message: response })
     return
+  // ******* GET_RECENT_TXS ******* //
+  } else if (m.message.method === constants.GET_RECENT_TXS_METHOD) {
+    let response
+    try {
+      const recentTransactions = await state.getRecentTransactions(m.message.params[0])
+      response = { result: recentTransactions }
+    } catch (err) {
+      error('Error getting recent transactions!\nrpcID:', m.message.id, '\nError message:', err, '\n')
+      response = { error: err }
+    }
+    log('OUTGOING getRecentTransactions response with rpcID:', m.message.id)
+    process.send({ ipcID: m.ipcID, message: response })
+    return
   }
   process.send({ ipcID: m.ipcID, message: {error: 'RPC method not recognized!'} })
   error('RPC method', m.message.method, 'not recognized!')

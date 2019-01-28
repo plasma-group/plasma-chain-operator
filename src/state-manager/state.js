@@ -16,7 +16,9 @@ const START_BYTE_SIZE = require('../constants.js').START_BYTE_SIZE
 const TYPE_BYTE_SIZE = require('../constants.js').TYPE_BYTE_SIZE
 const DEPOSIT_SENDER = require('../constants.js').DEPOSIT_SENDER
 const BLOCKNUMBER_BYTE_SIZE = require('../constants.js').BLOCKNUMBER_BYTE_SIZE
+
 const DEPOSIT_TX_LENGTH = 73
+const RECENT_TX_CACHE_SIZE = 30
 
 // ************* HELPER FUNCTIONS ************* //
 const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
@@ -59,6 +61,7 @@ class State {
     this.txLogDirectory = txLogDirectory
     this.tmpTxLogFile = this.txLogDirectory + 'tmp-tx-log.bin'
     this.lock = {}
+    this.recentTransactions = []
   }
 
   async init () {
@@ -176,16 +179,16 @@ class State {
   }
 
   async getTransactionLock (tx) {
-    // const senders = tx.transfers.map((transfer) => transfer.sender)
-    // while (!this.attemptAcquireLocks(senders)) {
-    //   // Wait before attempting again
-    //   await timeout(timeoutAmt())
-    // }
+    const senders = tx.transfers.map((transfer) => transfer.sender)
+    while (!this.attemptAcquireLocks(senders)) {
+      // Wait before attempting again
+      await timeout(timeoutAmt())
+    }
   }
 
   async releaseTransactionLock (tx) {
-    // const senders = tx.transfers.map((transfer) => transfer.sender)
-    // this.releaseLocks(senders)
+    const senders = tx.transfers.map((transfer) => transfer.sender)
+    this.releaseLocks(senders)
   }
 
   validateAffectedRanges (tx) {
@@ -214,6 +217,8 @@ class State {
     // Write the transaction to the DB and tx log
     await this.db.batch(dbBatch)
     this.writeStream.write(Buffer.from(txEncoding, 'hex'))
+    // And add to our recent transaction cache
+    this.addRecentTransaction(txEncoding)
   }
 
   async getTransferBatchOps (transaction, transfer, affectedRanges) {
@@ -277,6 +282,7 @@ class State {
     }
     this.releaseTransactionLock(tx)
     log('Added transaction from:', tx.transfers[0].recipient)
+    this.addRecentTransaction(tx)
     return new SignedTransaction(tx).encoded
   }
 
@@ -338,6 +344,17 @@ class State {
     await itEnd(it)
     this.releaseLocks([address])
     return ownedRanges
+  }
+
+  getRecentTransactions () {
+    return this.recentTransactions
+  }
+
+  addRecentTransaction (encodedTx) {
+    this.recentTransactions.unshift(encodedTx)
+    if (this.recentTransactions.length > RECENT_TX_CACHE_SIZE) {
+      this.recentTransactions.pop()
+    }
   }
 
   async getTransactions (address, startBlock, endBlock) {
