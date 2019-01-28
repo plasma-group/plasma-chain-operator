@@ -95,7 +95,7 @@ class LevelDBSumTree {
         const prevTxHash = sha3(prevTxEncodedBuf)
         self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
         self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encoded, 'hex'), previousTxIndex)
-        self.writeHashToTransaction(blockNumber, prevTxHash, prevTxEncodedBuf)
+        self.writeHashToTransaction(prevTxHash, prevTxEncodedBuf)
         previousTxIndex = previousTxIndex.add(new BN(1))
         previousTransaction = transaction
       }).on('end', function (data) {
@@ -104,7 +104,7 @@ class LevelDBSumTree {
         const prevTxHash = sha3(prevTxEncodedBuf)
         self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
         self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encoded, 'hex'), previousTxIndex)
-        self.writeHashToTransaction(blockNumber, prevTxHash, prevTxEncodedBuf)
+        self.writeHashToTransaction(prevTxHash, prevTxEncodedBuf)
         // Return the total number of leaves
         resolve(previousTxIndex.addn(1))
       }).on('error', function (err) {
