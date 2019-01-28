@@ -220,7 +220,7 @@ class BlockStore {
     }
     const transactionHistory = {}
     while (blockNumberBN.lte(endBlockNumberBN)) {
-      const proofs = []
+      let proofs = []
       for (const [i, transfer] of transaction.transfers.entries()) {
         if (blockNumberBN.lte(earliestBlocks[i])) {
           log('Reached deposit end for transfer', i)
@@ -230,7 +230,7 @@ class BlockStore {
         // For each one of the transfer records get the proofs
         const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
         const rangeTxProof = await this.getTxsWithProofsFor(blockNumberKey, transfer.token, transfer.start, transfer.end)
-        proofs.concat(rangeTxProof)
+        proofs = proofs.concat(rangeTxProof)
       }
       transactionHistory[blockNumberBN.toString()] = proofs
       blockNumberBN = blockNumberBN.add(new BN(1))
@@ -309,9 +309,11 @@ class BlockStore {
     const self = this
     log('Generating new block for block:', blockNumber)
     const readStream = fs.createReadStream(txLogFilePath)
+    let chunkNumber = 0
     readStream.on('data', function (chunk) {
       log('Read chunk of size:', chunk.length)
-      self.parseTxBinary(blockNumber, chunk)
+      self.parseTxBinary(blockNumber, chunk, chunkNumber)
+      chunkNumber++
     })
     // Return a promise which resolves once the entire file has been read
     return new Promise((resolve, reject) => {
@@ -344,7 +346,7 @@ class BlockStore {
     return [cursor + txSize, nextTransaction, chunk.slice(cursor, txEnd)]
   }
 
-  parseTxBinary (blockNumber, chunk) {
+  parseTxBinary (blockNumber, chunk, chunkNumber) {
     if (this.partialChunk != null) {
       chunk = Buffer.concat([this.partialChunk, chunk])
     }
@@ -354,6 +356,16 @@ class BlockStore {
       txBundle.push([nextTx, nextTxEncoding]);
       [cursor, nextTx, nextTxEncoding] = this.readNextTransaction(cursor, chunk)
     }
+
+    // Leftmost transfer of the first transaction in a block MUST start at zero.
+    // We should probably get rid of this later on.
+    if (chunkNumber === 0 && txBundle.length > 0) {
+      const leftmost = txBundle[0][0].transfers.reduce((prev, curr) => {
+        return prev.start < curr.start ? prev : curr
+      })
+      leftmost.start = new BN(0)
+    }
+
     this.storeTransactions(blockNumber, txBundle)
   }
 

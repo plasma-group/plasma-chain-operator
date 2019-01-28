@@ -52,7 +52,7 @@ process.on('message', async (m) => {
     let addDepositRes
     try {
       // owner, token, start, end, block
-      const depositTx = getDepositTransaction(m.message.params.recipient, new BN(m.message.params.token, 16), new BN(m.message.start, 16), new BN(m.message.end, 16))
+      const depositTx = getDepositTransaction(m.message.params.recipient, new BN(m.message.params.token, 16), new BN(m.message.params.start, 16), new BN(m.message.params.end, 16))
       addDepositRes = await blockStore.addDeposit(depositTx)
     } catch (err) {
       error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
@@ -65,15 +65,17 @@ process.on('message', async (m) => {
     const startBlockBN = new BN(m.message.params[0], 'hex')
     const endBlockBN = new BN(m.message.params[1], 'hex')
     const transaction = new SignedTransaction(m.message.params[2])
-    let txsAndProofs
+    let response
     try {
-      txsAndProofs = await blockStore.getTxHistory(startBlockBN, endBlockBN, transaction)
+      const txsAndProofs = await blockStore.getTxHistory(startBlockBN, endBlockBN, transaction)
+      response = { result: txsAndProofs }
     } catch (err) {
       console.error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
-      txsAndProofs = { error: err }
+      response = { error: err }
     }
     log('OUTGOING getHistoryProof with rpcID:', m.message.id)
-    process.send({ ipcID: m.ipcID, message: { txsAndProofs } })
+    process.send({ ipcID: m.ipcID, message: response })
+    return
   }
   process.send({ ipcID: m.ipcID, message: {error: 'RPC method not recognized!'} })
   error('RPC method', m.message.method, 'not recognized!')
