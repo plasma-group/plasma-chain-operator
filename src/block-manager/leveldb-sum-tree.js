@@ -6,6 +6,7 @@ const BLOCK_TX_PREFIX = require('../constants.js').BLOCK_TX_PREFIX
 const BLOCK_INDEX_PREFIX = require('../constants.js').BLOCK_INDEX_PREFIX
 const NUM_LEVELS_PREFIX = require('../constants.js').BLOCK_TX_PREFIX
 const NODE_DB_PREFIX = require('../constants.js').NODE_DB_PREFIX
+const HASH_TO_TX_PREFIX = require('../constants.js').HASH_TO_TX_PREFIX
 const models = require('plasma-utils').serialization.models
 const SignedTransaction = models.SignedTransaction
 const UnsignedTransaction = models.UnsignedTransaction
@@ -90,16 +91,20 @@ class LevelDBSumTree {
         const transaction = self.getTransactionFromLeaf(data.value)
         transaction.sumStart = typedStart(getTr(transaction))
         const range = coinIdToBuffer(transaction.sumStart.sub(previousTransaction.sumStart))
-        const prevTxHash = sha3(Buffer.from(self.getUnsignedTransaction(previousTransaction).encoded, 'hex'))
+        const prevTxEncodedBuf = Buffer.from(self.getUnsignedTransaction(previousTransaction).encoded, 'hex')
+        const prevTxHash = sha3(prevTxEncodedBuf)
         self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
         self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encoded, 'hex'), previousTxIndex)
+        self.writeHashToTransaction(blockNumber, prevTxHash, prevTxEncodedBuf)
         previousTxIndex = previousTxIndex.add(new BN(1))
         previousTransaction = transaction
       }).on('end', function (data) {
         const range = coinIdToBuffer(new BN(maxEnd).sub(previousTransaction.sumStart))
-        const prevTxHash = sha3(Buffer.from(self.getUnsignedTransaction(previousTransaction).encoded, 'hex'))
+        const prevTxEncodedBuf = Buffer.from(self.getUnsignedTransaction(previousTransaction).encoded, 'hex')
+        const prevTxHash = sha3(prevTxEncodedBuf)
         self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
         self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encoded, 'hex'), previousTxIndex)
+        self.writeHashToTransaction(blockNumber, prevTxHash, prevTxEncodedBuf)
         // Return the total number of leaves
         resolve(previousTxIndex.addn(1))
       }).on('error', function (err) {
@@ -152,6 +157,12 @@ class LevelDBSumTree {
     const newNodeKey = this.makeNodeKey(blockNumber, level, index)
     log('Writing new node\nKey:', newNodeKey.toString('hex'), '\nValue:', Buffer.concat([Buffer.from(hash), sum]).toString('hex'))
     await this.db.put(newNodeKey, Buffer.concat([Buffer.from(hash), sum]))
+  }
+
+  async writeHashToTransaction (txHash, prevTxEncodedBuf) {
+    const newHashToTransactionKey = Buffer.concat([Buffer.from(HASH_TO_TX_PREFIX), txHash])
+    log('Writing hash -> encoding\nKey:', newHashToTransactionKey.toString('hex'), '\nValue:', prevTxEncodedBuf.toString('hex'))
+    await this.db.put(newHashToTransactionKey, prevTxEncodedBuf)
   }
 
   async writeTrToIndex (blockNumber, trEncoding, index) {

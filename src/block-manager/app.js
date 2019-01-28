@@ -108,6 +108,18 @@ process.on('message', async (m) => {
     }
     process.send({ ipcID: m.ipcID, message: response })
     return
+  // ******* GET_TX_FROM_HASH ******* //
+  } else if (m.message.method === constants.GET_TX_FROM_HASH_METHOD) {
+    const txHash = Buffer.from(m.message.params[0], 'hex')
+    // If end block is undefined, set them equal
+    let response
+    try {
+      response = await blockStore.getTxFromHash(txHash)
+    } catch (err) {
+      response = { error: err }
+    }
+    process.send({ ipcID: m.ipcID, message: response })
+    return
   }
   process.send({ ipcID: m.ipcID, message: {error: 'RPC method not recognized!'} })
   error('RPC method', m.message.method, 'not recognized!')

@@ -9,6 +9,7 @@ const GET_RECENT_TXS_METHOD = 'getRecentTransactions'
 const GET_BLOCK_NUMBER_METHOD = 'getBlockNumber'
 const GET_BLOCK_TXS_METHOD = 'getBlockTransactions'
 const GET_BLOCK_METADATA_METHOD = 'getBlockMetadata'
+const GET_TX_FROM_HASH_METHOD = 'getTxFromHash'
 const ADDRESS_BYTE_SIZE = 20
 const START_BYTE_SIZE = 12
 const TYPE_BYTE_SIZE = 4
@@ -31,6 +32,7 @@ const NUM_LEVELS_PREFIX = Buffer.from([251]) // The number of levels in a partic
 const NODE_DB_PREFIX = Buffer.from([250])
 const BLOCK_NUM_TXS_PREFIX = Buffer.from([249])
 const BLOCK_TIMESTAMP_PREFIX = Buffer.from([248])
+const HASH_TO_TX_PREFIX = Buffer.from([247])
 // DB
 const ETH_DB_FILENAME = 'eth-config.json'
 const TEST_DB_DIR = './operator-db-test/'
@@ -46,6 +48,7 @@ module.exports = {
   GET_RECENT_TXS_METHOD,
   GET_BLOCK_TXS_METHOD,
   GET_BLOCK_METADATA_METHOD,
+  GET_TX_FROM_HASH_METHOD,
   GET_HISTORY_PROOF,
   START_BYTE_SIZE,
   TYPE_BYTE_SIZE,
@@ -63,6 +66,7 @@ module.exports = {
   BLOCK_INDEX_PREFIX,
   NUM_LEVELS_PREFIX,
   NODE_DB_PREFIX,
+  HASH_TO_TX_PREFIX,
   SIGNATURE_BYTE_SIZE,
   ETH_DB_FILENAME,
   KEYSTORE_DIR,

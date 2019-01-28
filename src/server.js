@@ -73,6 +73,7 @@ app.post('/api', function (req, res) {
     })
   } else if (req.body.method === constants.GET_HISTORY_PROOF ||
              req.body.method === constants.GET_BLOCK_METADATA_METHOD ||
+             req.body.method === constants.GET_TX_FROM_HASH_METHOD ||
              req.body.method === constants.GET_BLOCK_TXS_METHOD) {
     sendMessage(blockManager, req.body).then((response) => {
       log('OUTGOING response to RPC request with method:', req.body.method, 'and rpcID:', req.body.id)

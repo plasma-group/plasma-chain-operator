@@ -13,6 +13,7 @@ const BLOCK_DEPOSIT_PREFIX = require('../constants.js').BLOCK_DEPOSIT_PREFIX
 const BLOCK_ROOT_HASH_PREFIX = require('../constants.js').BLOCK_ROOT_HASH_PREFIX
 const BLOCK_NUM_TXS_PREFIX = require('../constants.js').BLOCK_NUM_TXS_PREFIX
 const BLOCK_TIMESTAMP_PREFIX = require('../constants.js').BLOCK_TIMESTAMP_PREFIX
+const HASH_TO_TX_PREFIX = require('../constants.js').HASH_TO_TX_PREFIX
 const BLOCKNUMBER_BYTE_SIZE = require('../constants.js').BLOCKNUMBER_BYTE_SIZE
 const TRANSFER_BYTE_SIZE = require('../constants.js').TRANSFER_BYTE_SIZE
 const SIGNATURE_BYTE_SIZE = require('../constants.js').SIGNATURE_BYTE_SIZE
@@ -89,6 +90,16 @@ class BlockStore {
       }
     }
     return metadata
+  }
+
+  async getTxFromHash (txHash) {
+    let txEncoding
+    try {
+      txEncoding = await this.db.get(Buffer.concat([HASH_TO_TX_PREFIX, txHash]))
+    } catch (err) {
+      return { error: 'Tx hash: ' + txHash.toString('hex') + ' not found!' }
+    }
+    return txEncoding
   }
 
   async _processNewBlockQueue () {
