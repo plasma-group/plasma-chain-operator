@@ -69,7 +69,7 @@ const operator = {
       id: idCounter++,
       params: []
     })
-    console.log('Sending transactions for block:', new BN(response.data.blockNumber, 10).toString(10))
+    console.log('Sending transactions for block:', new BN(response.data.blockNumber, 10).toString(10).green)
     return new BN(response.data.blockNumber, 10)
   }
 }
