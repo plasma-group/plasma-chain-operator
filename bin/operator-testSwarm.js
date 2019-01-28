@@ -37,7 +37,7 @@ const operator = {
         encodedTx
       ]
     })
-    return txResponse.body
+    return txResponse.data
   },
   addDeposit: async (recipient, token, amount) => {
     // First calculate start and end from token amount
@@ -61,6 +61,16 @@ const operator = {
       }
     })
     return new UnsignedTransaction(txResponse.data.deposit)
+  },
+  getBlockNumber: async () => {
+    const response = await http.post('/api', {
+      method: constants.GET_BLOCK_NUMBER_METHOD,
+      jsonrpc: '2.0',
+      id: idCounter++,
+      params: []
+    })
+    console.log('Sending transactions for block:', new BN(response.data.blockNumber, 10).toString(10))
+    return new BN(response.data.blockNumber, 10)
   }
 }
 
@@ -79,16 +89,18 @@ program
       await node.deposit(depositType, depositAmount)
     }
     const startTime = +new Date()
-    // Transact on a loooop!
-    for (let i = 0; i < 100; i++) {
+    // Transact on a looonng loooop!
+    for (let i = 0; i < 100000; i++) {
+      // Get the current block number
+      const blockNumber = await operator.getBlockNumber()
       const promises = []
       for (const node of nodes) {
-        promises.push(node.sendRandomTransaction(new BN(1), 2, true))
+        promises.push(node.sendRandomTransaction(blockNumber, 2, true))
       }
       await Promise.all(promises)
-      // timeout(500)
+      timeout(100)
     }
-    console.log('total time:', +new Date() - startTime)
+    console.log('Total time:', +new Date() - startTime)
   })
 
 program.parse(process.argv)

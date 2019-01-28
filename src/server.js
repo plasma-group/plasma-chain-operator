@@ -55,6 +55,7 @@ app.post('/api', function (req, res) {
   if (req.body.method === constants.DEPOSIT_METHOD ||
       req.body.method === constants.ADD_TX_METHOD ||
       req.body.method === constants.NEW_BLOCK_METHOD ||
+      req.body.method === constants.GET_BLOCK_NUMBER_METHOD ||
       req.body.method === constants.GET_TXS_METHOD) {
     if (req.body.method === constants.ADD_TX_METHOD) {
       // For performance, check sigs here

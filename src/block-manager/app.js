@@ -75,5 +75,6 @@ process.on('message', async (m) => {
     log('OUTGOING getHistoryProof with rpcID:', m.message.id)
     process.send({ ipcID: m.ipcID, message: { txsAndProofs } })
   }
-  throw new Error('RPC method not recognized!')
+  process.send({ ipcID: m.ipcID, message: {error: 'RPC method not recognized!'} })
+  error('RPC method', m.message.method, 'not recognized!')
 })

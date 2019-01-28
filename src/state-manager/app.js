@@ -31,6 +31,12 @@ process.on('message', async (m) => {
     log('OUTGOING new block success with rpcID:', m.message.id)
     process.send({ ipcID: m.ipcID, message: {newBlockNumber: blockNumber.toString()} })
     return
+  // ******* GET_BLOCK_NUMBER ******* //
+  } else if (m.message.method === constants.GET_BLOCK_NUMBER_METHOD) {
+    const blockNumber = state.blockNumber
+    log('OUTGOING new block success with rpcID:', m.message.id)
+    process.send({ ipcID: m.ipcID, message: {blockNumber: blockNumber.toString()} })
+    return
   // ******* DEPOSIT ******* //
   } else if (m.message.method === constants.DEPOSIT_METHOD) {
     const deposit = await newDepositCallback(null, {
@@ -71,7 +77,8 @@ process.on('message', async (m) => {
     process.send({ ipcID: m.ipcID, message: response })
     return
   }
-  throw new Error('RPC method not recognized!')
+  process.send({ ipcID: m.ipcID, message: {error: 'RPC method not recognized!'} })
+  error('RPC method', m.message.method, 'not recognized!')
 })
 
 async function newDepositCallback (err, deposit) {

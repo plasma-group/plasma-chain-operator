@@ -81,13 +81,14 @@ class BlockStore {
     const blockNumberBN = new BN(txLogFile)
     const blockNumber = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
     if (!this.blockNumberBN.add(new BN(1)).eq(blockNumberBN)) {
-      throw new Error('Expected block number to be ' + this.blockNumberBN.add(new BN(1)).toString() + ' not ' + blockNumberBN.toString())
+      // TODO: After launch figure out why I was even storing block number in the first place....? Either store in DB or remove it.
+      log('Warning: Expected block number to be ' + this.blockNumberBN.add(new BN(1)).toString() + ' not ' + blockNumberBN.toString())
     }
     await this.ingestBlock(blockNumber, this.txLogDir + txLogFile)
     const rootHash = await this.sumTree.generateTree(blockNumber)
     this.db.put(Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber]), rootHash)
     this.blockNumberBN = this.blockNumberBN.addn(1)
-    log('Adding block number:', this.blockNumberBN.toString(), 'with root hash:', Buffer.from(rootHash).toString('hex'))
+    log('Adding block number:', blockNumberBN.toString(), 'with root hash:', Buffer.from(rootHash).toString('hex'))
     return {
       blockNumber,
       rootHash

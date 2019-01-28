@@ -5,6 +5,7 @@ const ADD_TX_METHOD = 'addTransaction'
 const GET_TXS_METHOD = 'getTransactions'
 const GET_HISTORY_PROOF = 'getHistoryProof'
 const NEW_BLOCK_METHOD = 'newBlock'
+const GET_BLOCK_NUMBER_METHOD = 'getBlockNumber'
 const ADDRESS_BYTE_SIZE = 20
 const START_BYTE_SIZE = 12
 const TYPE_BYTE_SIZE = 4
@@ -36,6 +37,7 @@ module.exports = {
   NEW_BLOCK_METHOD,
   ADD_TX_METHOD,
   GET_TXS_METHOD,
+  GET_BLOCK_NUMBER_METHOD,
   GET_HISTORY_PROOF,
   START_BYTE_SIZE,
   TYPE_BYTE_SIZE,

@@ -85,6 +85,13 @@ class MockNode {
       blockNumber,
       isSigned
     )
+    // Add transaction
+    const txResult = await this.operator.addTransaction(tx)
+    if (txResult.error !== undefined) {
+      // This means we got an error! Probably need to update the block number
+      log('Error in transaction! We may need to update the block number...')
+      return false
+    }
     // Update ranges
     log(this.account.address, 'trying to send a transaction with', 'start:', new BN(startId).toString('hex'), '-- end', new BN(endId).toString('hex'))
     // TODO: Move this over to the range manager code in `core`
@@ -96,8 +103,6 @@ class MockNode {
       // throw err
     }
     recipient.pendingRanges.push([new BN(startId), new BN(endId)])
-    // Add transaction
-    await this.operator.addTransaction(tx)
     log('sent a transaction!')
   }
 
