@@ -165,7 +165,7 @@ class BlockStore {
     return [result, deposit]
   }
 
-  async getTransactions (startBlockNumberBN, endBlockNumberBN, token, start, end) {
+  async getTransactions (startBlockNumberBN, endBlockNumberBN, token, start, end, maxTransactions) {
     let blockNumberBN = startBlockNumberBN
     const relevantTransactions = []
     while (blockNumberBN.lte(endBlockNumberBN)) {
@@ -176,6 +176,9 @@ class BlockStore {
         relevantTransactions.push(tx)
       }
       blockNumberBN = blockNumberBN.add(new BN(1))
+      if (maxTransactions !== undefined && relevantTransactions.length > maxTransactions) {
+        return relevantTransactions
+      }
     }
     return relevantTransactions
   }

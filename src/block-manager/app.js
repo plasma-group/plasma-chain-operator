@@ -76,6 +76,20 @@ process.on('message', async (m) => {
     log('OUTGOING getHistoryProof with rpcID:', m.message.id)
     process.send({ ipcID: m.ipcID, message: response })
     return
+  // ******* GET_BLOCK_TXS ******* //
+  } else if (m.message.method === constants.GET_BLOCK_TXS_METHOD) {
+    const blockNum = new BN(m.message.params[0], 'hex')
+    const token = new BN(m.message.params[1], 'hex')
+    const start = new BN(m.message.params[2], 'hex')
+    const maxEnd = new BN('ffffffffffffffffffffffff', 'hex') // max end
+    let response
+    try {
+      response = await blockStore.getTransactions(blockNum, blockNum, token, start, maxEnd, 20)
+    } catch (err) {
+      response = { error: err }
+    }
+    process.send({ ipcID: m.ipcID, message: response })
+    return
   }
   process.send({ ipcID: m.ipcID, message: {error: 'RPC method not recognized!'} })
   error('RPC method', m.message.method, 'not recognized!')
