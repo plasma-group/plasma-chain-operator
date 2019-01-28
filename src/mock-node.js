@@ -8,14 +8,10 @@ const UnsignedTransaction = require('plasma-utils').serialization.models.Unsigne
 const SignedTransaction = models.SignedTransaction
 const log = require('debug')('info:node')
 
-const fakeSig = {
+const fakeSig = { // Used when isSigned is set to false
   v: 'ff',
   r: '0000000000000000000000000000000000000000000000000000000000000000',
   s: '0000000000000000000000000000000000000000000000000000000000000000'
-}
-
-const sign = (data, key) => {
-  return web3Utils.sign(data, key)
 }
 
 class MockNode {
