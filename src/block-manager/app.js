@@ -92,10 +92,17 @@ process.on('message', async (m) => {
     return
   // ******* GET_BLOCK_METADATA ******* //
   } else if (m.message.method === constants.GET_BLOCK_METADATA_METHOD) {
-    const blockNum = new BN(m.message.params[0], 'hex')
+    const startBlock = new BN(m.message.params[0], 'hex')
+    // If end block is undefined, set them equal
+    let endBlock
+    if (m.message.params[1] !== undefined) {
+      endBlock = new BN(m.message.params[1], 'hex')
+    } else {
+      endBlock = startBlock
+    }
     let response
     try {
-      response = await blockStore.getBlockMetadata(blockNum)
+      response = await blockStore.getBlockMetadata(startBlock, endBlock)
     } catch (err) {
       response = { error: err }
     }

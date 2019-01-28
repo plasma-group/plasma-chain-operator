@@ -69,17 +69,22 @@ class BlockStore {
     return rootHash
   }
 
-  async getBlockMetadata (blockNumberBN) {
-    const blockNumber = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
-    const rootHash = await this.db.get(Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber]))
-    const timestamp = await this.db.get(Buffer.concat([BLOCK_TIMESTAMP_PREFIX, blockNumber]))
-    const numTxs = await this.db.get(Buffer.concat([BLOCK_NUM_TXS_PREFIX, blockNumber]))
-    return {
-      blockNumber,
-      rootHash,
-      timestamp,
-      numTxs
+  async getBlockMetadata (startBlockBN, endBlockBN) {
+    let blockNumberBN = new BN(startBlockBN)
+    const metadata = []
+    for (blockNumberBN; blockNumberBN.lte(endBlockBN); blockNumberBN = blockNumberBN.addn(1)) {
+      const blockNumber = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
+      const rootHash = await this.db.get(Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber]))
+      const timestamp = await this.db.get(Buffer.concat([BLOCK_TIMESTAMP_PREFIX, blockNumber]))
+      const numTxs = await this.db.get(Buffer.concat([BLOCK_NUM_TXS_PREFIX, blockNumber]))
+      metadata.push({
+        blockNumber,
+        rootHash,
+        timestamp,
+        numTxs
+      })
     }
+    return metadata
   }
 
   async _processNewBlockQueue () {
