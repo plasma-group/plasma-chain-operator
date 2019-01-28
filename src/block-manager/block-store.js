@@ -74,15 +74,19 @@ class BlockStore {
     const metadata = []
     for (blockNumberBN; blockNumberBN.lte(endBlockBN); blockNumberBN = blockNumberBN.addn(1)) {
       const blockNumber = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
-      const rootHash = await this.db.get(Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber]))
-      const timestamp = await this.db.get(Buffer.concat([BLOCK_TIMESTAMP_PREFIX, blockNumber]))
-      const numTxs = await this.db.get(Buffer.concat([BLOCK_NUM_TXS_PREFIX, blockNumber]))
-      metadata.push({
-        blockNumber,
-        rootHash,
-        timestamp,
-        numTxs
-      })
+      try {
+        const rootHash = await this.db.get(Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber]))
+        const timestamp = await this.db.get(Buffer.concat([BLOCK_TIMESTAMP_PREFIX, blockNumber]))
+        const numTxs = await this.db.get(Buffer.concat([BLOCK_NUM_TXS_PREFIX, blockNumber]))
+        metadata.push({
+          blockNumber,
+          rootHash,
+          timestamp,
+          numTxs
+        })
+      } catch (err) {
+        return metadata
+      }
     }
     return metadata
   }
