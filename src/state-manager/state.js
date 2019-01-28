@@ -340,10 +340,15 @@ class State {
     return ownedRanges
   }
 
-  async getTransactions (address) {
+  async getTransactions (address, startBlock, endBlock) {
     const ownedRanges = await this.getOwnedRanges(address)
     const transactions = new Set()
     for (const range of ownedRanges) {
+      const serialized = new UnsignedTransaction(range.value)
+      if (serialized.block < startBlock || serialized > endBlock) {
+        continue
+      }
+
       transactions.add(range.value)
     }
     return transactions

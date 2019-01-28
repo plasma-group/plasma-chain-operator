@@ -59,9 +59,11 @@ process.on('message', async (m) => {
   // ******* GET_TXS ******* //
   } else if (m.message.method === constants.GET_TXS_METHOD) {
     const address = m.message.params[0]
+    const startBlock = m.message.params[1]
+    const endBlock = m.message.params[2]
     let response
     try {
-      const getTxResult = Array.from(await state.getTransactions(address))
+      const getTxResult = Array.from(await state.getTransactions(address, startBlock, endBlock))
       response = { result: getTxResult }
     } catch (err) {
       error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
