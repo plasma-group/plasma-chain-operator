@@ -376,7 +376,7 @@ class BlockStore {
     // Make the transaction object
     const nextTransaction = new SignedTransaction(chunk.slice(txStart, txEnd).toString('hex'))
     log('Read new transaction')
-    this.lastBlockNumTxs.addn(1) // Increment the total number of txs which we've added
+    this.lastBlockNumTxs = this.lastBlockNumTxs.addn(1) // Increment the total number of txs which we've added
     return [cursor + txSize, nextTransaction, chunk.slice(cursor, txEnd)]
   }
 
