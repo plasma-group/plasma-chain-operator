@@ -8,6 +8,7 @@ const NEW_BLOCK_METHOD = 'newBlock'
 const GET_RECENT_TXS_METHOD = 'getRecentTransactions'
 const GET_BLOCK_NUMBER_METHOD = 'getBlockNumber'
 const GET_BLOCK_TXS_METHOD = 'getBlockTransactions'
+const GET_BLOCK_METADATA_METHOD = 'getBlockMetadata'
 const ADDRESS_BYTE_SIZE = 20
 const START_BYTE_SIZE = 12
 const TYPE_BYTE_SIZE = 4
@@ -28,6 +29,8 @@ const BLOCK_INDEX_PREFIX = Buffer.from([253])
 const BLOCK_ROOT_HASH_PREFIX = Buffer.from([252])
 const NUM_LEVELS_PREFIX = Buffer.from([251]) // The number of levels in a particular block
 const NODE_DB_PREFIX = Buffer.from([250])
+const BLOCK_NUM_TXS_PREFIX = Buffer.from([249])
+const BLOCK_TIMESTAMP_PREFIX = Buffer.from([248])
 // DB
 const ETH_DB_FILENAME = 'eth-config.json'
 const TEST_DB_DIR = './operator-db-test/'
@@ -42,6 +45,7 @@ module.exports = {
   GET_BLOCK_NUMBER_METHOD,
   GET_RECENT_TXS_METHOD,
   GET_BLOCK_TXS_METHOD,
+  GET_BLOCK_METADATA_METHOD,
   GET_HISTORY_PROOF,
   START_BYTE_SIZE,
   TYPE_BYTE_SIZE,
@@ -54,6 +58,8 @@ module.exports = {
   BLOCK_TX_PREFIX,
   BLOCK_DEPOSIT_PREFIX,
   BLOCK_ROOT_HASH_PREFIX,
+  BLOCK_NUM_TXS_PREFIX,
+  BLOCK_TIMESTAMP_PREFIX,
   BLOCK_INDEX_PREFIX,
   NUM_LEVELS_PREFIX,
   NODE_DB_PREFIX,

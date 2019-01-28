@@ -11,6 +11,8 @@ const TransactionProof = models.TransactionProof
 const BLOCK_TX_PREFIX = require('../constants.js').BLOCK_TX_PREFIX
 const BLOCK_DEPOSIT_PREFIX = require('../constants.js').BLOCK_DEPOSIT_PREFIX
 const BLOCK_ROOT_HASH_PREFIX = require('../constants.js').BLOCK_ROOT_HASH_PREFIX
+const BLOCK_NUM_TXS_PREFIX = require('../constants.js').BLOCK_NUM_TXS_PREFIX
+const BLOCK_TIMESTAMP_PREFIX = require('../constants.js').BLOCK_TIMESTAMP_PREFIX
 const BLOCKNUMBER_BYTE_SIZE = require('../constants.js').BLOCKNUMBER_BYTE_SIZE
 const TRANSFER_BYTE_SIZE = require('../constants.js').TRANSFER_BYTE_SIZE
 const SIGNATURE_BYTE_SIZE = require('../constants.js').SIGNATURE_BYTE_SIZE
@@ -42,6 +44,7 @@ class BlockStore {
     this.batchPromises = []
     this.blockNumberBN = new BN(0) // Set block number to be -1 so that the first block is block 0
     this.newBlockQueue = []
+    this.lastBlockNumTxs = new BN(0)
   }
 
   async addBlock (txLogFile) {
@@ -66,6 +69,19 @@ class BlockStore {
     return rootHash
   }
 
+  async getBlockMetadata (blockNumberBN) {
+    const blockNumber = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
+    const rootHash = await this.db.get(Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber]))
+    const timestamp = await this.db.get(Buffer.concat([BLOCK_TIMESTAMP_PREFIX, blockNumber]))
+    const numTxs = await this.db.get(Buffer.concat([BLOCK_NUM_TXS_PREFIX, blockNumber]))
+    return {
+      blockNumber,
+      rootHash,
+      timestamp,
+      numTxs
+    }
+  }
+
   async _processNewBlockQueue () {
     let numBlocksProcessed
     for (numBlocksProcessed = 0; numBlocksProcessed < this.newBlockQueue.length; numBlocksProcessed++) {
@@ -86,7 +102,10 @@ class BlockStore {
     }
     await this.ingestBlock(blockNumber, this.txLogDir + txLogFile)
     const rootHash = await this.sumTree.generateTree(blockNumber)
+    // Set block metadata for the block explorer api
     this.db.put(Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber]), rootHash)
+    this.db.put(Buffer.concat([BLOCK_TIMESTAMP_PREFIX, blockNumber]), Buffer.from(Date.now()))
+    this.db.put(Buffer.concat([BLOCK_NUM_TXS_PREFIX, blockNumber]), this.lastBlockNumTxs.toArrayLike(Buffer, 'big')) // lastBlockNumTxs computed during ingestion
     this.blockNumberBN = this.blockNumberBN.addn(1)
     log('Adding block number:', blockNumberBN.toString(), 'with root hash:', Buffer.from(rootHash).toString('hex'))
     return {
@@ -311,6 +330,8 @@ class BlockStore {
   ingestBlock (blockNumber, txLogFilePath) {
     const self = this
     log('Generating new block for block:', blockNumber)
+    // First set the total number of txs for the latest block to zero. This just metadata for the block
+    this.lastBlockNumTxs = new BN(0)
     const readStream = fs.createReadStream(txLogFilePath)
     let chunkNumber = 0
     readStream.on('data', function (chunk) {
@@ -346,6 +367,7 @@ class BlockStore {
     // Make the transaction object
     const nextTransaction = new SignedTransaction(chunk.slice(txStart, txEnd).toString('hex'))
     log('Read new transaction')
+    this.lastBlockNumTxs.addn(1) // Increment the total number of txs which we've added
     return [cursor + txSize, nextTransaction, chunk.slice(cursor, txEnd)]
   }
 

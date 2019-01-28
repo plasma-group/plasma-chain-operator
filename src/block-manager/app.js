@@ -90,6 +90,17 @@ process.on('message', async (m) => {
     }
     process.send({ ipcID: m.ipcID, message: response })
     return
+  // ******* GET_BLOCK_METADATA ******* //
+  } else if (m.message.method === constants.GET_BLOCK_METADATA_METHOD) {
+    const blockNum = new BN(m.message.params[0], 'hex')
+    let response
+    try {
+      response = await blockStore.getBlockMetadata(blockNum)
+    } catch (err) {
+      response = { error: err }
+    }
+    process.send({ ipcID: m.ipcID, message: response })
+    return
   }
   process.send({ ipcID: m.ipcID, message: {error: 'RPC method not recognized!'} })
   error('RPC method', m.message.method, 'not recognized!')
