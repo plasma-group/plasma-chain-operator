@@ -104,7 +104,7 @@ class BlockStore {
     const rootHash = await this.sumTree.generateTree(blockNumber)
     // Set block metadata for the block explorer api
     this.db.put(Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber]), rootHash)
-    this.db.put(Buffer.concat([BLOCK_TIMESTAMP_PREFIX, blockNumber]), Buffer.from(Date.now()))
+    this.db.put(Buffer.concat([BLOCK_TIMESTAMP_PREFIX, blockNumber]), Buffer.from(Date.now().toString()))
     this.db.put(Buffer.concat([BLOCK_NUM_TXS_PREFIX, blockNumber]), this.lastBlockNumTxs.toArrayLike(Buffer, 'big')) // lastBlockNumTxs computed during ingestion
     this.blockNumberBN = this.blockNumberBN.addn(1)
     log('Adding block number:', blockNumberBN.toString(), 'with root hash:', Buffer.from(rootHash).toString('hex'))
