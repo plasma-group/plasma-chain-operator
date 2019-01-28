@@ -120,7 +120,7 @@ async function startup (config) {
     throw err
   }
   log('Finished sub process startup')
-  app.listen(config.port, () => {
+  app.listen(config.port, '0.0.0.0', () => {
     console.log('\x1b[36m%s\x1b[0m', `Operator listening on port ${config.port}!`)
   })
   started = true
