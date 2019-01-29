@@ -69,8 +69,8 @@ const operator = {
       id: idCounter++,
       params: []
     })
-    console.log('Sending transactions for block:', new BN(response.data.blockNumber, 10).toString(10).green)
-    return new BN(response.data.blockNumber, 10)
+    console.log('Sending transactions for block:', new BN(response.data.result, 10).toString(10).green)
+    return new BN(response.data.result, 10)
   }
 }
 
@@ -82,8 +82,8 @@ program
     for (const acct of accounts) {
       nodes.push(new MockNode(operator, acct, nodes))
     }
-    // Add deposits
-    const depositType = new BN(999)
+    // Add deposits -- it will be a random token above token type 1000 to avoid overlap with real deposits...
+    const depositType = new BN(999 + Math.floor(Math.random() * 10000))
     const depositAmount = new BN(10000000, 'hex')
     for (const node of nodes) {
       await node.deposit(depositType, depositAmount)

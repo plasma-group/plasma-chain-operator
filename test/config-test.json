@@ -1,5 +1,6 @@
 {
   "dbDir": "./operator-db-test/",
+  "plasmaChainName": "One TEST Chain To Rule Them All",
   "operatorIpAddress": "0.0.0.0",
   "port": "3000",
   "finalityDepth": "0"

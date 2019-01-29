@@ -1,6 +1,7 @@
 {
   "dbDir": "./operator-db",
   "plasmaRegistryAddress": "0x3937461e2d953C0f28d83911ffae708a26B4eE18",
+  "plasmaChainName": "One Chain To Rule Them All",
   "operatorIpAddress": "0.0.0.0",
   "port": "3000",
   "finalityDepth": "6",

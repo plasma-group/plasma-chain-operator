@@ -153,7 +153,7 @@ async function initializeProdEnv (config) {
 async function deployNewPlasmaChain (web3, config) {
   // We have the compiled contracts, let's create objects for them...
   const plasmaRegistry = new web3.eth.Contract(plasmaRegistryCompiled.abi, es.ethDB.plasmaRegistryAddress)
-  createPChainReciept = await plasmaRegistry.methods.createPlasmaChain(es.operatorAddress, Buffer.from(config.operatorIpAddress)).send({ from: es.operatorAddress, gas: 8000000, gasPrice: '300000' })
+  const createPChainReciept = await plasmaRegistry.methods.createPlasmaChain(es.operatorAddress, Buffer.from(config.plasmaChainName), Buffer.from(config.operatorIpAddress)).send({ from: es.operatorAddress, gas: 8000000, gasPrice: '300000' })
   const newPlasmaChainAddress = createPChainReciept.events.NewPlasmaChain.returnValues['0']
   log('Deployed a Plasma Chain at', newPlasmaChainAddress)
   return newPlasmaChainAddress
