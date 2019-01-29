@@ -116,7 +116,8 @@ process.on('message', async (m) => {
     // If end block is undefined, set them equal
     let response
     try {
-      response = await blockStore.getTxFromHash(txHash)
+      const tx = await blockStore.getTxFromHash(txHash)
+      response = { result: tx }
     } catch (err) {
       response = { error: err }
     }
