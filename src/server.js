@@ -109,8 +109,8 @@ async function startup (config) {
       txLogDir: config.txLogDir
     }))
     // Set up the eth event watchers
-    log('Registering Ethereum event watcher for `DepositEvent(address,uint256,uint256,uint256)`')
-    EthService.eventWatchers['DepositEvent(address,uint256,uint256,uint256)'].subscribe(_submitDeposits)
+    log('Registering Ethereum event watcher for `DepositEvent`')
+    EthService.eventWatchers['DepositEvent'].subscribe(_submitDeposits)
     // Set up auto new block creator
     if (config.blockTimeInSeconds !== undefined) {
       const blockTimeInMiliseconds = parseInt(config.blockTimeInSeconds) * 1000

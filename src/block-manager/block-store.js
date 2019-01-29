@@ -84,9 +84,7 @@ class BlockStore {
           timestamp,
           numTxs
         })
-      } catch (err) {
-        return metadata
-      }
+      } catch (err) { }
     }
     return metadata
   }
@@ -239,7 +237,7 @@ class BlockStore {
   }
 
   async getTxHistory (startBlockNumberBN, endBlockNumberBN, transaction) {
-    let blockNumberBN = startBlockNumberBN
+    let blockNumberBN = startBlockNumberBN.eqn(0) ? new BN(1) : startBlockNumberBN
     // First get all of the deposits for each transaction
     let deposits = []
     const earliestBlocks = []
@@ -251,6 +249,12 @@ class BlockStore {
     }
     const transactionHistory = {}
     while (blockNumberBN.lte(endBlockNumberBN)) {
+      const rootHash = await this.getRootHash(blockNumberBN)
+      if (new BN(rootHash).eq(new BN(0))) {
+        blockNumberBN = blockNumberBN.addn(1)
+        continue
+      }
+
       let proofs = []
       for (const [i, transfer] of transaction.transfers.entries()) {
         if (blockNumberBN.lte(earliestBlocks[i])) {
