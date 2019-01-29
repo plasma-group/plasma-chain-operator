@@ -35,7 +35,7 @@ process.on('message', async (m) => {
   } else if (m.message.method === constants.GET_BLOCK_NUMBER_METHOD) {
     const blockNumber = state.blockNumber
     log('OUTGOING new block success with rpcID:', m.message.id)
-    process.send({ ipcID: m.ipcID, message: {blockNumber: blockNumber.toString()} })
+    process.send({ ipcID: m.ipcID, message: { result: blockNumber.toString() } })
     return
   // ******* DEPOSIT ******* //
   } else if (m.message.method === constants.DEPOSIT_METHOD) {
