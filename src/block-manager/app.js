@@ -84,7 +84,8 @@ process.on('message', async (m) => {
     const maxEnd = new BN('ffffffffffffffffffffffff', 'hex') // max end
     let response
     try {
-      response = await blockStore.getTransactions(blockNum, blockNum, token, start, maxEnd, 20)
+      const txs = await blockStore.getTransactions(blockNum, blockNum, token, start, maxEnd, 20)
+      response = { result: txs }
     } catch (err) {
       response = { error: err }
     }
@@ -102,7 +103,8 @@ process.on('message', async (m) => {
     }
     let response
     try {
-      response = await blockStore.getBlockMetadata(startBlock, endBlock)
+      const blocks = await blockStore.getBlockMetadata(startBlock, endBlock)
+      response = { result: blocks }
     } catch (err) {
       response = { error: err }
     }

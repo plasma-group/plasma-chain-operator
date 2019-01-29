@@ -5,6 +5,7 @@ const constants = require('./constants.js')
 const defer = require('./utils.js').defer
 const jsonrpc = require('./utils.js').jsonrpc
 const express = require('express')
+const cors = require('cors')
 const bodyParser = require('body-parser')
 const log = require('debug')('info:api-app')
 const EthService = require('./eth-service.js')
@@ -21,6 +22,7 @@ let started = false
 const alreadyStartedError = new Error('Operator already started!')
 
 app.use(bodyParser.json())
+app.use(cors())
 
 // Setup simple message queue
 const messageQueue = {}
