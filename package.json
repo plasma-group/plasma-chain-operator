@@ -1,6 +1,6 @@
 {
-  "name": "plasma-operator",
-  "version": "1.0.0",
+  "name": "plasma-chain",
+  "version": "0.0.1",
   "description": "Plasma operator & simple REST server",
   "main": "index.js",
   "scripts": {
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/plasma-group/plasma-operator.git"
+    "url": "git+https://github.com/plasma-group/plasma-chain-operator.git"
   },
   "keywords": [
     "plasma",
@@ -25,9 +25,9 @@
   "author": "Plasma Group",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/plasma-group/plasma-operator/issues"
+    "url": "https://github.com/plasma-group/plasma-chain-operator/issues"
   },
-  "homepage": "https://github.com/plasma-group/plasma-operator#readme",
+  "homepage": "https://github.com/plasma-group/plasma-chain-operator#readme",
   "devDependencies": {
     "chai-http": "^4.2.0",
     "eslint": "^5.10.0",
@@ -54,8 +54,8 @@
     "leveldown": "^4.0.1",
     "levelup": "^3.1.1",
     "lodash": "^4.17.11",
-    "plasma-contracts": "git+ssh://git@github.com:plasma-group/plasma-contracts.git",
-    "plasma-utils": "git+ssh://git@github.com:plasma-group/plasma-utils.git",
+    "plasma-contracts": "git+https://github.com/plasma-group/plasma-contracts.git",
+    "plasma-utils": "git+https://github.com/plasma-group/plasma-utils.git",
     "web3": "1.0.0-beta.37"
   }
 }
