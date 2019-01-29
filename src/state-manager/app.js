@@ -64,11 +64,9 @@ process.on('message', async (m) => {
     return
   // ******* GET_TXS ******* //
   } else if (m.message.method === constants.GET_TXS_METHOD) {
-    const address = m.message.params[0]
-    const startBlock = m.message.params[1]
-    const endBlock = m.message.params[2]
     let response
     try {
+      const [address, startBlock, endBlock] = m.message.params
       const getTxResult = Array.from(await state.getTransactions(address, startBlock, endBlock))
       response = { result: getTxResult }
     } catch (err) {
@@ -82,7 +80,8 @@ process.on('message', async (m) => {
   } else if (m.message.method === constants.GET_RECENT_TXS_METHOD) {
     let response
     try {
-      const recentTransactions = await state.getRecentTransactions(m.message.params[0])
+      const [start, end] = m.message.params
+      const recentTransactions = await state.getRecentTransactions(start, end)
       response = { result: recentTransactions }
     } catch (err) {
       error('Error getting recent transactions!\nrpcID:', m.message.id, '\nError message:', err, '\n')

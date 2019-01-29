@@ -346,8 +346,10 @@ class State {
     return ownedRanges
   }
 
-  getRecentTransactions () {
-    return this.recentTransactions
+  getRecentTransactions (start, end) {
+    if (start === undefined) start = 0
+    if (end === undefined) start = this.recentTransactions.length
+    return this.recentTransactions.slice(start, end)
   }
 
   addRecentTransaction (encodedTx) {
