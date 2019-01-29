@@ -106,9 +106,9 @@ async function initializeTestingEnv (config) {
 async function deployNewPlasmaRegistry (config) {
   // Deploy a new PlasmaRegistry. This requires first deploying a dummy Plasma Chain
   // We have the compiled contracts, let's create objects for them...
-  const plasmaSerializerCt = new es.web3.eth.Contract(serializerCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 7000000, gasPrice: '300000'})
-  const plasmaChainCt = new es.web3.eth.Contract(plasmaChainCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 7000000, gasPrice: '300000'})
-  const plasmaRegistryCt = new es.web3.eth.Contract(plasmaRegistryCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 7000000, gasPrice: '300000'})
+  const plasmaSerializerCt = new es.web3.eth.Contract(serializerCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 7000000, gasPrice: '50000000000'})
+  const plasmaChainCt = new es.web3.eth.Contract(plasmaChainCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 7000000, gasPrice: '50000000000'})
+  const plasmaRegistryCt = new es.web3.eth.Contract(plasmaRegistryCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 7000000, gasPrice: '50000000000'})
   const serializer = await plasmaSerializerCt.deploy({ data: serializerCompiled.bytecode }).send()
   // To set up the Plasma Network, we need to first deploy a Plasma Chain contract
   const plasmaChain = await plasmaChainCt.deploy({ data: plasmaChainCompiled.bytecode }).send()
@@ -153,7 +153,7 @@ async function initializeProdEnv (config) {
 async function deployNewPlasmaChain (web3, config) {
   // We have the compiled contracts, let's create objects for them...
   const plasmaRegistry = new web3.eth.Contract(plasmaRegistryCompiled.abi, es.ethDB.plasmaRegistryAddress)
-  const createPChainReciept = await plasmaRegistry.methods.createPlasmaChain(es.operatorAddress, Buffer.from(config.plasmaChainName), Buffer.from(config.operatorIpAddress)).send({ from: es.operatorAddress, gas: 8000000, gasPrice: '300000' })
+  const createPChainReciept = await plasmaRegistry.methods.createPlasmaChain(es.operatorAddress, Buffer.from(config.plasmaChainName), Buffer.from(config.operatorIpAddress)).send({ from: es.operatorAddress, gas: 8000000, gasPrice: '50000000000' })
   const newPlasmaChainAddress = createPChainReciept.events.NewPlasmaChain.returnValues['0']
   log('Deployed a Plasma Chain at', newPlasmaChainAddress)
   return newPlasmaChainAddress
