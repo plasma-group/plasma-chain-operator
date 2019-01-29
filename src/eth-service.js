@@ -3,6 +3,7 @@ const fs = require('fs')
 const colors = require('colors') // eslint-disable-line no-unused-vars
 const plasmaChainCompiled = require('plasma-contracts').plasmaChainCompiled
 const plasmaRegistryCompiled = require('plasma-contracts').plasmaRegistryCompiled
+const serializerCompiled = require('plasma-contracts').serializerCompiled
 const Web3 = require('web3')
 const ganache = require('ganache-cli')
 const log = require('debug')('info:eth')
@@ -47,13 +48,12 @@ async function startup (config) {
 function _getEventWatchers (config) {
   const eventWatchers = {}
   for (const ethEvent of Object.keys(es.plasmaChain.events)) {
-    if (ethEvent.slice(0, 2) === '0x' || !ethEvent.includes('(')) {
+    if (ethEvent.slice(0, 2) === '0x' || ethEvent.includes('(')) {
       // Filter out all of the events that are not of the form `DepositEvent(address,uint256)`
       continue
     }
     log('Creating event watcher for event:', ethEvent)
-    const topic = es.web3.utils.soliditySha3(ethEvent) // Topic is the event function & params hashed together
-    eventWatchers[ethEvent] = new EventWatcher(es.web3, es.plasmaChain, topic, config.finalityDepth, config.ethPollInterval)
+    eventWatchers[ethEvent] = new EventWatcher(es.web3, es.plasmaChain, ethEvent, config.finalityDepth, config.ethPollInterval)
   }
   return eventWatchers
 }
@@ -106,8 +106,10 @@ async function initializeTestingEnv (config) {
 async function deployNewPlasmaRegistry (config) {
   // Deploy a new PlasmaRegistry. This requires first deploying a dummy Plasma Chain
   // We have the compiled contracts, let's create objects for them...
-  const plasmaChainCt = new es.web3.eth.Contract(plasmaChainCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 6302132, gasPrice: '300000'})
-  const plasmaRegistryCt = new es.web3.eth.Contract(plasmaRegistryCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 4000000, gasPrice: '300000'})
+  const plasmaSerializerCt = new es.web3.eth.Contract(serializerCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 7000000, gasPrice: '300000'})
+  const plasmaChainCt = new es.web3.eth.Contract(plasmaChainCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 7000000, gasPrice: '300000'})
+  const plasmaRegistryCt = new es.web3.eth.Contract(plasmaRegistryCompiled.abi, es.operatorAddress, {from: es.operatorAddress, gas: 7000000, gasPrice: '300000'})
+  const serializer = await plasmaSerializerCt.deploy({ data: serializerCompiled.bytecode }).send()
   // To set up the Plasma Network, we need to first deploy a Plasma Chain contract
   const plasmaChain = await plasmaChainCt.deploy({ data: plasmaChainCompiled.bytecode }).send()
   // Finally deploy the Plasma Registry and save the address in our ethDB
@@ -116,7 +118,7 @@ async function deployNewPlasmaRegistry (config) {
   writeEthDB(config, es.ethDB)
   log('Deployed a Plasma Registry at', es.ethDB.plasmaRegistryAddress)
   // Initialize the registry
-  await plasmaRegistry.methods.initializeRegistry(plasmaChain.options.address).send()
+  await plasmaRegistry.methods.initializeRegistry(plasmaChain.options.address, serializer.options.address).send()
 }
 
 async function initializeProdEnv (config) {
@@ -151,7 +153,7 @@ async function initializeProdEnv (config) {
 async function deployNewPlasmaChain (web3, config) {
   // We have the compiled contracts, let's create objects for them...
   const plasmaRegistry = new web3.eth.Contract(plasmaRegistryCompiled.abi, es.ethDB.plasmaRegistryAddress)
-  const createPChainReciept = await plasmaRegistry.methods.createPlasmaChain(es.operatorAddress, Buffer.from(config.operatorIpAddress)).send({ from: es.operatorAddress, gas: 4000000, gasPrice: '300000' })
+  createPChainReciept = await plasmaRegistry.methods.createPlasmaChain(es.operatorAddress, Buffer.from(config.operatorIpAddress)).send({ from: es.operatorAddress, gas: 8000000, gasPrice: '300000' })
   const newPlasmaChainAddress = createPChainReciept.events.NewPlasmaChain.returnValues['0']
   log('Deployed a Plasma Chain at', newPlasmaChainAddress)
   return newPlasmaChainAddress
@@ -179,7 +181,7 @@ async function _setupGanache (web3, config) {
     })
   }
   // For all provider options, see: https://github.com/trufflesuite/ganache-cli#library
-  const providerOptions = {'accounts': ganacheAccounts, 'gasLimit': '0x669F82', 'locked': false, 'logger': { log }}
+  const providerOptions = {'accounts': ganacheAccounts, 'gasLimit': '0x7A1200', 'locked': false, 'logger': { log }}
   // If we are given an HttpProvider, use a ganache server instead of as a local library
   if (config.testHttpProviderPort !== undefined) {
     es.ganacheServer = ganache.server(providerOptions)

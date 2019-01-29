@@ -29,7 +29,7 @@ process.on('message', async (m) => {
   } else if (m.message.method === constants.NEW_BLOCK_METHOD) {
     const blockNumber = await state.startNewBlock()
     log('OUTGOING new block success with rpcID:', m.message.id)
-    process.send({ ipcID: m.ipcID, message: {newBlockNumber: blockNumber.toString()} })
+    process.send({ ipcID: m.ipcID, message: { result: { newBlockNumber: blockNumber.toString() } } })
     return
   // ******* GET_BLOCK_NUMBER ******* //
   } else if (m.message.method === constants.GET_BLOCK_NUMBER_METHOD) {
@@ -72,7 +72,7 @@ process.on('message', async (m) => {
       const getTxResult = Array.from(await state.getTransactions(address, startBlock, endBlock))
       response = { result: getTxResult }
     } catch (err) {
-      error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
+      error('Error in getting past transactions!\nrpcID:', m.message.id, '\nError message:', err, '\n')
       response = { error: err }
     }
     log('OUTGOING getTransactions response with rpcID:', m.message.id)

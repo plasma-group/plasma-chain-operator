@@ -55,7 +55,7 @@ process.on('message', async (m) => {
       const depositTx = getDepositTransaction(m.message.params.recipient, new BN(m.message.params.token, 16), new BN(m.message.params.start, 16), new BN(m.message.params.end, 16))
       addDepositRes = await blockStore.addDeposit(depositTx)
     } catch (err) {
-      error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
+      error('Error in adding deposit!\nrpcID:', m.message.id, '\nError message:', err, '\n')
       addDepositRes = { error: err }
     }
     process.send({ ipcID: m.ipcID, message: { addDepositRes } })
@@ -70,7 +70,7 @@ process.on('message', async (m) => {
       const txsAndProofs = await blockStore.getTxHistory(startBlockBN, endBlockBN, transaction)
       response = { result: txsAndProofs }
     } catch (err) {
-      console.error('Error in adding transaction!\nrpcID:', m.message.id, '\nError message:', err, '\n')
+      console.error('Error in getting history proof!\nrpcID:', m.message.id, '\nError message:', err, '\n')
       response = { error: err }
     }
     log('OUTGOING getHistoryProof with rpcID:', m.message.id)
