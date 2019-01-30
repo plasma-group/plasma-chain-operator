@@ -136,8 +136,15 @@ class BlockStore {
    * History proof logic
    */
   async getLeavesAt (blockNumber, token, start, end) {
-    const startKey = makeBlockTxKey(blockNumber, token, start)
-    const endKey = makeBlockTxKey(blockNumber, token, end)
+    let startKey
+    let endKey
+    if (token !== 'null') {
+      startKey = makeBlockTxKey(blockNumber, token, start)
+      endKey = makeBlockTxKey(blockNumber, token, end)
+    } else {
+      startKey = start.toArrayLike(Buffer, 'big', 16)
+      endKey = end.toArrayLike(Buffer, 'big', 16)
+    }
     const it = this.db.iterator({
       lt: endKey,
       reverse: true

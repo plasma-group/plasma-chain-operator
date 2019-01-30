@@ -79,7 +79,12 @@ process.on('message', async (m) => {
   // ******* GET_BLOCK_TXS ******* //
   } else if (m.message.method === constants.GET_BLOCK_TXS_METHOD) {
     const blockNum = new BN(m.message.params[0], 'hex')
-    const token = new BN(m.message.params[1], 'hex')
+    let token
+    if (m.message.params[1] !== 'null') {
+      token = 'null'
+    } else {
+      token = new BN(m.message.params[1], 'hex')
+    }
     const start = new BN(m.message.params[2], 'hex')
     const maxEnd = new BN('ffffffffffffffffffffffff', 'hex') // max end
     let response

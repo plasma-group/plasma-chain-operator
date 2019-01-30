@@ -18,7 +18,7 @@ const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
 const configFile = (process.env.CONFIG) ? process.env.CONFIG : path.join(appRoot.toString(), 'config.json')
 const config = readConfigFile(configFile)
 const http = axios.create({
-  baseURL: 'http://localhost:' + config.port
+  baseURL: 'http://107.22.13.89'
 })
 
 let idCounter
@@ -98,7 +98,7 @@ program
         promises.push(node.sendRandomTransaction(blockNumber, 2, true))
       }
       await Promise.all(promises)
-      timeout(100)
+      await timeout(Math.floor(Math.random() * 5000) + 1000)
     }
     console.log('Total time:', +new Date() - startTime)
   })

@@ -202,7 +202,7 @@ async function _setupGanache (web3, config) {
 }
 
 async function submitRootHash (rootHash) {
-  const reciept = await es.plasmaChain.methods.submitBlock('0x' + rootHash).send({gas: 400000})
+  const reciept = await es.plasmaChain.methods.submitBlock('0x' + rootHash).send({gas: 400000, gasPrice: '5000000000'})
   log('Ethereum reciept for block number:', reciept.events.SubmitBlockEvent.returnValues['0'], 'wish root hash:', reciept.events.SubmitBlockEvent.returnValues['1'])
 }
 
