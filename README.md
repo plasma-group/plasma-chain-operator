@@ -13,7 +13,7 @@ $ operator start
 
 To deploy a new Plasma Chain, use the following commands:
 ```
-0) $ npm install plasma-chain -g  # create a new account 
+0) $ npm install plasma-chain -g  # install the plasma chain operator
 
 1) $ plasma-chain account new  # create a new account
 
