@@ -416,9 +416,12 @@ class BlockStore {
     // Leftmost transfer of the first transaction in a block MUST start at zero.
     // We should probably get rid of this later on.
     if (chunkNumber === 0 && txBundle.length > 0) {
-      const leftmost = txBundle[0][0].transfers.reduce((prev, curr) => {
-        return prev.start < curr.start ? prev : curr
+      const leftmost = txBundle[0][0].transfers.sort((a, b) => {
+        return a.token.sub(b.token)
+      }).reduce((prev, curr) => {
+        return prev.start.lt(curr.start) ? prev : curr
       })
+      leftmost.token = new BN(0)
       leftmost.start = new BN(0)
     }
 
