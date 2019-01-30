@@ -7,5 +7,5 @@
   "finalityDepth": "6",
   "blockTimeInSeconds": "60",
   "ethPollInterval": "30000",
-  "web3HttpProvider": "http://localhost:8545"
+  "web3HttpProvider": "https://rinkeby.infura.io/v3/fce31f1fb2d54caa9b31ed7d28437fa5"
 }

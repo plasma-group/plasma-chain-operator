@@ -17,6 +17,7 @@ program
     }
     // Get the config
     const configFile = (process.env.CONFIG) ? process.env.CONFIG : path.join(__dirname, '..', 'config.json')
+    console.log('Reading config file from:', configFile)
     const config = readConfigFile(configFile)
     // Ask for a Plasma Chain name and ip address
     const chainMetadata = await setChainMetadata(config)
