@@ -5,6 +5,7 @@
 - `git` -- version 2.17.1
 - `g++` -- version 7.3.1
 
+## Setup
 To deploy a new Plasma Chain, use the following commands:
 ```
 0) $ npm install plasma-chain -g  # install the plasma chain operator
