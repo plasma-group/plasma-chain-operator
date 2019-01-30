@@ -155,7 +155,7 @@ async function deployNewPlasmaChain (web3, config) {
   const plasmaRegistry = new web3.eth.Contract(plasmaRegistryCompiled.abi, es.ethDB.plasmaRegistryAddress)
   let createPChainReciept
   try {
-    createPChainReciept = await plasmaRegistry.methods.createPlasmaChain(es.operatorAddress, Buffer.from(config.plasmaChainName), Buffer.from(config.operatorIpAddress)).send({ from: es.operatorAddress, gas: 8000000, gasPrice: '50000000000' })
+    createPChainReciept = await plasmaRegistry.methods.createPlasmaChain(es.operatorAddress, Buffer.from(config.plasmaChainName), Buffer.from(config.operatorIpAddress)).send({ from: es.operatorAddress, gas: 7000000, gasPrice: '50000000000' })
   } catch (err) {
     log(err)
     console.log('ERROR DEPLOYING PLASMA CHAIN.'.red, '\nThe Plasma Chain name you selected is probably taken... try another! But hurry--the namespace is filling up quick!'.white)
