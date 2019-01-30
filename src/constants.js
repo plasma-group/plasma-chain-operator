@@ -10,6 +10,7 @@ const GET_BLOCK_NUMBER_METHOD = 'getBlockNumber'
 const GET_BLOCK_TXS_METHOD = 'getBlockTransactions'
 const GET_BLOCK_METADATA_METHOD = 'getBlockMetadata'
 const GET_TX_FROM_HASH_METHOD = 'getTxFromHash'
+const GET_ETH_INFO_METHOD = 'getEthInfo'
 const ADDRESS_BYTE_SIZE = 20
 const START_BYTE_SIZE = 12
 const TYPE_BYTE_SIZE = 4
@@ -49,6 +50,7 @@ module.exports = {
   GET_BLOCK_TXS_METHOD,
   GET_BLOCK_METADATA_METHOD,
   GET_TX_FROM_HASH_METHOD,
+  GET_ETH_INFO_METHOD,
   GET_HISTORY_PROOF,
   START_BYTE_SIZE,
   TYPE_BYTE_SIZE,

@@ -81,6 +81,12 @@ app.post('/api', function (req, res) {
       log('OUTGOING response to RPC request with method:', req.body.method, 'and rpcID:', req.body.id)
       res.send(response.message)
     })
+  } else if (req.body.method === constants.GET_ETH_INFO_METHOD) {
+    res.send({ result: {
+      operatorAddress: EthService.operatorAddress,
+      plasmaRegistryAddress: EthService.ethDB.plasmaRegistryAddress,
+      plasmaChainAddress: EthService.ethDB.plasmaChainAddress
+    }})
   }
 })
 
