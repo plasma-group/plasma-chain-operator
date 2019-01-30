@@ -21,6 +21,9 @@ program
     // Ask for a Plasma Chain name and ip address
     const chainMetadata = await setChainMetadata(config)
     console.log('Chain metadata:', chainMetadata)
+    // Add the chain metadata to the config
+    config.plasmaChainName = chainMetadata.chainName
+    config.operatorIpAddress = chainMetadata.ipAddress
     // Initialize a new Plasma Chain
     config.privateKey = account.privateKey
     if (cmd.newRegistry === true) {
@@ -34,26 +37,27 @@ async function setChainMetadata (config) {
   console.log("\nBefore we deploy your new Plasma Chain, I'll need to ask a couple questions.".white)
   const plasmaChainMetadata = {}
   // Get the Plasma Chain name
-  const chainName = await getPlasmaChainName()
+  const chainName = await getPlasmaChainName(config)
   Object.assign(plasmaChainMetadata, chainName)
   // Set the hostname
   console.log('\nWhat is your IP address? Or a domain name that points to your IP.\n'.white, 'WARNING:'.yellow, 'This IP address will be posted to the Ethereum blockchain.'.white)
   const hostResponse = await inquirer.prompt([{
     type: 'input',
     name: 'ipAddress',
+    default: (config.operatorIpAddress === undefined) ? '' : config.operatorIpAddress,
     message: 'Your IP address or hostname:'
   }])
   Object.assign(plasmaChainMetadata, hostResponse)
-  console.log('Metadata!', plasmaChainMetadata)
   return plasmaChainMetadata
 }
 
-async function getPlasmaChainName () {
+async function getPlasmaChainName (config) {
   console.log('\nWhat is the name of your new Plasma Chain?\nThis will be displayed in the'.white, 'Plasma Network Explorer'.green, '--'.white, 'http://plasma.run'.blue)
   const chainNameResponse = await inquirer.prompt([{
     type: 'input',
     name: 'chainName',
-    message: "Your Plasma Chain's Name 😍:",
+    message: "Your Plasma Chain's Name:",
+    default: (config.plasmaChainName === undefined) ? '' : config.plasmaChainName,
     validate: (input) => {
       if (input.length < 3) {
         console.log('Error!'.red, 'Plasma Chain Name is too short!')
