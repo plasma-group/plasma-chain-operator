@@ -185,9 +185,7 @@ async function _setupGanache (web3, config) {
   // If we are given an HttpProvider, use a ganache server instead of as a local library
   if (config.testHttpProviderPort !== undefined) {
     es.ganacheServer = ganache.server(providerOptions)
-    log('starting server')
     await _startGanacheServer(es.ganacheServer, config.testHttpProviderPort)
-    log('done?')
     web3.setProvider(new Web3.providers.HttpProvider('http://localhost:' + config.testHttpProviderPort))
   } else {
     // No port given, so run as local library

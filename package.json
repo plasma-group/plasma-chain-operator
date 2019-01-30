@@ -11,7 +11,7 @@
     "test-debug": "env CONFIG='./config-test.json' NODE_ENV='test' mocha debug --timeout 200000 --recursive"
   },
   "bin": {
-    "operator": "./bin/operator.js"
+    "plasma-chain": "./bin/plasma-chain.js"
   },
   "repository": {
     "type": "git",
@@ -19,7 +19,7 @@
   },
   "keywords": [
     "plasma",
-    "prime",
+    "chain",
     "operator"
   ],
   "author": "Plasma Group",
