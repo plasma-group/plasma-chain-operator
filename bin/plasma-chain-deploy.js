@@ -9,7 +9,7 @@ const readConfigFile = require('../src/utils.js').readConfigFile
 
 program
   .description('starts the operator using the first account')
-  .option('-n, --newRegistry', 'Initialize a new Plasma Network in addition to a Plasma Chain')
+  .option('-n, --newRegistry', 'Deploy a new Plasma Network in addition to a Plasma Chain')
   .action(async (none, cmd) => {
     const account = await getAccount()
     if (account === null) {
@@ -25,7 +25,7 @@ program
     // Add the chain metadata to the config
     config.plasmaChainName = chainMetadata.chainName
     config.operatorIpAddress = chainMetadata.ipAddress
-    // Initialize a new Plasma Chain
+    // Deploy a new Plasma Chain
     config.privateKey = account.privateKey
     if (cmd.newRegistry === true) {
       config.plasmaRegistryAddress = 'DEPLOY'
@@ -34,7 +34,7 @@ program
   })
 
 async function setChainMetadata (config) {
-  console.log('\n~~~~~~~~~plasma~~~~~~~~~chain~~~~~~~~~initialization~~~~~~~~~'.rainbow)
+  console.log('\n~~~~~~~~~plasma~~~~~~~~~chain~~~~~~~~~deployment~~~~~~~~~'.rainbow)
   console.log("\nBefore we deploy your new Plasma Chain, I'll need to ask a couple questions.".white)
   const plasmaChainMetadata = {}
   // Get the Plasma Chain name

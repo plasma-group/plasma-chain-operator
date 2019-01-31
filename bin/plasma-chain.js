@@ -11,7 +11,7 @@ const isRinkeby = config.web3HttpProvider.includes('rinkeby')
 
 const rinkebyStep2 = `# On Rinkeby testnet, send your new Operator address ~0.5 ETH.
 You can use a faucet to get test ETH for free here: ${'https://faucet.rinkeby.io/'.green}`
-const rinkebyStep3 = `${'$ plasma-chain deploy'.green} # initalizes a new Plasma Chain.
+const rinkebyStep3 = `${'$ plasma-chain deploy'.green} # deploys a new Plasma Chain.
 Note you will be prompted for a unique Plasma Chain name & IP address.
 If you are running on your laptop, just set the IP to \`0.0.0.0\` as you probably don't
 want to reveal your IP to the public. However, if you are running in a data center and would
@@ -51,7 +51,7 @@ ${'<3'.red}
 program
   .version('0.0.1')
   .description(introText)
-  .command('init', 'initalize a new plasma chain')
+  .command('deploy', 'deploy a new plasma chain')
   .command('start', 'start the operator')
   .command('testSwarm', 'start a swarm of test nodes')
   .command('account [cmd]', 'manage accounts')

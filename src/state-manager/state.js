@@ -145,7 +145,7 @@ class State {
   async addDeposit (recipient, token, start, end) {
     // Check that we haven't already recorded this deposit
     try {
-      this.db.get(Buffer.from([DEPOSIT_PREFIX, getCoinId(token, start)]))
+      this.db.get(Buffer.concat([DEPOSIT_PREFIX, getCoinId(token, start)]))
       log('Deposit already recorded with token type:', token.toString('hex'), ', start:', start.toString('hex'), 'and end:', end.toString('hex'))
       return
     } catch (err) {
@@ -159,7 +159,7 @@ class State {
     try {
       // Put the new owned coin range and the new total deposits
       const ops = [
-        { type: 'put', key: Buffer.from([DEPOSIT_PREFIX, getCoinId(token, start)]), value: Buffer.from([1]) },
+        { type: 'put', key: Buffer.concat([DEPOSIT_PREFIX, getCoinId(token, start)]), value: Buffer.from([1]) },
         { type: 'put', key: getAddressToCoinKey(recipient, token, deposit.tr.end), value: Buffer.from(depositEncoded, 'hex') },
         { type: 'put', key: getCoinToTxKey(token, deposit.tr.end), value: Buffer.from(depositEncoded, 'hex') }
       ]
