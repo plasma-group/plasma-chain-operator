@@ -15,7 +15,7 @@ async function getAccount () {
   }
   const accounts = fs.readdirSync(keystoreDirectory)
   if (!accounts.length) {
-    console.log('No account found! Create a new account with `plasma-chain account new`')
+    console.log('ERROR:'.red, 'No account found! Create a new account with `plasma-chain account new`')
     return
   }
   // Check if the account is plaintext

@@ -36,7 +36,7 @@ program
   .option('--force', 'Force deployment of new Plasma chain even if we already have one. Note this will overwrite your current Plasma Chain address')
   .action(async (none, cmd) => {
     const account = await getAccount()
-    if (account === null) {
+    if (account === null || account === undefined) {
       return
     }
     // Get the config
