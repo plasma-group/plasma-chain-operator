@@ -53,8 +53,9 @@ program
   .description(introText)
   .command('deploy', 'deploy a new plasma chain')
   .command('start', 'start the operator')
-  .command('testSwarm', 'start a swarm of test nodes')
   .command('account [cmd]', 'manage accounts')
+  .command('testSwarm', 'start a swarm of test nodes')
+  .command('list', 'list all Plasma Chains on the Registry')
   .action((command) => {
   })
   .parse(process.argv)
