@@ -39,7 +39,6 @@
     "mocha": "^5.2.0"
   },
   "dependencies": {
-    "app-root-path": "^2.1.0",
     "axios": "^0.18.0",
     "body-parser": "^1.18.3",
     "chai": "^4.2.0",
