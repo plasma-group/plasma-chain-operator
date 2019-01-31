@@ -2,16 +2,14 @@ const fs = require('fs')
 const path = require('path')
 const colors = require('colors') // eslint-disable-line no-unused-vars
 const inquirer = require('inquirer')
-const { appRootPath } = require('../src/utils')
+const appRoot = require('../src/utils.js').appRoot
 const Web3 = require('web3')
 const KEYSTORE_DIR = require('../src/constants.js').KEYSTORE_DIR
 
 const web3 = new Web3()
+const keystoreDirectory = path.join(appRoot.toString(), KEYSTORE_DIR)
 
 async function getAccount () {
-  const appRoot = await appRootPath()
-  const keystoreDirectory = path.join(appRoot, KEYSTORE_DIR)
-
   if (!fs.existsSync(keystoreDirectory)) {
     fs.mkdirSync(keystoreDirectory)
   }
@@ -55,6 +53,5 @@ async function _unlockAccount (encryptedAccount) {
 }
 
 module.exports = {
-  getAccount,
-  appRootPath
+  getAccount
 }

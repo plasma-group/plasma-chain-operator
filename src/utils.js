@@ -8,8 +8,8 @@ const soliditySha3 = require('web3').utils.soliditySha3
 const UnsignedTransaction = require('plasma-utils').serialization.models.UnsignedTransaction
 const fs = require('fs')
 const _ = require('lodash')
-const util = require('util');
-const exec = util.promisify(require('child_process').exec);
+
+const appRoot = path.join(__dirname, '..')
 
 function addRange (rangeList, start, end, numSize) {
   if (numSize === undefined) {
@@ -139,26 +139,22 @@ function makeBlockTxKey (blockNumber, type, start) {
   return Buffer.concat([BLOCK_TX_PREFIX, blockNumber, getCoinId(type, start)])
 }
 
-async function readConfigFile (configFilePath, mode) {
+function readConfigFile (configFilePath, mode) {
   const config = JSON.parse(fs.readFileSync(configFilePath, 'utf8'))
-  const appRoot = await appRootPath();
-  setConfigDefaults(config, appRoot, mode)
+  setConfigDefaults(config, mode)
   return config
 }
 
-function setConfigDefaults (config, appRootPath, mode) {
+function setConfigDefaults (config, mode) {
   const setIfUndefined = (config, key, value) => {
     if (config[key] === undefined) {
       config[key] = value
     }
   }
-
   if (mode === 'test') {
     config.dbDir = _generateNewDbTestDir()
-  } else {
-    config.dbDir = path.join(appRootPath, config.dbDir)
   }
-
+  config.dbDir = path.join(appRoot.toString(), config.dbDir)
   // Set db sub directories defaults if they don't exist
   setIfUndefined(config, 'txLogDir', config.dbDir + '/tx-log/')
   setIfUndefined(config, 'stateDBDir', config.dbDir + '/state-db/')
@@ -183,15 +179,7 @@ function getDepositTransaction (owner, token, start, end, block) {
   return tx
 }
 
-async function appRootPath() {
-  const { stdout } = await exec('npm root', {
-    cwd: __dirname,
-  });
-  return path.join(stdout, '..');
-}
-
 module.exports = {
-  appRootPath,
   addRange,
   subtractRange,
   defer,
@@ -201,6 +189,7 @@ module.exports = {
   getCoinId,
   readConfigFile,
   sha3,
+  appRoot,
   getDepositTransaction,
-  makeBlockTxKey,
+  makeBlockTxKey
 }

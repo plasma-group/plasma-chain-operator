@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const program = require('commander')
 const colors = require('colors') // eslint-disable-line no-unused-vars
-const appRoot = require('app-root-path')
+const appRoot = require('../src/utils.js').appRoot
 const readConfigFile = require('../src/utils.js').readConfigFile
 const path = require('path')
 

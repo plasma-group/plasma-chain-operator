@@ -1,13 +1,10 @@
 #!/usr/bin/env node
-const path = require('path')
 const program = require('commander')
 const colors = require('colors') // eslint-disable-line no-unused-vars
-const appRoot = require('app-root-path')
 const constants = require('../src/constants.js')
 const UnsignedTransaction = require('plasma-utils').serialization.models.UnsignedTransaction
 const Web3 = require('web3')
 const BN = require('web3').utils.BN
-const readConfigFile = require(appRoot + '/src/utils.js').readConfigFile
 const axios = require('axios')
 const accounts = require('../test/mock-accounts.js').accounts
 const MockNode = require('../src/mock-node.js')
@@ -15,8 +12,6 @@ const MockNode = require('../src/mock-node.js')
 const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 // Get the config
-const configFile = (process.env.CONFIG) ? process.env.CONFIG : path.join(appRoot.toString(), 'config.json')
-const config = readConfigFile(configFile)
 const http = axios.create({
   baseURL: 'http://localhost:3000'
 })
