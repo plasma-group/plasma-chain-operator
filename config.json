@@ -1,6 +1,6 @@
 {
   "dbDir": "./operator-db",
-  "plasmaRegistryAddress": "0xFD1c85D8D261eFcc627d87693fFd3fDfb205F9c3",
+  "plasmaRegistryAddress": "0x18d8BD44a01fb8D5f295a2B3Ab15789F26385df7",
   "plasmaChainName": "I <3 Plasma",
   "operatorIpAddress": "0.0.0.0",
   "port": "3000",

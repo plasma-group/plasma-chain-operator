@@ -1,10 +1,10 @@
 {
   "name": "plasma-chain",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "description": "Plasma operator & simple REST server",
   "main": "index.js",
   "scripts": {
-    "start": "node src/run-server.js",
+    "plasma-chain": "./bin/plasma-chain.js",
     "clean": "rm -rf db",
     "interactive": "node",
     "test": "env CONFIG='./config-test.json' NODE_ENV='test' mocha --timeout 200000 --recursive",
