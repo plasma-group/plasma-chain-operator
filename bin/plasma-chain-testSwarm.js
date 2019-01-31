@@ -93,7 +93,8 @@ program
         promises.push(node.sendRandomTransaction(blockNumber, 2, true))
       }
       await Promise.all(promises)
-      await timeout(Math.floor(Math.random() * 5000) + 1000)
+      console.log('sleeping...')
+      await timeout(Math.floor(Math.random() * 1000) + 10)
     }
     console.log('Total time:', +new Date() - startTime)
   })

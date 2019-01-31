@@ -12,6 +12,9 @@ const EthService = require('./eth-service.js')
 const BN = require('web3').utils.BN
 const models = require('plasma-utils').serialization.models
 const SignedTransaction = models.SignedTransaction
+const debug = require('debug')
+
+debug.enable('info:state,info:block-store,info:leveldb-sum-tree')
 
 // Set up express
 const app = express()
