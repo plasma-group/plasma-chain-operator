@@ -24,6 +24,7 @@ const SIGNATURE_BYTE_SIZE = 1 + 32 * 2
 //   State Manager
 const COIN_ID_PREFIX = Buffer.from([128])
 const ADDRESS_PREFIX = Buffer.from([127])
+const DEPOSIT_PREFIX = Buffer.from([126])
 //   Block Manager
 const BLOCK_TX_PREFIX = Buffer.from([255])
 const BLOCK_DEPOSIT_PREFIX = Buffer.from([254])
@@ -60,6 +61,7 @@ module.exports = {
   DEPOSIT_SENDER,
   COIN_ID_PREFIX,
   ADDRESS_PREFIX,
+  DEPOSIT_PREFIX,
   BLOCK_TX_PREFIX,
   BLOCK_DEPOSIT_PREFIX,
   BLOCK_ROOT_HASH_PREFIX,

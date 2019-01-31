@@ -8,10 +8,12 @@ const SignedTransaction = models.SignedTransaction
 const itNext = require('../utils.js').itNext
 const itEnd = require('../utils.js').itEnd
 const getDepositTransaction = require('../utils.js').getDepositTransaction
+const getCoinId = require('../utils.js').getCoinId
 const colors = require('colors') // eslint-disable-line no-unused-vars
 
 const COIN_ID_PREFIX = require('../constants.js').COIN_ID_PREFIX
 const ADDRESS_PREFIX = require('../constants.js').ADDRESS_PREFIX
+const DEPOSIT_PREFIX = require('../constants.js').DEPOSIT_PREFIX
 const START_BYTE_SIZE = require('../constants.js').START_BYTE_SIZE
 const TYPE_BYTE_SIZE = require('../constants.js').TYPE_BYTE_SIZE
 const DEPOSIT_SENDER = require('../constants.js').DEPOSIT_SENDER
@@ -141,6 +143,13 @@ class State {
   }
 
   async addDeposit (recipient, token, start, end) {
+    // Check that we haven't already recorded this deposit
+    try {
+      this.db.get(Buffer.from([DEPOSIT_PREFIX, getCoinId(token, start)]))
+      log('Deposit already recorded with token type:', token.toString('hex'), ', start:', start.toString('hex'), 'and end:', end.toString('hex'))
+      return
+    } catch (err) {
+    }
     while (!this.attemptAcquireLocks([token.toString(16)])) {
       // Wait before attempting again
       await timeout(timeoutAmt())
@@ -150,6 +159,7 @@ class State {
     try {
       // Put the new owned coin range and the new total deposits
       const ops = [
+        { type: 'put', key: Buffer.from([DEPOSIT_PREFIX, getCoinId(token, start)]), value: Buffer.from([1]) },
         { type: 'put', key: getAddressToCoinKey(recipient, token, deposit.tr.end), value: Buffer.from(depositEncoded, 'hex') },
         { type: 'put', key: getCoinToTxKey(token, deposit.tr.end), value: Buffer.from(depositEncoded, 'hex') }
       ]
