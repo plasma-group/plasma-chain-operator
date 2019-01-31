@@ -18,7 +18,7 @@ const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
 const configFile = (process.env.CONFIG) ? process.env.CONFIG : path.join(appRoot.toString(), 'config.json')
 const config = readConfigFile(configFile)
 const http = axios.create({
-  baseURL: 'http://107.22.13.89'
+  baseURL: 'http://localhost:3000'
 })
 
 let idCounter
