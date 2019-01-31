@@ -28,3 +28,5 @@ You can also view your local block explorer at http:127.0.0.1:8000
 5) $ plasma-chain testSwarm # spam your Plasma Chain with tons of test transactions 😁
 
 ```
+
+### To open your port, you may need to forward traffic from port 80 to port 3000
