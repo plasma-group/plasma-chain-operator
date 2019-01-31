@@ -4,8 +4,8 @@
   "plasmaChainName": "I <3 Plasma",
   "operatorIpAddress": "0.0.0.0",
   "port": "3000",
-  "finalityDepth": "6",
+  "finalityDepth": "1",
   "blockTimeInSeconds": "60",
-  "ethPollInterval": "30000",
+  "ethPollInterval": "3000",
   "web3HttpProvider": "https://rinkeby.infura.io/v3/fce31f1fb2d54caa9b31ed7d28437fa5"
 }
