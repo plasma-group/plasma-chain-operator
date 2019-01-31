@@ -129,7 +129,7 @@ async function initializeProdEnv (config) {
   // Check if we need to deploy a new Plasma registry.
   if (es.ethDB.plasmaRegistryAddress === DEPLOY_REGISTRY) {
     console.log('Deploying new registry...This could take some time.'.green)
-    if (config.web3HttpProvider.includes('rinkeby')) {
+    if (config.web3HttpProvider !== undefined && config.web3HttpProvider.includes('rinkeby')) {
       console.log('View transaction progress on Etherscan:', 'https://rinkeby.etherscan.io/address/'.blue + es.operatorAddress.blue)
     }
     await deployNewPlasmaRegistry(config)
@@ -159,7 +159,7 @@ async function deployNewPlasmaChain (web3, config) {
   let createPChainReciept
   try {
     console.log('Deploying new Plasma Chain... this could take a while')
-    if (config.web3HttpProvider.includes('rinkeby')) {
+    if (config.web3HttpProvider !== undefined && config.web3HttpProvider.includes('rinkeby')) {
       console.log('View transaction progress on Etherscan:', 'https://rinkeby.etherscan.io/address/'.blue + es.operatorAddress.blue)
     }
     createPChainReciept = await plasmaRegistry.methods.createPlasmaChain(es.operatorAddress, Buffer.from(config.plasmaChainName), Buffer.from(config.operatorIpAddress)).send({ from: es.operatorAddress, gas: 7000000, gasPrice: '50000000000' })

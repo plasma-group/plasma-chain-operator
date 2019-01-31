@@ -88,7 +88,7 @@ describe('BlockStore', function () {
   //   console.log('')
   // })
 
-  it('gets transaction leaves over a number of blocks correctly', async () => {
+  it.skip('gets transaction leaves over a number of blocks correctly', async () => {
     // add some blocks
     for (let i = 1; i < 4; i++) {
       const TXs = dummyTxs.getSequentialTxs(100, 1)
@@ -135,7 +135,7 @@ describe('BlockStore', function () {
     // await verifyTxsAndProofs(txsAndProofs, web3, plasmaChain, roots)
   })
 
-  it('generates history proofs correctly when given a particular transaction', async () => {
+  it.skip('generates history proofs correctly when given a particular transaction', async () => {
     const numTxs = 50
     const txAmt = 2
     // First add some deposits
