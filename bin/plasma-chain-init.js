@@ -4,7 +4,7 @@ const program = require('commander')
 const colors = require('colors') // eslint-disable-line no-unused-vars
 const inquirer = require('inquirer')
 const getAccount = require('./utils.js').getAccount
-const ethService = require('../src/eth-service.js')
+const ethService = require('../src/eth-service.js');
 const readConfigFile = require('../src/utils.js').readConfigFile;
 
 (async () => {

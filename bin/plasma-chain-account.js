@@ -8,11 +8,11 @@ const { appRootPath } = require('../src/utils')
 const Web3 = require('web3')
 const KEYSTORE_DIR = require('../src/constants.js').KEYSTORE_DIR
 
-const web3 = new Web3()
+const web3 = new Web3();
 
 (async () => {
 
-  const appRoot = appRootPath();
+  const appRoot = await appRootPath();
   const keystoreDirectory = path.join(appRoot, KEYSTORE_DIR);
 
   program
