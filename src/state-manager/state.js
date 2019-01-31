@@ -145,7 +145,7 @@ class State {
   async addDeposit (recipient, token, start, end) {
     // Check that we haven't already recorded this deposit
     try {
-      await this.db.get(Buffer.concat([DEPOSIT_PREFIX, getCoinId(token, start)]))
+      await this.db.get(Buffer.concat([DEPOSIT_PREFIX, getCoinId(token, end)]))
       log('Deposit already recorded with token type:', token.toString('hex'), ', start:', start.toString('hex'), 'and end:', end.toString('hex'))
       return
     } catch (err) {
