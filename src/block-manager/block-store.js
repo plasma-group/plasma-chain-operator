@@ -218,11 +218,11 @@ class BlockStore {
       for (const r of ranges) {
         const tx = await this.sumTree.getTransactionFromLeaf(r.value)
         relevantTransactions.push(tx)
+        if (maxTransactions !== undefined && relevantTransactions.length > maxTransactions) {
+          return relevantTransactions
+        }
       }
       blockNumberBN = blockNumberBN.add(new BN(1))
-      if (maxTransactions !== undefined && relevantTransactions.length > maxTransactions) {
-        return relevantTransactions
-      }
     }
     return relevantTransactions
   }
