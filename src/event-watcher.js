@@ -32,7 +32,7 @@ class EventWatcher {
         fromBlock: this.lastLoggedBlock + 1,
         toBlock: block - this.finalityDepth
       }, callback)
-      this.lastLoggedBlock = block
+      this.lastLoggedBlock = block - this.finalityDepth
     }, this.pollInterval)
   }
 

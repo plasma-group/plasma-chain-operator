@@ -1,6 +1,6 @@
 {
   "name": "plasma-chain",
-  "version": "0.0.9",
+  "version": "0.0.11",
   "description": "Plasma operator & simple REST server",
   "main": "index.js",
   "scripts": {
