@@ -30,3 +30,4 @@ You can also view your local block explorer at http:127.0.0.1:8000
 ```
 
 ### To open your port, you may need to forward traffic from port 80 to port 3000
+See: https://coderwall.com/p/plejka/forward-port-80-to-port-3000
