@@ -121,11 +121,13 @@ process.on('message', async (m) => {
     // If end block is undefined, set them equal
     let response
     try {
-      const tx = await blockStore.getTxFromHash(txHash)
+      const txEncoding = await blockStore.getTxFromHash(txHash)
+      const tx = new SignedTransaction(txEncoding)
       response = { result: tx }
     } catch (err) {
       response = { error: err }
     }
+    log('Sending a response!', response)
     process.send({ ipcID: m.ipcID, message: response })
     return
   }
