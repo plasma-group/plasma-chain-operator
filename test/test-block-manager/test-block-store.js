@@ -52,7 +52,7 @@ describe('BlockStore', function () {
   beforeEach(async () => {
     // Startup with test config file
     const configFile = path.join(__dirname, '..', 'config-test.json')
-    config = readConfigFile(configFile, 'test')
+    config = await readConfigFile(configFile, 'test')
     // Create dbDir and ethDB dir directory
     if (!fs.existsSync(config.dbDir)) {
       log('Creating a new db directory because it does not exist')

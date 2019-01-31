@@ -88,7 +88,7 @@ describe('Server', function () {
   before(async () => {
     // Startup with test config file
     const configFile = path.join(__dirname, 'config-test.json')
-    const config = readConfigFile(configFile, 'test')
+    const config = await readConfigFile(configFile, 'test')
     await server.safeStartup(config)
   })
   it('Nodes are able to deposit and send transactions', (done) => {
