@@ -6,10 +6,10 @@
 - `g++` -- version 7.3.1
 
 
-$ npm install plasma-chain -g
-$ operator account new
-$ operator init
-$ operator start
+$ npm install
+$ ./bin/plasma-chain.js new
+$ ./bin/plasma-chain.js init
+$ ./bin/plasma-chain.js operator start
 
 To deploy a new Plasma Chain, use the following commands:
 ```
