@@ -135,15 +135,18 @@ class BlockStore {
   /*
    * History proof logic
    */
-  async getLeavesAt (blockNumber, token, start, end) {
+  async getLeavesAt (blockNumber, token, start, end, maxLeaves) {
     let startKey
     let endKey
-    if (token !== 'null') {
-      startKey = makeBlockTxKey(blockNumber, token, start)
-      endKey = makeBlockTxKey(blockNumber, token, end)
-    } else {
+    if (token === 'none') {
       startKey = start.toArrayLike(Buffer, 'big', 16)
       endKey = end.toArrayLike(Buffer, 'big', 16)
+    } else {
+      startKey = makeBlockTxKey(blockNumber, token, start)
+      endKey = makeBlockTxKey(blockNumber, token, end)
+    }
+    if (maxLeaves === undefined) {
+      maxLeaves = 50000
     }
     const it = this.db.iterator({
       lt: endKey,
@@ -155,6 +158,10 @@ class BlockStore {
     while (result.key > startKey) {
       result = await this._getNextBlockTx(it)
       ranges.push(result)
+      if (ranges.length > maxLeaves) {
+        await itEnd(it)
+        return ranges
+      }
     }
     await itEnd(it)
     return ranges
@@ -214,13 +221,13 @@ class BlockStore {
     const relevantTransactions = []
     while (blockNumberBN.lte(endBlockNumberBN)) {
       const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
-      const ranges = await this.getLeavesAt(blockNumberKey, token, start, end)
+      const ranges = await this.getLeavesAt(blockNumberKey, token, start, end, maxTransactions)
       for (const r of ranges) {
         const tx = await this.sumTree.getTransactionFromLeaf(r.value)
         relevantTransactions.push(tx)
-        if (maxTransactions !== undefined && relevantTransactions.length > maxTransactions) {
-          return relevantTransactions
-        }
+      }
+      if (maxTransactions !== undefined && relevantTransactions.length > maxTransactions) {
+        return relevantTransactions
       }
       blockNumberBN = blockNumberBN.add(new BN(1))
     }

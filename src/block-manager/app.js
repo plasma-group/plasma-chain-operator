@@ -80,13 +80,13 @@ process.on('message', async (m) => {
   } else if (m.message.method === constants.GET_BLOCK_TXS_METHOD) {
     const blockNum = new BN(m.message.params[0], 'hex')
     let token
-    if (m.message.params[1] !== 'null') {
-      token = 'null'
+    if (m.message.params[1] === 'none') {
+      token = 'none'
     } else {
       token = new BN(m.message.params[1], 'hex')
     }
     const start = new BN(m.message.params[2], 'hex')
-    const maxEnd = new BN('ffffffffffffffffffffffff', 'hex') // max end
+    const maxEnd = new BN('ffffffffffffffffffffffffffffffff', 'hex') // max end
     let response
     try {
       const txs = await blockStore.getTransactions(blockNum, blockNum, token, start, maxEnd, 20)
