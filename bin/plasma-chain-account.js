@@ -4,18 +4,20 @@ const path = require('path')
 const program = require('commander')
 const colors = require('colors') // eslint-disable-line no-unused-vars
 const inquirer = require('inquirer')
-const appRoot = require('app-root-path')
+const { appRootPath } = require('../src/utils')
 const Web3 = require('web3')
 const KEYSTORE_DIR = require('../src/constants.js').KEYSTORE_DIR
 
 const web3 = new Web3()
-const keystoreDirectory = path.join(appRoot.toString(), KEYSTORE_DIR)
 
 program
   .command('new')
   .description('creates a new account')
   .option('-p, --plaintext', 'Store the private key in plaintext')
   .action(async (none, cmd) => {
+    const appRoot = await appRootPath()
+    const keystoreDirectory = path.join(appRoot.toString(), KEYSTORE_DIR)
+
     if (!fs.existsSync(keystoreDirectory)) {
       fs.mkdirSync(keystoreDirectory)
     }
@@ -40,7 +42,10 @@ program
 program
   .command('list')
   .description('list all accounts')
-  .action((none, cmd) => {
+  .action(async (none, cmd) => {
+    const appRoot = await appRootPath()
+    const keystoreDirectory = path.join(appRoot.toString(), KEYSTORE_DIR)
+
     let counter = 0
     if (!fs.existsSync(keystoreDirectory)) {
       console.log('No accounts found!')
