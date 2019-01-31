@@ -15,6 +15,8 @@ To deploy a new Plasma Chain, use the following commands:
 2) # On Rinkeby testnet, send your new Operator address ~0.5 ETH.
 You can use a faucet to get test ETH for free here: https://faucet.rinkeby.io/
 
+2.5) $ plasma-chain list # list all the plasma chains which others have deployed to the Plasma Network Registry 
+
 3) $ plasma-chain deploy # deploy a new Plasma Chain.
 Note you will be prompted for a unique Plasma Chain name & IP address.
 If you are running on your laptop, just set the IP to `0.0.0.0` as you probably don't
@@ -24,8 +26,9 @@ like to accept Plasma transactions & serve a block explorer to the public, go ah
 4) $ plasma-chain start # start your new Plasma Chain
 You can also view your local block explorer at http:127.0.0.1:8000
 
-[optional]
-5) $ plasma-chain testSwarm # spam your Plasma Chain with tons of test transactions 😁
+5) [optional]
+Open a new terminal. In this new terminal use the following command:
+$ plasma-chain testSwarm # spam your Plasma Chain with tons of test transactions 😁
 
 ```
 
