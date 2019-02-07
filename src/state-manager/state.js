@@ -247,7 +247,6 @@ class State {
       const arRecipient = Buffer.from(Web3.utils.hexToBytes(ar.tr.recipient))
       ar.tr.end = transfer.start
       // Get the affectedTransaction so that when we create the new address->coin mapping we preserve the transaction
-      await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
       const affectedTransaction = await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
       dbBatch.push({ type: 'put', key: getCoinToTxKey(ar.tr.token, ar.tr.end), value: Buffer.from(ar.encoded, 'hex') })
       dbBatch.push({ type: 'put', key: getAddressToCoinKey(arRecipient, ar.tr.token, ar.tr.end), value: affectedTransaction })
@@ -259,7 +258,6 @@ class State {
       const arRecipient = Buffer.from(Web3.utils.hexToBytes(ar.tr.recipient))
       ar.tr.start = transfer.end
       // Get the affectedTransaction so that when we create the new address->coin mapping we preserve the transaction
-      await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
       const affectedTransaction = await this.db.get(Buffer.concat([ADDRESS_PREFIX, arRecipient, arEntry.key.slice(1)]))
       dbBatch.push({ type: 'put', key: affectedRanges[affectedRanges.length - 1].key, value: Buffer.from(ar.encoded, 'hex') })
       dbBatch.push({ type: 'put', key: Buffer.concat([ADDRESS_PREFIX, arRecipient, affectedRanges[affectedRanges.length - 1].key.slice(1)]), value: affectedTransaction })
