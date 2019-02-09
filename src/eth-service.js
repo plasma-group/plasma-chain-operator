@@ -162,7 +162,7 @@ async function deployNewPlasmaChain (web3, config) {
     if (config.web3HttpProvider !== undefined && config.web3HttpProvider.includes('rinkeby')) {
       console.log('View transaction progress on Etherscan:', 'https://rinkeby.etherscan.io/address/'.blue + es.operatorAddress.blue)
     }
-    createPChainReciept = await plasmaRegistry.methods.createPlasmaChain(es.operatorAddress, Buffer.from(config.plasmaChainName), Buffer.from(config.operatorIpAddress)).send({ from: es.operatorAddress, gas: 7000000, gasPrice: '5000000000' })
+    createPChainReciept = await plasmaRegistry.methods.createPlasmaChain(es.operatorAddress, Buffer.from(config.plasmaChainName), Buffer.from(config.operatorIpAddress)).send({ from: es.operatorAddress, gas: 800000, gasPrice: '5000000000' })
   } catch (err) {
     if (err.toString().includes('gas * price')) {
       console.log('ERROR DEPLOYING CHAIN'.red, '\nYou do not have enough ETH to pay for the deployment.\nGet some using a faucet (https://faucet.rinkeby.io/)')
