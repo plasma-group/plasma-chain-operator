@@ -3,7 +3,7 @@
 ## Prerequisites 
 - `node.js` -- version 11.6.0
 - `git` -- version 2.17.1
-- `g++` -- version 7.3.1
+- Build essentials or similar (specifically `g++` -- version 7.3.1)
 
 ## Setup
 To deploy a new Plasma Chain, use the following commands:
