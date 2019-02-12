@@ -187,7 +187,11 @@ async function newBlockTrigger (blockTime) {
     method: constants.NEW_BLOCK_METHOD
   }
   const response = await sendMessage(stateManager, newBlockReq)
-  log('New block created with blocknumber:', response.message.newBlockNumber)
+  if (response.error === undefined) {
+    log('New block created with blockNumber:', response.message.newBlockNumber)
+  } else {
+    log('Block is empty--skipping new block')
+  }
   setTimeout(() => newBlockTrigger(blockTime), blockTime)
 }
 

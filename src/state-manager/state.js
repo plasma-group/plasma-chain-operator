@@ -64,6 +64,7 @@ class State {
     this.tmpTxLogFile = this.txLogDirectory + 'tmp-tx-log.bin'
     this.lock = {}
     this.recentTransactions = []
+    this.isCurrentBlockEmpty = true
   }
 
   async init () {
@@ -94,6 +95,10 @@ class State {
   }
 
   async startNewBlock () {
+    // Check that this isn't an empty block
+    if (this.isCurrentBlockEmpty) {
+      throw new Error('Block is empty! Cannot start new block.')
+    }
     if (this.lock.all === true) {
       throw new Error('Attempting to start a new block when a global lock is already active')
     }
@@ -113,6 +118,8 @@ class State {
     const txLogPath = this.txLogDirectory + this.blockNumber.subn(1).toString(10, BLOCKNUMBER_BYTE_SIZE * 2)
     await fs.rename(this.tmpTxLogFile, txLogPath)
     this.writeStream = fs.createWriteStream(this.tmpTxLogFile, { flags: 'a' })
+    // Set empty block flag
+    this.isCurrentBlockEmpty = true
     // Release our lock
     delete this.lock.all
     log('#### Started new Block #', this.blockNumber.toString())
@@ -293,6 +300,8 @@ class State {
     this.releaseTransactionLock(tx)
     log('Added transaction from:', tx.transfers[0].recipient)
     this.addRecentTransaction(tx)
+    // Record that this block is not empty
+    this.isCurrentBlockEmpty = false
     return new SignedTransaction(tx).encoded
   }
 

@@ -27,9 +27,16 @@ process.on('message', async (m) => {
     return
   // ******* NEW_BLOCK ******* //
   } else if (m.message.method === constants.NEW_BLOCK_METHOD) {
-    const blockNumber = await state.startNewBlock()
+    let response
+    try {
+      const blockNumber = await state.startNewBlock()
+      response = { newBlockNumber: blockNumber.toString() }
+    } catch (err) {
+      error('Error in new block!\nrpcID:', m.message.id, '\nError message:', err, '\n')
+      response = { error: err }
+    }
     log('OUTGOING new block success with rpcID:', m.message.id)
-    process.send({ ipcID: m.ipcID, message: { result: { newBlockNumber: blockNumber.toString() } } })
+    process.send({ ipcID: m.ipcID, message: { result: response } })
     return
   // ******* GET_BLOCK_NUMBER ******* //
   } else if (m.message.method === constants.GET_BLOCK_NUMBER_METHOD) {
