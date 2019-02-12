@@ -31,6 +31,9 @@ const operator = {
   },
   addTransaction: (tx) => {
     return state.addTransaction(tx)
+  },
+  getBlockNumber: async () => {
+    return state.blockNumber
   }
 }
 
@@ -102,20 +105,20 @@ describe('State', function () {
 })
 
 async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
-  await state.startNewBlock()
   for (let i = 0; i < numTimes; i++) {
+    const blockNumber = await operator.getBlockNumber()
+    await sendRandomTransactions(operator, nodes, blockNumber)
     log('Starting new block...')
-    const blockNumber = await state.startNewBlock()
+    await state.startNewBlock()
     log('Sending new txs for block number:', blockNumber.toString())
     for (const node of nodes) {
       node.processPendingRanges()
     }
-    await sendRandomTransactions(operator, nodes, blockNumber)
   }
 }
 
 async function loopSendRandomTxs (numTimes, operator, nodes) {
-  const blockNumber = await state.startNewBlock()
+  const blockNumber = await operator.getBlockNumber()
   for (let i = 0; i < numTimes; i++) {
     await sendRandomTransactions(operator, nodes, blockNumber, 1, 10)
   }
