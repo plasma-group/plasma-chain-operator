@@ -81,6 +81,25 @@ const operator = {
           resolve(res.body)
         })
     })
+  },
+  getBlockNumber: () => {
+    return new Promise((resolve, reject) => {
+      chai.request(server.app)
+        .post('/api')
+        .send({
+          method: constants.GET_BLOCK_NUMBER_METHOD,
+          jsonrpc: '2.0',
+          id: idCounter++,
+          params: {}
+        })
+        .end((err, res) => {
+          if (err) {
+            throw err
+          }
+          log('Resolve get block number')
+          resolve(new BN(res.body.result, 10))
+        })
+    })
   }
 }
 
@@ -117,20 +136,20 @@ async function bigIntegrationTest (nodes, operator) {
 }
 
 async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
-  await operator.startNewBlock()
   for (let i = 0; i < numTimes; i++) {
+    const blockNumber = await operator.getBlockNumber()
+    // Send a bunch of transactions
+    for (const node of nodes) {
+      await node.sendRandomTransaction(blockNumber, 1024)
+    }
+    // Start a new block
     log('Starting new block...')
-    const blockNumberResponse = await operator.startNewBlock()
-    const blockNumber = new BN(blockNumberResponse.newBlockNumber)
-    log('Waiting before starting block:', blockNumber.toString() + '...')
+    await operator.startNewBlock()
+    log('Waiting before sending transactions to block:', blockNumber.toString() + '...')
     await timeout(500)
     log('Sending new txs for block number:', blockNumber.toString())
     for (const node of nodes) {
       node.processPendingRanges()
-    }
-    // await sendRandomTransactions(operator, nodes, blockNumber)
-    for (const node of nodes) {
-      await node.sendRandomTransaction(blockNumber, 1024)
     }
   }
 }

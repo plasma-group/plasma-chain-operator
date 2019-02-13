@@ -94,6 +94,25 @@ const operator = {
           resolve(res.body)
         })
     })
+  },
+  getBlockNumber: () => {
+    return new Promise((resolve, reject) => {
+      chai.request(server.app)
+        .post('/api')
+        .send({
+          method: constants.GET_BLOCK_NUMBER_METHOD,
+          jsonrpc: '2.0',
+          id: idCounter++,
+          params: {}
+        })
+        .end((err, res) => {
+          if (err) {
+            throw err
+          }
+          log('Resolve get block number')
+          resolve(new BN(res.body.result, 10))
+        })
+    })
   }
 }
 
@@ -151,7 +170,7 @@ describe('Server api', function () {
       })
     })
 
-    it('Nodes are able to deposit and send transactions', (done) => {
+    it('Nodes are able to deposit and send transactions using the api', (done) => {
       const nodes = []
       for (const acct of accounts) {
         nodes.push(new MockNode(operator, acct, nodes))
@@ -175,15 +194,8 @@ async function runDepositAndSendTxTest (nodes, operator) {
 }
 
 async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
-  await operator.startNewBlock()
   for (let i = 0; i < numTimes; i++) {
-    log('Starting new block...')
-    const blockNumberResponse = await operator.startNewBlock()
-    const blockNumber = new BN(blockNumberResponse.newBlockNumber)
-    log('Sending new txs for block number:', blockNumber.toString())
-    for (const node of nodes) {
-      node.processPendingRanges()
-    }
+    let blockNumber = await operator.getBlockNumber()
     try {
       await sendRandomTransactions(operator, nodes, blockNumber)
     } catch (err) {
@@ -191,6 +203,13 @@ async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
         console.log('ERROR:', err)
       }
       console.log('Squashing for now... this might be a problem with the range manager which I need to sort out anyway...')
+    }
+    log('Starting new block...')
+    await operator.startNewBlock()
+    blockNumber = await operator.getBlockNumber()
+    log('Sending new txs for block number:', blockNumber.toString())
+    for (const node of nodes) {
+      node.processPendingRanges()
     }
   }
 }
