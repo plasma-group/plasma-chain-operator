@@ -215,8 +215,17 @@ async function _setupGanache (web3, config) {
   }
 }
 
+let numRoots = 0
+let currentRootNum = 0
+const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
 async function submitRootHash (rootHash) {
+  const rootNum = numRoots++
+  while (currentRootNum !== rootNum) { // eslint-disable-line no-unmodified-loop-condition
+    log('Multiple roots attempting to be submitted at the same time. Waiting until other submit root has finished')
+    await timeout(100)
+  }
   const reciept = await es.plasmaChain.methods.submitBlock('0x' + rootHash).send({gas: 400000, gasPrice: '5000000000'})
+  currentRootNum++
   log('Ethereum reciept for block number:', reciept.events.SubmitBlockEvent.returnValues['0'], 'wish root hash:', reciept.events.SubmitBlockEvent.returnValues['1'])
 }
 
