@@ -11,6 +11,7 @@ const State = require('../../src/state-manager/state.js')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
 const models = require('plasma-utils').serialization.models
+const getRandomTx = require('plasma-utils').utils.getRandomTx
 const Transfer = models.Transfer
 const Signature = models.Signature
 const SignedTransaction = models.SignedTransaction
@@ -101,22 +102,11 @@ describe('State', function () {
       const depositAmount = new BN(10)
       // Add a deposit
       await operator.addDeposit(addr0, ethType, depositAmount)
-      // Increment the blockNumber
-      await state.startNewBlock()
-      expect(state.blockNumber).to.deep.equal(new BN(2))
-    })
-    it('should lock deposits while changing blockNumber', async () => {
-      const addr0 = Buffer.from(web3.utils.hexToBytes(accounts[0].address))
-      const ethType = new BN(0)
-      const depositAmount = new BN(10)
-      // Add a deposit
-      await operator.addDeposit(addr0, ethType, depositAmount)
-      // Now add a bunch of conflicting deposits. This will trigger a bunch of locks
-      for (let i = 0; i < 20; i++) {
-        operator.addDeposit(addr0, ethType, depositAmount).then((res) => {
-          log('Added deposit')
-        })
-      }
+
+      // Add a tx to the block before starting a new one
+      const tx = makeTx([{ sender: accounts[0].address, recipient: accounts[1].address, token: ethType, start: 0, end: 5 }], [fakeSig], 1)
+      await state.addTransaction(tx)
+
       // Increment the blockNumber
       await state.startNewBlock()
       expect(state.blockNumber).to.deep.equal(new BN(2))
@@ -154,12 +144,10 @@ describe('State', function () {
       const depositAmount = new BN(10)
       // Add deposits for us to later send
       await operator.addDeposit(Buffer.from(web3.utils.hexToBytes(accounts[0].address)), ethType, depositAmount)
-      // Start a new block
-      await state.startNewBlock()
       // Create some transfer records & trList
       const tx = makeTx([
-        {sender: accounts[0].address, recipient: accounts[1].address, token: ethType, start: 0, end: 8},
-        {sender: accounts[0].address, recipient: accounts[1].address, token: ethType, start: 3, end: 7}
+        { sender: accounts[0].address, recipient: accounts[1].address, token: ethType, start: 0, end: 8 },
+        { sender: accounts[0].address, recipient: accounts[1].address, token: ethType, start: 3, end: 7 }
       ], [
         fakeSig, fakeSig
       ], 1)
