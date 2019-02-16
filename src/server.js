@@ -60,12 +60,7 @@ function resolveMessage (m) {
 // Handle incoming transactions
 app.post('/api', function (req, res) {
   log('INCOMING RPC request with method:', req.body.method, 'and rpcID:', req.body.id)
-  if (req.body.method === constants.DEPOSIT_METHOD ||
-      req.body.method === constants.ADD_TX_METHOD ||
-      req.body.method === constants.NEW_BLOCK_METHOD ||
-      req.body.method === constants.GET_BLOCK_NUMBER_METHOD ||
-      req.body.method === constants.GET_TXS_METHOD ||
-      req.body.method === constants.GET_RECENT_TXS_METHOD) {
+  if (constants.STATE_METHODS.includes(req.body.method)) {
     if (req.body.method === constants.ADD_TX_METHOD) {
       // For performance, check sigs here
       try {
@@ -79,10 +74,7 @@ app.post('/api', function (req, res) {
       log('OUTGOING response to RPC request with method:', req.body.method, 'and rpcID:', req.body.id)
       res.send(response.message)
     })
-  } else if (req.body.method === constants.GET_HISTORY_PROOF ||
-             req.body.method === constants.GET_BLOCK_METADATA_METHOD ||
-             req.body.method === constants.GET_TX_FROM_HASH_METHOD ||
-             req.body.method === constants.GET_BLOCK_TXS_METHOD) {
+  } else if (constants.BLOCK_METHODS.includes(req.body.method)) {
     sendMessage(blockManager, req.body).then((response) => {
       log('OUTGOING response to RPC request with method:', req.body.method, 'and rpcID:', req.body.id)
       res.send(response.message)
