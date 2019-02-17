@@ -2,7 +2,7 @@
 
 const chai = require('chai')
 const chaiHttp = require('chai-http')
-const server = require('../src/server')
+const Server = require('../src/server').Server
 const web3 = require('web3')
 const constants = require('../src/constants.js')
 const accounts = require('./mock-accounts.js').accounts
@@ -12,6 +12,7 @@ const MockNode = require('../src/mock-node.js')
 const readConfigFile = require('../src/utils.js').readConfigFile
 const path = require('path')
 
+const server = new Server()
 const expect = chai.expect
 
 chai.use(chaiHttp)

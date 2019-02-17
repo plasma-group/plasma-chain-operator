@@ -4,8 +4,10 @@ const program = require('commander')
 const colors = require('colors') // eslint-disable-line no-unused-vars
 const appRoot = require('../src/utils.js').appRoot
 const getAccount = require('./utils.js').getAccount
-const server = require(appRoot + '/src/server.js')
+const Server = require(appRoot + '/src/server.js').Server
 const readConfigFile = require(appRoot + '/src/utils.js').readConfigFile
+
+const server = new Server()
 
 program
   .command('*')
