@@ -75,6 +75,7 @@ class Server {
       // Setup our child processes -- stateManager & blockManager
       this.stateManager = cp.fork(path.join(__dirname, '/state-manager/app.js'))
       this.blockManager = cp.fork(path.join(__dirname, '/block-manager/app.js'))
+      // Child processes need to have the context of 'this' passed in with bind
       this.stateManager.on('message', this.resolveMessage.bind(this))
       this.blockManager.on('message', this.resolveMessage.bind(this))
       // Now send an init message
@@ -171,7 +172,9 @@ class Server {
           if (tx.checkSigs() === false) {
             throw new Error('Invalid signature on tx!')
           }
-        } catch (err) {}
+        } catch (err) {
+          throw new Error(err)
+        }
       }
       this.sendMessage(this.stateManager, req.body).then((response) => {
         log('OUTGOING response to RPC request with method:', req.body.method, 'and rpcID:', req.body.id)

@@ -11,7 +11,7 @@ function bn (number) {
 
 describe('utils', function () {
   describe('addRange', () => {
-    it('adds ranges and merges if possible', async () => {
+    it('adds ranges and merges if possible', async (done) => {
       const addRange = utils.addRange
       const rangeList = [bn(0), bn(2), bn(6), bn(11), bn(15), bn(18), bn(20), bn(21)]
       addRange(rangeList, bn(5), bn(6))
@@ -26,11 +26,12 @@ describe('utils', function () {
       expect(rangeList).to.deep.equal([bn(0), bn(11), bn(15), bn(21)])
       addRange(rangeList, bn(11), bn(15))
       expect(rangeList).to.deep.equal([bn(0), bn(21)])
+      done()
     })
   })
 
   describe('subtractRange', () => {
-    it('removes ranges & splits them up if needed', async () => {
+    it('removes ranges & splits them up if needed', async (done) => {
       const subtractRange = utils.subtractRange
       const rangeList = [bn(0), bn(4), bn(6), bn(11), bn(15), bn(18), bn(18), bn(19)]
       subtractRange(rangeList, bn(0), bn(4))
@@ -49,6 +50,7 @@ describe('utils', function () {
       expect(rangeList).to.deep.equal([bn(10), bn(11)])
       subtractRange(rangeList, bn(10), bn(11))
       expect(rangeList).to.deep.equal([])
+      done()
     })
   })
 })
