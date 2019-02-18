@@ -164,15 +164,14 @@ async function deployNewPlasmaChain (web3, config) {
     }
     createPChainReciept = await plasmaRegistry.methods.createPlasmaChain(es.operatorAddress, Buffer.from(config.plasmaChainName), Buffer.from(config.operatorIpAddress)).send({ from: es.operatorAddress, gas: 800000, gasPrice: '5000000000' })
   } catch (err) {
+    console.log('ERROR DEPLOYING CHAIN\n'.red)
     if (err.toString().includes('gas * price')) {
-      console.log('ERROR DEPLOYING CHAIN'.red, '\nYou do not have enough ETH to pay for the deployment.\nGet some using a faucet (https://faucet.rinkeby.io/)')
-      console.log('\n\n', err)
-      process.exit(1)
-    } else if (err.toString().includes('gas * price')) {
-      console.log('ERROR DEPLOYING CHAIN'.red, '\nYour Plasma Chain name may be taken! Try another--they\'re filling up quick!')
-      console.log('\n\n', err)
-      process.exit(1)
+      console.log('You do not have enough ETH to pay for the deployment.\nGet some using a faucet (https://faucet.rinkeby.io/)')
+    } else {
+      console.log('Your Plasma Chain name may be taken! Try another--they\'re filling up quick!')
     }
+    console.log('\n', err)
+    process.exit(1)
     throw err
   }
   const newPlasmaChainAddress = createPChainReciept.events.NewPlasmaChain.returnValues['0']
