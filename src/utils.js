@@ -168,7 +168,7 @@ function setConfigDefaults(config, mode) {
     txLogDir: config.dbDir + '/tx-log/',
     stateDBDir: config.dbDir + '/state-db/',
     blockDBDir: config.dbDir + '/block-db/',
-    ethDBDir: config.dbDir + '/eth-db/'
+    ethDBDir: config.dbDir + '/eth-db/',
   })
 }
 
