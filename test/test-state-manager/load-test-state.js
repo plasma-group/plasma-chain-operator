@@ -25,7 +25,9 @@ const operator = {
       totalDeposits[tokenTypeKey] = new BN(0)
     }
     const start = new BN(totalDeposits[tokenTypeKey])
-    totalDeposits[tokenTypeKey] = new BN(totalDeposits[tokenTypeKey].add(amount))
+    totalDeposits[tokenTypeKey] = new BN(
+      totalDeposits[tokenTypeKey].add(amount)
+    )
     const end = new BN(totalDeposits[tokenTypeKey])
     return state.addDeposit(address, tokenType, start, end)
   },
@@ -34,10 +36,10 @@ const operator = {
   },
   getBlockNumber: async () => {
     return state.blockNumber
-  }
+  },
 }
 
-describe('State', function () {
+describe('State', function() {
   let db
   const startNewDB = async () => {
     const dbDir = TEST_DB_DIR
@@ -72,7 +74,8 @@ describe('State', function () {
       }
       Promise.all(depositPromises).then((res) => {
         // Send txs!
-        mineAndLoopSendRandomTxs(100, operator, nodes).then(() => { // 10000
+        mineAndLoopSendRandomTxs(100, operator, nodes).then(() => {
+          // 10000
           done()
         })
       })
@@ -84,7 +87,7 @@ describe('State', function () {
       const depositAmount = new BN('1000000')
       const nodes = []
       for (const acct of accounts) {
-      // for (const acct of accts) {
+        // for (const acct of accts) {
         nodes.push(new MockNode(operator, acct, nodes))
       }
       // Add deposits from 100 different accounts
@@ -92,19 +95,21 @@ describe('State', function () {
       for (const node of nodes) {
         depositPromises.push(node.deposit(depositType, depositAmount))
       }
-      Promise.all(depositPromises).catch((err) => {
-        console.log(err)
-      }).then((res) => {
-        // For some number of rounds, have every node send a random transaction
-        loopSendRandomTxs(100, operator, nodes).then(() => {
-          done()
+      Promise.all(depositPromises)
+        .catch((err) => {
+          console.log(err)
         })
-      })
+        .then((res) => {
+          // For some number of rounds, have every node send a random transaction
+          loopSendRandomTxs(100, operator, nodes).then(() => {
+            done()
+          })
+        })
     })
   })
 })
 
-async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
+async function mineAndLoopSendRandomTxs(numTimes, operator, nodes) {
   for (let i = 0; i < numTimes; i++) {
     const blockNumber = await operator.getBlockNumber()
     await sendRandomTransactions(operator, nodes, blockNumber)
@@ -117,7 +122,7 @@ async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
   }
 }
 
-async function loopSendRandomTxs (numTimes, operator, nodes) {
+async function loopSendRandomTxs(numTimes, operator, nodes) {
   const blockNumber = await operator.getBlockNumber()
   for (let i = 0; i < numTimes; i++) {
     await sendRandomTransactions(operator, nodes, blockNumber, 1, 10)
@@ -125,7 +130,7 @@ async function loopSendRandomTxs (numTimes, operator, nodes) {
   await state.startNewBlock()
 }
 
-function sendRandomTransactions (operator, nodes, blockNumber, rounds, maxSize) {
+function sendRandomTransactions(operator, nodes, blockNumber, rounds, maxSize) {
   if (rounds === undefined) rounds = 1
   const randomTxPromises = []
   for (let i = 0; i < rounds; i++) {

@@ -17,16 +17,50 @@ const TEST_DB_DIR = require('../../src/constants.js').TEST_DB_DIR
 
 const expect = chai.expect
 
-const tr1 = new Transfer({sender: '0x43aaDF3d5b44290385fe4193A1b13f15eF3A4FD5', recipient: '0xa12bcf1159aa01c739269391ae2d0be4037259f3', token: 0, start: 2, end: 3})
-const tr2 = new Transfer({sender: '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8', recipient: '0xa12bcf1159aa01c739269391ae2d0be4037259f4', token: 0, start: 6, end: 7})
-const tr3 = new Transfer({sender: '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8', recipient: '0xa12bcf1159aa01c739269391ae2d0be4037259f4', token: 1, start: 100, end: 108})
-const sig = new Signature({v: '0a', r: 'd693b532a80fed6392b428604171fb32fdbf953728a3a7ecc7d4062b1652c042', s: 'd693b532a80fed6392b428604171fb32fdbf953728a3a7ecc7d4062b1652c042'})
-const TX1 = new SignedTransaction({block: new BN(4), transfers: [tr1], signatures: [sig]})
-const TX2 = new SignedTransaction({block: new BN(5), transfers: [tr2], signatures: [sig]})
-const TX3 = new SignedTransaction({block: new BN(5), transfers: [tr3], signatures: [sig]})
+const tr1 = new Transfer({
+  sender: '0x43aaDF3d5b44290385fe4193A1b13f15eF3A4FD5',
+  recipient: '0xa12bcf1159aa01c739269391ae2d0be4037259f3',
+  token: 0,
+  start: 2,
+  end: 3,
+})
+const tr2 = new Transfer({
+  sender: '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8',
+  recipient: '0xa12bcf1159aa01c739269391ae2d0be4037259f4',
+  token: 0,
+  start: 6,
+  end: 7,
+})
+const tr3 = new Transfer({
+  sender: '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8',
+  recipient: '0xa12bcf1159aa01c739269391ae2d0be4037259f4',
+  token: 1,
+  start: 100,
+  end: 108,
+})
+const sig = new Signature({
+  v: '0a',
+  r: 'd693b532a80fed6392b428604171fb32fdbf953728a3a7ecc7d4062b1652c042',
+  s: 'd693b532a80fed6392b428604171fb32fdbf953728a3a7ecc7d4062b1652c042',
+})
+const TX1 = new SignedTransaction({
+  block: new BN(4),
+  transfers: [tr1],
+  signatures: [sig],
+})
+const TX2 = new SignedTransaction({
+  block: new BN(5),
+  transfers: [tr2],
+  signatures: [sig],
+})
+const TX3 = new SignedTransaction({
+  block: new BN(5),
+  transfers: [tr3],
+  signatures: [sig],
+})
 TX1.TRIndex = TX2.TRIndex = TX3.TRIndex = 0
 
-function getTxBundle (txs) {
+function getTxBundle(txs) {
   const txBundle = []
   for (const tx of txs) {
     txBundle.push([tx, Buffer.from(tx.encoded, 'hex')])
@@ -34,7 +68,7 @@ function getTxBundle (txs) {
   return txBundle
 }
 
-describe('LevelDBSumTree', function () {
+describe('LevelDBSumTree', function() {
   let db
   let blockStore
   beforeEach(async () => {
@@ -56,7 +90,27 @@ describe('LevelDBSumTree', function () {
     // Ingest the required data to begin processing the block
     const blockNumber = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     // Put a fake entry in the db to find
-    await blockStore.db.put(Buffer.from([ 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255 ]), 'this is a fake value')
+    await blockStore.db.put(
+      Buffer.from([
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+      ]),
+      'this is a fake value'
+    )
     // Create a new tree based on block 0's transactions
     const sumTree = new LevelDBSumTree(blockStore.db)
     await sumTree.parseLeaves(blockNumber)

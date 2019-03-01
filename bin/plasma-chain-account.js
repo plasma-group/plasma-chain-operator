@@ -22,7 +22,9 @@ program
     // Check that there are no accounts already -- no reason to have more than one operator account
     const accounts = fs.readdirSync(keystoreDirectory)
     if (accounts.length) {
-      console.log('Account already created! Try starting the operator with `operator start`')
+      console.log(
+        'Account already created! Try starting the operator with `operator start`'
+      )
       return
     }
     // There are no accounts so create one!
@@ -31,7 +33,10 @@ program
       return
     }
     console.log('Created new account with address:', newAccount.address.green)
-    const keystorePath = path.join(keystoreDirectory, new Date().toISOString() + '--' + newAccount.address)
+    const keystorePath = path.join(
+      keystoreDirectory,
+      new Date().toISOString() + '--' + newAccount.address
+    )
     console.log('Saving account to:', keystorePath.yellow)
     fs.writeFileSync(keystorePath, newAccount.keystoreFile)
     // Create new password file
@@ -46,31 +51,35 @@ program
       console.log('No accounts found!')
       return
     }
-    fs.readdirSync(keystoreDirectory).forEach(file => {
+    fs.readdirSync(keystoreDirectory).forEach((file) => {
       console.log('Account #' + counter++ + ':', file.split('--')[1])
     })
   })
 
-async function createAccount (isPlaintext) {
+async function createAccount(isPlaintext) {
   if (isPlaintext) {
     const newAccount = web3.eth.accounts.create()
     return {
       address: newAccount.address,
-      keystoreFile: JSON.stringify(newAccount)
+      keystoreFile: JSON.stringify(newAccount),
     }
   }
   // If it's not plaintext, we need to prompt for password
-  console.log('Your new account is locked with a password. Please give a password. Do not forget this password.')
-  const response = await inquirer.prompt([{
-    type: 'password',
-    name: 'password',
-    message: 'Passphrase:'
-  },
-  {
-    type: 'password',
-    name: 'retypePassword',
-    message: 'Repeat passphrase:'
-  }])
+  console.log(
+    'Your new account is locked with a password. Please give a password. Do not forget this password.'
+  )
+  const response = await inquirer.prompt([
+    {
+      type: 'password',
+      name: 'password',
+      message: 'Passphrase:',
+    },
+    {
+      type: 'password',
+      name: 'retypePassword',
+      message: 'Repeat passphrase:',
+    },
+  ])
   if (response.password !== response.retypePassword) {
     console.log('Passwords do not match! Try again...'.red)
     return
@@ -79,12 +88,16 @@ async function createAccount (isPlaintext) {
   const encryptedAccount = newAccount.encrypt(response.password)
   return {
     address: newAccount.address,
-    keystoreFile: JSON.stringify(encryptedAccount)
+    keystoreFile: JSON.stringify(encryptedAccount),
   }
 }
 
 program.parse(process.argv)
 
 if (program.args.length === 1) {
-  console.log('Command not found. Try `' + 'operator help account'.yellow + '` for more options')
+  console.log(
+    'Command not found. Try `' +
+      'operator help account'.yellow +
+      '` for more options'
+  )
 }
