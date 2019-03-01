@@ -23,20 +23,23 @@ const defer = require('../utils.js').defer
 const getCoinId = require('../utils.js').getCoinId
 
 /* ******** HELPER FUNCTIONS ********** */
-function getHexStringProof (proof) { // TODO: Remove this and instead support buffers by default
+function getHexStringProof(proof) {
+  // TODO: Remove this and instead support buffers by default
   let inclusionProof = []
   for (const sibling of proof) {
-    inclusionProof.push(sibling.hash.toString('hex') + sibling.sum.toString('hex', 32))
+    inclusionProof.push(
+      sibling.hash.toString('hex') + sibling.sum.toString('hex', 32)
+    )
   }
   return inclusionProof
 }
 
-function makeDepositKey (type, start) {
+function makeDepositKey(type, start) {
   return Buffer.concat([BLOCK_DEPOSIT_PREFIX, getCoinId(type, start)])
 }
 
 class BlockStore {
-  constructor (db, txLogDir) {
+  constructor(db, txLogDir) {
     log('Creating new block store')
     this.db = db
     this.sumTree = new LevelDBSumTree(this.db)
@@ -48,7 +51,7 @@ class BlockStore {
     this.lastBlockNumTxs = new BN(0)
   }
 
-  async addBlock (txLogFile) {
+  async addBlock(txLogFile) {
     log('Adding new block:', txLogFile)
     const deferred = defer()
     this.newBlockQueue.push({ txLogFile, resolve: deferred.resolve })
@@ -58,39 +61,69 @@ class BlockStore {
     return deferred.promise
   }
 
-  async addDeposit (depositTx) {
-    log('Adding new deposit for', depositTx.tr.recipient, 'with start:', depositTx.tr.start.toString(16), 'and end:', depositTx.tr.end.toString(16))
+  async addDeposit(depositTx) {
+    log(
+      'Adding new deposit for',
+      depositTx.tr.recipient,
+      'with start:',
+      depositTx.tr.start.toString(16),
+      'and end:',
+      depositTx.tr.end.toString(16)
+    )
     // Store the deposit in our database in a similar way that we store normal transactions, by start position
-    await this.db.put(makeDepositKey(depositTx.tr.token, depositTx.tr.start), Buffer.from(depositTx.encoded, 'hex'))
+    await this.db.put(
+      makeDepositKey(depositTx.tr.token, depositTx.tr.start),
+      Buffer.from(depositTx.encoded, 'hex')
+    )
   }
 
-  async getRootHash (blockNumberBN) {
-    const blockNumber = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
-    const rootHash = await this.db.get(Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber]))
+  async getRootHash(blockNumberBN) {
+    const blockNumber = blockNumberBN.toArrayLike(
+      Buffer,
+      'big',
+      BLOCKNUMBER_BYTE_SIZE
+    )
+    const rootHash = await this.db.get(
+      Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber])
+    )
     return rootHash
   }
 
-  async getBlockMetadata (startBlockBN, endBlockBN) {
+  async getBlockMetadata(startBlockBN, endBlockBN) {
     let blockNumberBN = new BN(startBlockBN)
     const metadata = []
-    for (blockNumberBN; blockNumberBN.lte(endBlockBN); blockNumberBN = blockNumberBN.addn(1)) {
-      const blockNumber = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
+    for (
+      blockNumberBN;
+      blockNumberBN.lte(endBlockBN);
+      blockNumberBN = blockNumberBN.addn(1)
+    ) {
+      const blockNumber = blockNumberBN.toArrayLike(
+        Buffer,
+        'big',
+        BLOCKNUMBER_BYTE_SIZE
+      )
       try {
-        const rootHash = await this.db.get(Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber]))
-        const timestamp = await this.db.get(Buffer.concat([BLOCK_TIMESTAMP_PREFIX, blockNumber]))
-        const numTxs = await this.db.get(Buffer.concat([BLOCK_NUM_TXS_PREFIX, blockNumber]))
+        const rootHash = await this.db.get(
+          Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber])
+        )
+        const timestamp = await this.db.get(
+          Buffer.concat([BLOCK_TIMESTAMP_PREFIX, blockNumber])
+        )
+        const numTxs = await this.db.get(
+          Buffer.concat([BLOCK_NUM_TXS_PREFIX, blockNumber])
+        )
         metadata.push({
           blockNumber,
           rootHash,
           timestamp,
-          numTxs
+          numTxs,
         })
-      } catch (err) { }
+      } catch (err) {}
     }
     return metadata
   }
 
-  async getTxFromHash (txHash) {
+  async getTxFromHash(txHash) {
     let txEncoding
     try {
       txEncoding = await this.db.get(Buffer.concat([HASH_TO_TX_PREFIX, txHash]))
@@ -100,10 +133,18 @@ class BlockStore {
     return txEncoding
   }
 
-  async _processNewBlockQueue () {
+  async _processNewBlockQueue() {
     let numBlocksProcessed
-    for (numBlocksProcessed = 0; numBlocksProcessed < this.newBlockQueue.length; numBlocksProcessed++) {
-      this.newBlockQueue[numBlocksProcessed].newBlock = await this._processBlock(this.newBlockQueue[numBlocksProcessed].txLogFile)
+    for (
+      numBlocksProcessed = 0;
+      numBlocksProcessed < this.newBlockQueue.length;
+      numBlocksProcessed++
+    ) {
+      this.newBlockQueue[
+        numBlocksProcessed
+      ].newBlock = await this._processBlock(
+        this.newBlockQueue[numBlocksProcessed].txLogFile
+      )
     }
     const processedBlocks = this.newBlockQueue.splice(0, numBlocksProcessed)
     for (const processedBlock of processedBlocks) {
@@ -111,31 +152,51 @@ class BlockStore {
     }
   }
 
-  async _processBlock (txLogFile) {
+  async _processBlock(txLogFile) {
     const blockNumberBN = new BN(txLogFile)
-    const blockNumber = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
+    const blockNumber = blockNumberBN.toArrayLike(
+      Buffer,
+      'big',
+      BLOCKNUMBER_BYTE_SIZE
+    )
     if (!this.blockNumberBN.add(new BN(1)).eq(blockNumberBN)) {
       // TODO: After launch figure out why I was even storing block number in the first place....? Either store in DB or remove it.
-      log('Warning: Expected block number to be ' + this.blockNumberBN.add(new BN(1)).toString() + ' not ' + blockNumberBN.toString())
+      log(
+        'Warning: Expected block number to be ' +
+          this.blockNumberBN.add(new BN(1)).toString() +
+          ' not ' +
+          blockNumberBN.toString()
+      )
     }
     await this.ingestBlock(blockNumber, this.txLogDir + txLogFile)
     const rootHash = await this.sumTree.generateTree(blockNumber)
     // Set block metadata for the block explorer api
     this.db.put(Buffer.concat([BLOCK_ROOT_HASH_PREFIX, blockNumber]), rootHash)
-    this.db.put(Buffer.concat([BLOCK_TIMESTAMP_PREFIX, blockNumber]), new BN(Date.now()).toArrayLike(Buffer, 'big'))
-    this.db.put(Buffer.concat([BLOCK_NUM_TXS_PREFIX, blockNumber]), this.lastBlockNumTxs.toArrayLike(Buffer, 'big')) // lastBlockNumTxs computed during ingestion
+    this.db.put(
+      Buffer.concat([BLOCK_TIMESTAMP_PREFIX, blockNumber]),
+      new BN(Date.now()).toArrayLike(Buffer, 'big')
+    )
+    this.db.put(
+      Buffer.concat([BLOCK_NUM_TXS_PREFIX, blockNumber]),
+      this.lastBlockNumTxs.toArrayLike(Buffer, 'big')
+    ) // lastBlockNumTxs computed during ingestion
     this.blockNumberBN = this.blockNumberBN.addn(1)
-    log('Adding block number:', blockNumberBN.toString(), 'with root hash:', Buffer.from(rootHash).toString('hex'))
+    log(
+      'Adding block number:',
+      blockNumberBN.toString(),
+      'with root hash:',
+      Buffer.from(rootHash).toString('hex')
+    )
     return {
       blockNumber,
-      rootHash
+      rootHash,
     }
   }
 
   /*
    * History proof logic
    */
-  async getLeavesAt (blockNumber, token, start, end, maxLeaves) {
+  async getLeavesAt(blockNumber, token, start, end, maxLeaves) {
     let startKey
     let endKey
     if (token === 'none') {
@@ -150,7 +211,7 @@ class BlockStore {
     }
     const it = this.db.iterator({
       lt: endKey,
-      reverse: true
+      reverse: true,
     })
     let result = await this._getNextBlockTx(it)
     const ranges = [result]
@@ -167,7 +228,7 @@ class BlockStore {
     return ranges
   }
 
-  async _getNextBlockTx (it) {
+  async _getNextBlockTx(it) {
     const result = await itNext(it)
     if (result.key === undefined) {
       await itEnd(it)
@@ -180,29 +241,29 @@ class BlockStore {
     return result
   }
 
-  async getDepositsAt (token, start, end) {
+  async getDepositsAt(token, start, end) {
     const startKey = makeDepositKey(token, start)
     const endKey = makeDepositKey(token, end)
     const it = this.db.iterator({
       lt: endKey,
-      reverse: true
+      reverse: true,
     })
     let [result, deposit] = await this._getNextDeposit(it)
     const deposits = [deposit]
     let earliestBlock = new BN(deposit.block)
     // Make sure that we returned values that we expect
     while (result.key > startKey) {
-      [result, deposit] = await this._getNextDeposit(it)
+      ;[result, deposit] = await this._getNextDeposit(it)
       deposits.push(deposit)
       if (earliestBlock.gt(deposit.block)) {
         earliestBlock = new BN(deposit.block)
       }
     }
     await itEnd(it)
-    return [ deposits, earliestBlock ]
+    return [deposits, earliestBlock]
   }
 
-  async _getNextDeposit (it) {
+  async _getNextDeposit(it) {
     const result = await itNext(it)
     if (result.key === undefined) {
       await itEnd(it)
@@ -210,23 +271,45 @@ class BlockStore {
     }
     if (result.key[0] !== BLOCK_DEPOSIT_PREFIX[0]) {
       await itEnd(it)
-      throw new Error('Expected BLOCK_DEPOSIT_PREFIX instead of ' + result.key[0])
+      throw new Error(
+        'Expected BLOCK_DEPOSIT_PREFIX instead of ' + result.key[0]
+      )
     }
     const deposit = new UnsignedTransaction(result.value.toString('hex'))
     return [result, deposit]
   }
 
-  async getTransactions (startBlockNumberBN, endBlockNumberBN, token, start, end, maxTransactions) {
+  async getTransactions(
+    startBlockNumberBN,
+    endBlockNumberBN,
+    token,
+    start,
+    end,
+    maxTransactions
+  ) {
     let blockNumberBN = startBlockNumberBN
     const relevantTransactions = []
     while (blockNumberBN.lte(endBlockNumberBN)) {
-      const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
-      const ranges = await this.getLeavesAt(blockNumberKey, token, start, end, maxTransactions)
+      const blockNumberKey = blockNumberBN.toArrayLike(
+        Buffer,
+        'big',
+        BLOCKNUMBER_BYTE_SIZE
+      )
+      const ranges = await this.getLeavesAt(
+        blockNumberKey,
+        token,
+        start,
+        end,
+        maxTransactions
+      )
       for (const r of ranges) {
         const tx = await this.sumTree.getTransactionFromLeaf(r.value)
         relevantTransactions.push(tx)
       }
-      if (maxTransactions !== undefined && relevantTransactions.length > maxTransactions) {
+      if (
+        maxTransactions !== undefined &&
+        relevantTransactions.length > maxTransactions
+      ) {
         return relevantTransactions
       }
       blockNumberBN = blockNumberBN.add(new BN(1))
@@ -234,40 +317,65 @@ class BlockStore {
     return relevantTransactions
   }
 
-  async getTxsWithProofsFor (blockNumber, token, start, end) {
+  async getTxsWithProofsFor(blockNumber, token, start, end) {
     const numLevels = await this.sumTree.getNumLevels(blockNumber)
     const leaves = await this.getLeavesAt(blockNumber, token, start, end)
     const txProofs = []
     for (const leaf of leaves) {
       const transaction = this.sumTree.getTransactionFromLeaf(leaf.value)
-      const transactionProof = await this.getTransactionInclusionProof(transaction, blockNumber, numLevels)
+      const transactionProof = await this.getTransactionInclusionProof(
+        transaction,
+        blockNumber,
+        numLevels
+      )
       txProofs.push({
         transaction,
-        transactionProof
+        transactionProof,
       })
     }
     return txProofs
   }
 
-  async getTxsWithProofs (startBlockNumberBN, endBlockNumberBN, token, start, end) {
+  async getTxsWithProofs(
+    startBlockNumberBN,
+    endBlockNumberBN,
+    token,
+    start,
+    end
+  ) {
     let blockNumberBN = startBlockNumberBN
     const transactionProofs = {}
     while (blockNumberBN.lte(endBlockNumberBN)) {
-      const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
-      const proofs = await this.getTxsWithProofsFor(blockNumberKey, token, start, end)
+      const blockNumberKey = blockNumberBN.toArrayLike(
+        Buffer,
+        'big',
+        BLOCKNUMBER_BYTE_SIZE
+      )
+      const proofs = await this.getTxsWithProofsFor(
+        blockNumberKey,
+        token,
+        start,
+        end
+      )
       transactionProofs[blockNumberBN.toString()] = proofs
       blockNumberBN = blockNumberBN.add(new BN(1))
     }
     return transactionProofs
   }
 
-  async getTxHistory (startBlockNumberBN, endBlockNumberBN, transaction) {
-    let blockNumberBN = startBlockNumberBN.eqn(0) ? new BN(1) : startBlockNumberBN
+  async getTxHistory(startBlockNumberBN, endBlockNumberBN, transaction) {
+    let blockNumberBN = startBlockNumberBN.eqn(0)
+      ? new BN(1)
+      : startBlockNumberBN
     // First get all of the deposits for each transaction
     let deposits = []
     const earliestBlocks = []
     for (const transfer of transaction.transfers) {
-      const [transferDeposits, earliestBlock] = await this.getDepositsAt(transfer.token, transfer.start, transfer.end)
+      const [transferDeposits, earliestBlock] = await this.getDepositsAt(
+        transfer.token,
+        transfer.start,
+        transfer.end
+      )
       // Get the earliest deposit & set the transfer `earliestDeposit` field to it
       deposits = deposits.concat(transferDeposits)
       earliestBlocks.push(earliestBlock)
@@ -288,8 +396,17 @@ class BlockStore {
           continue
         }
         // For each one of the transfer records get the proofs
-        const blockNumberKey = blockNumberBN.toArrayLike(Buffer, 'big', BLOCKNUMBER_BYTE_SIZE)
-        const rangeTxProof = await this.getTxsWithProofsFor(blockNumberKey, transfer.token, transfer.start, transfer.end)
+        const blockNumberKey = blockNumberBN.toArrayLike(
+          Buffer,
+          'big',
+          BLOCKNUMBER_BYTE_SIZE
+        )
+        const rangeTxProof = await this.getTxsWithProofsFor(
+          blockNumberKey,
+          transfer.token,
+          transfer.start,
+          transfer.end
+        )
         proofs = proofs.concat(rangeTxProof)
       }
       transactionHistory[blockNumberBN.toString()] = proofs
@@ -297,11 +414,11 @@ class BlockStore {
     }
     return {
       deposits,
-      transactionHistory
+      transactionHistory,
     }
   }
 
-  async getTransactionInclusionProof (transaction, blockNumber, numLevels) {
+  async getTransactionInclusionProof(transaction, blockNumber, numLevels) {
     const getTr = (tx, trIndex) => new Transfer(tx.transfers[trIndex])
     const transferProofs = []
     // For all transfers in our transaction, get transfer proof
@@ -310,32 +427,41 @@ class BlockStore {
       const trEncoding = Buffer.from(getTr(transaction, i).encoded, 'hex')
       const leafIndex = await this.sumTree.getIndex(blockNumber, trEncoding)
       // Now get the transfer inclusion proof
-      const inclusionProof = await this.getTransferInclusionProof(blockNumber, numLevels, new BN(leafIndex))
+      const inclusionProof = await this.getTransferInclusionProof(
+        blockNumber,
+        numLevels,
+        new BN(leafIndex)
+      )
       const trProof = {
         parsedSum: new BN(inclusionProof.includedNode.sum),
         transaction: transaction,
         leafIndex,
         signature: transaction.signatures[i],
-        inclusionProof: getHexStringProof(inclusionProof.proof)
+        inclusionProof: getHexStringProof(inclusionProof.proof),
       }
       // Add it to our transaction proof
       transferProofs.push(trProof)
     }
-    return new TransactionProof({transferProofs})
+    return new TransactionProof({ transferProofs })
   }
 
-  async getTransferInclusionProof (blockNumber, numLevels, index) {
+  async getTransferInclusionProof(blockNumber, numLevels, index) {
     const proof = []
 
     // Included node
     const includedNodeValue = await this.sumTree.getNode(blockNumber, 0, index)
     const includedNode = this.sumTree.parseNodeValue(includedNodeValue)
-    log('Included node hash:', includedNode.hash.toString('hex'), '--sum:', includedNode.sum.toString(16))
+    log(
+      'Included node hash:',
+      includedNode.hash.toString('hex'),
+      '--sum:',
+      includedNode.sum.toString(16)
+    )
 
     let parentIndex
     let nodeValue
     let node
-    let siblingIndex = index.addn((index.mod(new BN(2)).eq(new BN(0)) ? 1 : -1))
+    let siblingIndex = index.addn(index.mod(new BN(2)).eq(new BN(0)) ? 1 : -1)
     for (let i = 0; i < numLevels; i++) {
       try {
         nodeValue = await this.sumTree.getNode(blockNumber, i, siblingIndex)
@@ -349,30 +475,34 @@ class BlockStore {
       }
       proof.push({
         hash: node.hash,
-        sum: node.sum
+        sum: node.sum,
       })
 
       // Figure out the parent and then figure out the parent's sibling.
-      parentIndex = siblingIndex.eq(new BN(0)) ? new BN(0) : siblingIndex.divn(2)
-      siblingIndex = parentIndex.addn((parentIndex.mod(new BN(2)).eq(new BN(0)) ? 1 : -1))
+      parentIndex = siblingIndex.eq(new BN(0))
+        ? new BN(0)
+        : siblingIndex.divn(2)
+      siblingIndex = parentIndex.addn(
+        parentIndex.mod(new BN(2)).eq(new BN(0)) ? 1 : -1
+      )
     }
     return {
       includedNode,
-      proof
+      proof,
     }
   }
 
   /*
    * Block ingestion logic
    */
-  ingestBlock (blockNumber, txLogFilePath) {
+  ingestBlock(blockNumber, txLogFilePath) {
     const self = this
     log('Generating new block for block:', blockNumber)
     // First set the total number of txs for the latest block to zero. This just metadata for the block
     this.lastBlockNumTxs = new BN(0)
     const readStream = fs.createReadStream(txLogFilePath)
     let chunkNumber = 0
-    readStream.on('data', function (chunk) {
+    readStream.on('data', function(chunk) {
       log('Read chunk of size:', chunk.length)
       self.parseTxBinary(blockNumber, chunk, chunkNumber)
       chunkNumber++
@@ -389,7 +519,7 @@ class BlockStore {
     })
   }
 
-  readNextTransaction (cursor, chunk) {
+  readNextTransaction(cursor, chunk) {
     const numElements = new BN(chunk.slice(cursor + 4, cursor + 5)).toNumber()
     const transferSize = numElements * TRANSFER_BYTE_SIZE
     const signatureSize = numElements * SIGNATURE_BYTE_SIZE
@@ -403,31 +533,38 @@ class BlockStore {
     const txStart = cursor
     const txEnd = txStart + txSize
     // Make the transaction object
-    const nextTransaction = new SignedTransaction(chunk.slice(txStart, txEnd).toString('hex'))
+    const nextTransaction = new SignedTransaction(
+      chunk.slice(txStart, txEnd).toString('hex')
+    )
     log('Read new transaction')
     this.lastBlockNumTxs = this.lastBlockNumTxs.addn(1) // Increment the total number of txs which we've added
     return [cursor + txSize, nextTransaction, chunk.slice(cursor, txEnd)]
   }
 
-  parseTxBinary (blockNumber, chunk, chunkNumber) {
+  parseTxBinary(blockNumber, chunk, chunkNumber) {
     if (this.partialChunk != null) {
       chunk = Buffer.concat([this.partialChunk, chunk])
     }
     const txBundle = []
     let [cursor, nextTx, nextTxEncoding] = this.readNextTransaction(0, chunk)
     while (cursor !== null) {
-      txBundle.push([nextTx, nextTxEncoding]);
-      [cursor, nextTx, nextTxEncoding] = this.readNextTransaction(cursor, chunk)
+      txBundle.push([nextTx, nextTxEncoding])
+      ;[cursor, nextTx, nextTxEncoding] = this.readNextTransaction(
+        cursor,
+        chunk
+      )
     }
 
     // Leftmost transfer of the first transaction in a block MUST start at zero.
     // We should probably get rid of this later on.
     if (chunkNumber === 0 && txBundle.length > 0) {
-      const leftmost = txBundle[0][0].transfers.sort((a, b) => {
-        return a.token.sub(b.token)
-      }).reduce((prev, curr) => {
-        return prev.start.lt(curr.start) ? prev : curr
-      })
+      const leftmost = txBundle[0][0].transfers
+        .sort((a, b) => {
+          return a.token.sub(b.token)
+        })
+        .reduce((prev, curr) => {
+          return prev.start.lt(curr.start) ? prev : curr
+        })
       leftmost.token = new BN(0)
       leftmost.start = new BN(0)
     }
@@ -435,7 +572,7 @@ class BlockStore {
     this.storeTransactions(blockNumber, txBundle)
   }
 
-  storeTransactions (blockNumber, txBundle) {
+  storeTransactions(blockNumber, txBundle) {
     // Ingest these transactions, into levelDB as `blocknum + typedStart +
     const dbBatch = []
     for (const tx of txBundle) {
@@ -444,7 +581,7 @@ class BlockStore {
         dbBatch.push({
           type: 'put',
           key: makeBlockTxKey(blockNumber, tr.token, tr.start),
-          value: Buffer.concat([Buffer.from([i]), Buffer.from(tx[1])]) // Store as index of the TR & then transaction
+          value: Buffer.concat([Buffer.from([i]), Buffer.from(tx[1])]), // Store as index of the TR & then transaction
         })
       }
     }

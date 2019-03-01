@@ -11,10 +11,11 @@ const MockNode = require('../src/mock-node.js')
 const EthService = require('../src/eth-service.js')
 const readConfigFile = require('../src/utils.js').readConfigFile
 const path = require('path')
-const UnsignedTransaction = require('plasma-utils').serialization.models.UnsignedTransaction
+const UnsignedTransaction = require('plasma-utils').serialization.models
+  .UnsignedTransaction
 const DEPOSIT_SENDER = '0x0000000000000000000000000000000000000000'
 
-const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
+const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 chai.use(chaiHttp)
 
@@ -25,15 +26,14 @@ const operator = {
   addTransaction: (tx) => {
     const encodedTx = tx.encoded
     return new Promise((resolve, reject) => {
-      chai.request(server.app)
+      chai
+        .request(server.app)
         .post('/api')
         .send({
           method: constants.ADD_TX_METHOD,
           jsonrpc: '2.0',
           id: idCounter++,
-          params: [
-            encodedTx
-          ]
+          params: [encodedTx],
         })
         .end((err, res) => {
           if (err) {
@@ -54,24 +54,36 @@ const operator = {
       from: EthService.web3.utils.bytesToHex(recipient),
       value: new BN('100000000', 'hex').toString(),
       gas: 3500000,
-      gasPrice: '300000'
+      gasPrice: '300000',
     })
     const depositEvent = reciept.events.DepositEvent.returnValues
     const tokenType = new BN(depositEvent.tokenType, 10)
     const start = new BN(depositEvent.untypedStart, 10)
     const end = new BN(depositEvent.untypedEnd, 10)
-    const deposit = new UnsignedTransaction({block: depositEvent.block, transfers: [{sender: DEPOSIT_SENDER, recipient: depositEvent.depositer, tokenType, start, end}]})
+    const deposit = new UnsignedTransaction({
+      block: depositEvent.block,
+      transfers: [
+        {
+          sender: DEPOSIT_SENDER,
+          recipient: depositEvent.depositer,
+          tokenType,
+          start,
+          end,
+        },
+      ],
+    })
     return deposit
   },
   startNewBlock: () => {
     return new Promise((resolve, reject) => {
-      chai.request(server.app)
+      chai
+        .request(server.app)
         .post('/api')
         .send({
           method: constants.NEW_BLOCK_METHOD,
           jsonrpc: '2.0',
           id: idCounter++,
-          params: {}
+          params: {},
         })
         .end((err, res) => {
           if (err) {
@@ -84,13 +96,14 @@ const operator = {
   },
   getBlockNumber: () => {
     return new Promise((resolve, reject) => {
-      chai.request(server.app)
+      chai
+        .request(server.app)
         .post('/api')
         .send({
           method: constants.GET_BLOCK_NUMBER_METHOD,
           jsonrpc: '2.0',
           id: idCounter++,
-          params: {}
+          params: {},
         })
         .end((err, res) => {
           if (err) {
@@ -100,10 +113,10 @@ const operator = {
           resolve(new BN(res.body.result, 10))
         })
     })
-  }
+  },
 }
 
-describe('Server', function () {
+describe('Server', function() {
   before(async () => {
     // Startup with test config file
     const configFile = path.join(__dirname, 'config-test.json')
@@ -123,7 +136,7 @@ describe('Server', function () {
   })
 })
 
-async function bigIntegrationTest (nodes, operator) {
+async function bigIntegrationTest(nodes, operator) {
   // Add deposits from 100 different accounts
   const depositType = new BN(0)
   const depositAmount = new BN(10000, 'hex')
@@ -135,7 +148,7 @@ async function bigIntegrationTest (nodes, operator) {
   await mineAndLoopSendRandomTxs(5, operator, nodes)
 }
 
-async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
+async function mineAndLoopSendRandomTxs(numTimes, operator, nodes) {
   for (let i = 0; i < numTimes; i++) {
     const blockNumber = await operator.getBlockNumber()
     // Send a bunch of transactions
@@ -145,7 +158,10 @@ async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
     // Start a new block
     log('Starting new block...')
     await operator.startNewBlock()
-    log('Waiting before sending transactions to block:', blockNumber.toString() + '...')
+    log(
+      'Waiting before sending transactions to block:',
+      blockNumber.toString() + '...'
+    )
     await timeout(500)
     log('Sending new txs for block number:', blockNumber.toString())
     for (const node of nodes) {
