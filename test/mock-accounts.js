@@ -18,21 +18,21 @@ const sampleTr = {
   type: new Web3.utils.BN('0'),
   start: new Web3.utils.BN('10'),
   offset: new Web3.utils.BN('1'),
-  block: new Web3.utils.BN('0')
+  block: new Web3.utils.BN('0'),
 }
 
 const sig = {
   v: new Web3.utils.BN('0'),
   r: new Web3.utils.BN('0'),
-  s: new Web3.utils.BN('0')
+  s: new Web3.utils.BN('0'),
 }
 
 const testTx = {
   transferRecords: [sampleTr],
-  signatures: [sig]
+  signatures: [sig],
 }
 
 module.exports = {
   accounts,
-  testTx
+  testTx,
 }

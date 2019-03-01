@@ -9,7 +9,7 @@ const ethService = require('../src/eth-service.js')
 const readConfigFile = require('../src/utils.js').readConfigFile
 const ETH_DB_FILENAME = require('../src/constants.js').ETH_DB_FILENAME
 
-function loadEthDB (config) {
+function loadEthDB(config) {
   const ethDBPath = path.join(config.ethDBDir, ETH_DB_FILENAME)
   let ethDB = {}
   if (fs.existsSync(ethDBPath)) {
@@ -22,25 +22,36 @@ function loadEthDB (config) {
   return ethDB
 }
 
-function writeEthDB (config, ethDB) {
+function writeEthDB(config, ethDB) {
   if (!fs.existsSync(config.dbDir)) {
     fs.mkdirSync(config.dbDir, { recursive: true })
     fs.mkdirSync(config.ethDBDir)
   }
-  fs.writeFileSync(path.join(config.ethDBDir, ETH_DB_FILENAME), JSON.stringify(ethDB))
+  fs.writeFileSync(
+    path.join(config.ethDBDir, ETH_DB_FILENAME),
+    JSON.stringify(ethDB)
+  )
 }
 
 program
   .description('starts the operator using the first account')
-  .option('-n, --newRegistry', 'Deploy a new Plasma Network in addition to a Plasma Chain')
-  .option('--force', 'Force deployment of new Plasma chain even if we already have one. Note this will overwrite your current Plasma Chain address')
+  .option(
+    '-n, --newRegistry',
+    'Deploy a new Plasma Network in addition to a Plasma Chain'
+  )
+  .option(
+    '--force',
+    'Force deployment of new Plasma chain even if we already have one. Note this will overwrite your current Plasma Chain address'
+  )
   .action(async (none, cmd) => {
     const account = await getAccount()
     if (account === null || account === undefined) {
       return
     }
     // Get the config
-    const configFile = (process.env.CONFIG) ? process.env.CONFIG : path.join(__dirname, '..', 'config.json')
+    const configFile = process.env.CONFIG
+      ? process.env.CONFIG
+      : path.join(__dirname, '..', 'config.json')
     console.log('Reading config file from:', configFile)
     const config = readConfigFile(configFile)
     // Check if we have already deployed a plasma chain
@@ -51,8 +62,17 @@ program
       writeEthDB(config, ethDB)
     }
     if (ethDB.plasmaChainAddress !== undefined) {
-      console.log('\nWARNING:'.yellow, 'Plasma Chain already deployed at:'.yellow, ethDB.plasmaChainAddress.yellow)
-      console.log('If you want to deploy another chain try ', '`', 'plasma-chain deploy --force'.white.bold, '`')
+      console.log(
+        '\nWARNING:'.yellow,
+        'Plasma Chain already deployed at:'.yellow,
+        ethDB.plasmaChainAddress.yellow
+      )
+      console.log(
+        'If you want to deploy another chain try ',
+        '`',
+        'plasma-chain deploy --force'.white.bold,
+        '`'
+      )
       return
     }
     // Ask for a Plasma Chain name and ip address
@@ -69,43 +89,66 @@ program
     await ethService.startup(config)
   })
 
-async function setChainMetadata (config) {
-  console.log('\n~~~~~~~~~plasma~~~~~~~~~chain~~~~~~~~~deployment~~~~~~~~~'.rainbow)
-  console.log("\nBefore we deploy your new Plasma Chain, I'll need to ask a couple questions.".white)
+async function setChainMetadata(config) {
+  console.log(
+    '\n~~~~~~~~~plasma~~~~~~~~~chain~~~~~~~~~deployment~~~~~~~~~'.rainbow
+  )
+  console.log(
+    "\nBefore we deploy your new Plasma Chain, I'll need to ask a couple questions."
+      .white
+  )
   const plasmaChainMetadata = {}
   // Get the Plasma Chain name
   const chainName = await getPlasmaChainName(config)
   Object.assign(plasmaChainMetadata, chainName)
   // Set the hostname
-  console.log('\nWhat is your IP address? Or a domain name that points to your IP.\n'.white, 'WARNING:'.yellow, 'This IP address will be posted to the Ethereum blockchain.'.white)
-  const hostResponse = await inquirer.prompt([{
-    type: 'input',
-    name: 'ipAddress',
-    default: (config.operatorIpAddress === undefined) ? '' : config.operatorIpAddress,
-    message: 'Your IP address or hostname:'
-  }])
+  console.log(
+    '\nWhat is your IP address? Or a domain name that points to your IP.\n'
+      .white,
+    'WARNING:'.yellow,
+    'This IP address will be posted to the Ethereum blockchain.'.white
+  )
+  const hostResponse = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'ipAddress',
+      default:
+        config.operatorIpAddress === undefined ? '' : config.operatorIpAddress,
+      message: 'Your IP address or hostname:',
+    },
+  ])
   Object.assign(plasmaChainMetadata, hostResponse)
   return plasmaChainMetadata
 }
 
-async function getPlasmaChainName (config) {
-  console.log('\nWhat is the name of your new Plasma Chain?\nThis will be displayed in the'.white, 'Plasma Network Registry'.green, '--'.white, 'You can view all registered Plasma Chains with'.white, '`plasma-chain list`'.white.bold)
-  const chainNameResponse = await inquirer.prompt([{
-    type: 'input',
-    name: 'chainName',
-    message: "Your Plasma Chain's Name:",
-    default: (config.plasmaChainName === undefined) ? '' : config.plasmaChainName,
-    validate: (input) => {
-      if (input.length < 3) {
-        console.log('Error!'.red, 'Plasma Chain Name is too short!')
-        return false
-      } else if (Buffer.from(input, 'utf8').length > 32) {
-        console.log('Error!'.red, 'Plasma Chain Name is too long!')
-        return false
-      }
-      return true
-    }
-  }])
+async function getPlasmaChainName(config) {
+  console.log(
+    '\nWhat is the name of your new Plasma Chain?\nThis will be displayed in the'
+      .white,
+    'Plasma Network Registry'.green,
+    '--'.white,
+    'You can view all registered Plasma Chains with'.white,
+    '`plasma-chain list`'.white.bold
+  )
+  const chainNameResponse = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'chainName',
+      message: "Your Plasma Chain's Name:",
+      default:
+        config.plasmaChainName === undefined ? '' : config.plasmaChainName,
+      validate: (input) => {
+        if (input.length < 3) {
+          console.log('Error!'.red, 'Plasma Chain Name is too short!')
+          return false
+        } else if (Buffer.from(input, 'utf8').length > 32) {
+          console.log('Error!'.red, 'Plasma Chain Name is too long!')
+          return false
+        }
+        return true
+      },
+    },
+  ])
   return chainNameResponse
 }
 

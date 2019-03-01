@@ -16,7 +16,9 @@ program
       return
     }
     // Start the server!
-    const configFile = (process.env.CONFIG) ? process.env.CONFIG : path.join(appRoot.toString(), 'config.json')
+    const configFile = process.env.CONFIG
+      ? process.env.CONFIG
+      : path.join(appRoot.toString(), 'config.json')
     const config = readConfigFile(configFile)
     config.privateKey = account.privateKey
     await server.startup(config)

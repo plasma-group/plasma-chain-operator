@@ -5,22 +5,30 @@ const BLOCK_TX_PREFIX = require('./constants.js').BLOCK_TX_PREFIX
 const TEST_DB_DIR = require('./constants.js').TEST_DB_DIR
 const DEPOSIT_SENDER = require('./constants.js').DEPOSIT_SENDER
 const soliditySha3 = require('web3').utils.soliditySha3
-const UnsignedTransaction = require('plasma-utils').serialization.models.UnsignedTransaction
+const UnsignedTransaction = require('plasma-utils').serialization.models
+  .UnsignedTransaction
 const fs = require('fs')
 const _ = require('lodash')
 
 const appRoot = path.join(__dirname, '..')
 
-function addRange (rangeList, start, end, numSize) {
+function addRange(rangeList, start, end, numSize) {
   if (numSize === undefined) {
     // Default to 16
     numSize = 16
   }
   // Find leftRange (a range which ends at the start of our tx) and right_range (a range which starts at the end of our tx)
   let leftRange, rightRange
-  let insertionPoint = _.sortedIndexBy(rangeList, start, (n) => n.toString(16, numSize))
+  let insertionPoint = _.sortedIndexBy(rangeList, start, (n) =>
+    n.toString(16, numSize)
+  )
   // If the insertion point found an end poisition equal to our start, change it to the next index (find insertion on the right side)
-  if (insertionPoint > 0 && insertionPoint < rangeList.length && insertionPoint % 2 === 1 && rangeList[insertionPoint].eq(start)) {
+  if (
+    insertionPoint > 0 &&
+    insertionPoint < rangeList.length &&
+    insertionPoint % 2 === 1 &&
+    rangeList[insertionPoint].eq(start)
+  ) {
     insertionPoint++
   }
   if (insertionPoint > 0 && rangeList[insertionPoint - 1].eq(start)) {
@@ -50,7 +58,7 @@ function addRange (rangeList, start, end, numSize) {
   rangeList.splice(insertionPoint + 1, 0, end)
 }
 
-function subtractRange (rangeList, start, end) {
+function subtractRange(rangeList, start, end) {
   let affectedRange
   let arStart
   let arEnd
@@ -81,20 +89,20 @@ function subtractRange (rangeList, start, end) {
   }
 }
 
-function getCoinId (type, start) {
+function getCoinId(type, start) {
   const buffers = [
     type.toArrayLike(Buffer, 'big', TYPE_BYTE_SIZE),
-    start.toArrayLike(Buffer, 'big', START_BYTE_SIZE)
+    start.toArrayLike(Buffer, 'big', START_BYTE_SIZE),
   ]
   return Buffer.concat(buffers)
 }
 
 // Create a defer function which will allow us to add our promise to the messageQueue
-function defer () {
+function defer() {
   const deferred = {
     promise: null,
     resolve: null,
-    reject: null
+    reject: null,
   }
   deferred.promise = new Promise((resolve, reject) => {
     deferred.resolve = resolve
@@ -103,28 +111,28 @@ function defer () {
   return deferred
 }
 
-function jsonrpc (method, params) {
+function jsonrpc(method, params) {
   return {
     jsonrpc: '2.0',
     method,
-    params
+    params,
   }
 }
 
 // Promisify the it.next(cb) function
-function itNext (it) {
+function itNext(it) {
   return new Promise((resolve, reject) => {
     it.next((err, key, value) => {
       if (err) {
         reject(err)
       }
-      resolve({key, value})
+      resolve({ key, value })
     })
   })
 }
 
 // Promisify the it.end(cb) function
-function itEnd (it) {
+function itEnd(it) {
   return new Promise((resolve, reject) => {
     it.end((err) => {
       if (err) {
@@ -135,17 +143,22 @@ function itEnd (it) {
   })
 }
 
-function makeBlockTxKey (blockNumber, type, start) {
+function makeBlockTxKey(blockNumber, type, start) {
   return Buffer.concat([BLOCK_TX_PREFIX, blockNumber, getCoinId(type, start)])
 }
 
-function readConfigFile (configFilePath, mode) {
+function readConfigFile(configFilePath, mode) {
   const config = JSON.parse(fs.readFileSync(configFilePath, 'utf8'))
   setConfigDefaults(config, mode)
   return config
 }
 
-function setConfigDefaults (config, mode) {
+function setConfigDefaults(config, mode) {
+  const setIfUndefined = (config, key, value) => {
+    if (config[key] === undefined) {
+      config[key] = value
+    }
+  }
   if (mode === 'test') {
     config.dbDir = _generateNewDbTestDir()
   }
@@ -159,19 +172,24 @@ function setConfigDefaults (config, mode) {
   })
 }
 
-function _generateNewDbTestDir () {
+function _generateNewDbTestDir() {
   return TEST_DB_DIR + +new Date()
 }
 
-function sha3 (value) {
+function sha3(value) {
   // Requires '0x' + becuase web3 only interprets strings as bytes if they start with 0x
   const hashString = '0x' + value.toString('hex')
   const solidityHash = soliditySha3(hashString)
   return Buffer.from(solidityHash.slice(2), 'hex') // Slice 2 to remove the dumb 0x
 }
 
-function getDepositTransaction (owner, token, start, end, block) {
-  const tx = new UnsignedTransaction({block, transfers: [{sender: DEPOSIT_SENDER, recipient: owner, token, start, end}]})
+function getDepositTransaction(owner, token, start, end, block) {
+  const tx = new UnsignedTransaction({
+    block,
+    transfers: [
+      { sender: DEPOSIT_SENDER, recipient: owner, token, start, end },
+    ],
+  })
   tx.tr = tx.transfers[0]
   return tx
 }
@@ -188,5 +206,5 @@ module.exports = {
   sha3,
   appRoot,
   getDepositTransaction,
-  makeBlockTxKey
+  makeBlockTxKey,
 }

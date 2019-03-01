@@ -18,30 +18,37 @@ const Decimal = require('decimal.js-light')
 
 const INDEX_BYTES_SIZE = 4
 
-function coinIdToBuffer (coinId) {
+function coinIdToBuffer(coinId) {
   return coinId.toArrayLike(Buffer, 'big', COIN_ID_BYTE_SIZE)
 }
 
 class LevelDBSumTree {
-  constructor (db) {
+  constructor(db) {
     this.db = db
   }
 
-  async generateTree (blockNumber) {
+  async generateTree(blockNumber) {
     const numLeaves = await this.parseLeaves(blockNumber)
     let heightOfTree
     if (numLeaves === undefined) {
       heightOfTree = 0
     } else {
       // TODO: Replace this and instead detect heightOfTree in generateLevel
-      heightOfTree = Math.ceil(new Decimal(numLeaves.toString(10)).log(2).toNumber())
+      heightOfTree = Math.ceil(
+        new Decimal(numLeaves.toString(10)).log(2).toNumber()
+      )
     }
     const rootHash = await this.generateLevel(blockNumber, 0, heightOfTree)
-    log('Generating tree for block:', blockNumber.toString('hex'), 'with root:', Buffer.from(rootHash).toString('hex'))
+    log(
+      'Generating tree for block:',
+      blockNumber.toString('hex'),
+      'with root:',
+      Buffer.from(rootHash).toString('hex')
+    )
     return rootHash
   }
 
-  getTransactionFromLeaf (value) {
+  getTransactionFromLeaf(value) {
     const index = value[0]
     const encoding = value.slice(1)
     const transaction = new SignedTransaction(encoding.toString('hex'))
@@ -50,29 +57,38 @@ class LevelDBSumTree {
     return transaction
   }
 
-  getUnsignedTransaction (tx) {
-    const unsignedTx = new UnsignedTransaction({block: tx.block, transfers: tx.transfers})
+  getUnsignedTransaction(tx) {
+    const unsignedTx = new UnsignedTransaction({
+      block: tx.block,
+      transfers: tx.transfers,
+    })
     return unsignedTx
   }
 
   /**
    * Parses the leaves to generate the zero'th level of our sum tree
    */
-  async parseLeaves (blockNumber) {
+  async parseLeaves(blockNumber) {
     const self = this
     return new Promise(async (resolve, reject) => {
       // Helper functions for getting properties of our transactions
       const getTr = (tx) => new Transfer(tx.transfers[tx.trIndex])
-      const typedStart = (tr) => new BN(tr.token.toString(16, 8) + tr.start.toString(16, 24), 16)
+      const typedStart = (tr) =>
+        new BN(tr.token.toString(16, 8) + tr.start.toString(16, 24), 16)
       // Store the min and max values which can exist for any range. This will be used as the bounds of our stream
       const minStart = Buffer.from('0'.repeat(COIN_ID_BYTE_SIZE * 2), 'hex')
       const maxEnd = Buffer.from('f'.repeat(COIN_ID_BYTE_SIZE * 2), 'hex')
       // Store the prefix which all our transactions should have
       const blockTxPrefix = Buffer.concat([BLOCK_TX_PREFIX, blockNumber])
       // We need special logic to handle the first leaf / transaction. Because of this, look it up independently.
-      const firstLeaf = await this.getNearest(Buffer.concat([blockTxPrefix, minStart]))
+      const firstLeaf = await this.getNearest(
+        Buffer.concat([blockTxPrefix, minStart])
+      )
       // Check if this block is empty -- if the nearest
-      if (firstLeaf.key === undefined || !firstLeaf.key.slice(0, blockTxPrefix.length).equals(blockTxPrefix)) {
+      if (
+        firstLeaf.key === undefined ||
+        !firstLeaf.key.slice(0, blockTxPrefix.length).equals(blockTxPrefix)
+      ) {
         // This block appears to be empty! Return early
         resolve()
         return
@@ -84,129 +100,199 @@ class LevelDBSumTree {
       let previousTxIndex = new BN(0)
       // Read all remaining leaves, computing hash and setting sum value
       const firstTxStart = coinIdToBuffer(typedStart(getTr(firstTransaction))) // Store the first start as we will use it for our next seek
-      this.db.createReadStream({
-        'gt': Buffer.concat([BLOCK_TX_PREFIX, blockNumber, firstTxStart]),
-        'lt': Buffer.concat([BLOCK_TX_PREFIX, blockNumber, maxEnd])
-      }).on('data', function (data) {
-        const transaction = self.getTransactionFromLeaf(data.value)
-        transaction.sumStart = typedStart(getTr(transaction))
-        const range = coinIdToBuffer(transaction.sumStart.sub(previousTransaction.sumStart))
-        const prevTxEncodedBuf = Buffer.from(self.getUnsignedTransaction(previousTransaction).encoded, 'hex')
-        const prevTxHash = sha3(prevTxEncodedBuf)
-        self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
-        self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encoded, 'hex'), previousTxIndex)
-        self.writeHashToTransaction(prevTxHash, prevTxEncodedBuf)
-        previousTxIndex = previousTxIndex.add(new BN(1))
-        previousTransaction = transaction
-      }).on('end', function (data) {
-        const range = coinIdToBuffer(new BN(maxEnd).sub(previousTransaction.sumStart))
-        const prevTxEncodedBuf = Buffer.from(self.getUnsignedTransaction(previousTransaction).encoded, 'hex')
-        const prevTxHash = sha3(prevTxEncodedBuf)
-        self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
-        self.writeTrToIndex(blockNumber, Buffer.from(getTr(previousTransaction).encoded, 'hex'), previousTxIndex)
-        self.writeHashToTransaction(prevTxHash, prevTxEncodedBuf)
-        // Return the total number of leaves
-        resolve(previousTxIndex.addn(1))
-      }).on('error', function (err) {
-        reject(err)
-      })
+      this.db
+        .createReadStream({
+          gt: Buffer.concat([BLOCK_TX_PREFIX, blockNumber, firstTxStart]),
+          lt: Buffer.concat([BLOCK_TX_PREFIX, blockNumber, maxEnd]),
+        })
+        .on('data', function(data) {
+          const transaction = self.getTransactionFromLeaf(data.value)
+          transaction.sumStart = typedStart(getTr(transaction))
+          const range = coinIdToBuffer(
+            transaction.sumStart.sub(previousTransaction.sumStart)
+          )
+          const prevTxEncodedBuf = Buffer.from(
+            self.getUnsignedTransaction(previousTransaction).encoded,
+            'hex'
+          )
+          const prevTxHash = sha3(prevTxEncodedBuf)
+          self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
+          self.writeTrToIndex(
+            blockNumber,
+            Buffer.from(getTr(previousTransaction).encoded, 'hex'),
+            previousTxIndex
+          )
+          self.writeHashToTransaction(prevTxHash, prevTxEncodedBuf)
+          previousTxIndex = previousTxIndex.add(new BN(1))
+          previousTransaction = transaction
+        })
+        .on('end', function(data) {
+          const range = coinIdToBuffer(
+            new BN(maxEnd).sub(previousTransaction.sumStart)
+          )
+          const prevTxEncodedBuf = Buffer.from(
+            self.getUnsignedTransaction(previousTransaction).encoded,
+            'hex'
+          )
+          const prevTxHash = sha3(prevTxEncodedBuf)
+          self.writeNode(blockNumber, 0, previousTxIndex, prevTxHash, range)
+          self.writeTrToIndex(
+            blockNumber,
+            Buffer.from(getTr(previousTransaction).encoded, 'hex'),
+            previousTxIndex
+          )
+          self.writeHashToTransaction(prevTxHash, prevTxEncodedBuf)
+          // Return the total number of leaves
+          resolve(previousTxIndex.addn(1))
+        })
+        .on('error', function(err) {
+          reject(err)
+        })
     })
   }
 
-  async getNearest (key) {
+  async getNearest(key) {
     const it = this.db.iterator({
       gte: key,
-      limit: 1
+      limit: 1,
     })
     const result = await itNext(it)
     await itEnd(it)
     return result
   }
 
-  async getHeight (blockNumber) {
-    const height = await this.get(Buffer.concat([blockNumber, Buffer.from('height')]))
+  async getHeight(blockNumber) {
+    const height = await this.get(
+      Buffer.concat([blockNumber, Buffer.from('height')])
+    )
     return height
   }
 
-  async getNode (blockNumber, level, index) {
+  async getNode(blockNumber, level, index) {
     const node = await this.db.get(this.makeNodeKey(blockNumber, level, index))
     return node
   }
 
-  async getIndex (blockNumber, trEncoding) {
-    const index = await this.db.get(this.makeTrToIndexKey(blockNumber, trEncoding))
+  async getIndex(blockNumber, trEncoding) {
+    const index = await this.db.get(
+      this.makeTrToIndexKey(blockNumber, trEncoding)
+    )
     return index
   }
 
-  parseNodeValue (value) {
+  parseNodeValue(value) {
     return {
       hash: value.slice(0, 32),
-      sum: new BN(value.slice(32))
+      sum: new BN(value.slice(32)),
     }
   }
 
-  makeNodeKey (blockNumber, level, index) {
-    return Buffer.concat([Buffer.from(NODE_DB_PREFIX), blockNumber, this.makeIndexId(level, index)])
+  makeNodeKey(blockNumber, level, index) {
+    return Buffer.concat([
+      Buffer.from(NODE_DB_PREFIX),
+      blockNumber,
+      this.makeIndexId(level, index),
+    ])
   }
 
-  makeTrToIndexKey (blockNumber, trEncoding) {
+  makeTrToIndexKey(blockNumber, trEncoding) {
     return Buffer.concat([BLOCK_INDEX_PREFIX, blockNumber, trEncoding])
   }
 
-  async writeNode (blockNumber, level, index, hash, sum) {
+  async writeNode(blockNumber, level, index, hash, sum) {
     const newNodeKey = this.makeNodeKey(blockNumber, level, index)
-    log('Writing new node\nKey:', newNodeKey.toString('hex'), '\nValue:', Buffer.concat([Buffer.from(hash), sum]).toString('hex'))
+    log(
+      'Writing new node\nKey:',
+      newNodeKey.toString('hex'),
+      '\nValue:',
+      Buffer.concat([Buffer.from(hash), sum]).toString('hex')
+    )
     await this.db.put(newNodeKey, Buffer.concat([Buffer.from(hash), sum]))
   }
 
-  async writeHashToTransaction (txHash, prevTxEncodedBuf) {
-    const newHashToTransactionKey = Buffer.concat([Buffer.from(HASH_TO_TX_PREFIX), txHash])
-    log('Writing hash -> encoding\nKey:', newHashToTransactionKey.toString('hex'), '\nValue:', prevTxEncodedBuf.toString('hex'))
+  async writeHashToTransaction(txHash, prevTxEncodedBuf) {
+    const newHashToTransactionKey = Buffer.concat([
+      Buffer.from(HASH_TO_TX_PREFIX),
+      txHash,
+    ])
+    log(
+      'Writing hash -> encoding\nKey:',
+      newHashToTransactionKey.toString('hex'),
+      '\nValue:',
+      prevTxEncodedBuf.toString('hex')
+    )
     await this.db.put(newHashToTransactionKey, prevTxEncodedBuf)
   }
 
-  async writeTrToIndex (blockNumber, trEncoding, index) {
+  async writeTrToIndex(blockNumber, trEncoding, index) {
     const newTrKey = this.makeTrToIndexKey(blockNumber, trEncoding)
     const indexBuff = index.toArrayLike(Buffer, 'big', INDEX_BYTES_SIZE)
-    log('Writing new tr -> index\nKey:', newTrKey.toString('hex'), '\nValue:', indexBuff.toString('hex'))
+    log(
+      'Writing new tr -> index\nKey:',
+      newTrKey.toString('hex'),
+      '\nValue:',
+      indexBuff.toString('hex')
+    )
     await this.db.put(newTrKey, indexBuff)
   }
 
-  async writeNumLevels (blockNumber, numLevels) {
-    log('Writing num levels for block:', Buffer.concat([NUM_LEVELS_PREFIX, blockNumber]), '\nWith value:', Buffer.from([numLevels]))
-    await this.db.put(Buffer.concat([NUM_LEVELS_PREFIX, blockNumber]), Buffer.from([numLevels]))
+  async writeNumLevels(blockNumber, numLevels) {
+    log(
+      'Writing num levels for block:',
+      Buffer.concat([NUM_LEVELS_PREFIX, blockNumber]),
+      '\nWith value:',
+      Buffer.from([numLevels])
+    )
+    await this.db.put(
+      Buffer.concat([NUM_LEVELS_PREFIX, blockNumber]),
+      Buffer.from([numLevels])
+    )
   }
 
-  async getNumLevels (blockNumber) {
-    const numLevels = await this.db.get(Buffer.concat([NUM_LEVELS_PREFIX, blockNumber]))
+  async getNumLevels(blockNumber) {
+    const numLevels = await this.db.get(
+      Buffer.concat([NUM_LEVELS_PREFIX, blockNumber])
+    )
     return new BN(numLevels)
   }
 
-  makeIndexId (level, index) {
-    return Buffer.concat([Buffer.from([level]), index.toArrayLike(Buffer, 'big', INDEX_BYTES_SIZE)])
+  makeIndexId(level, index) {
+    return Buffer.concat([
+      Buffer.from([level]),
+      index.toArrayLike(Buffer, 'big', INDEX_BYTES_SIZE),
+    ])
   }
 
-  emptyNode () {
+  emptyNode() {
     const emptyHash = Buffer.from('0'.repeat(64), 'hex')
     const emptySum = new BN(0)
     return {
       hash: emptyHash,
-      sum: emptySum
+      sum: emptySum,
     }
   }
 
-  getParent (left, right) {
+  getParent(left, right) {
     const leftSum = left.sum.toArrayLike(Buffer, 'big', 16)
     const rightSum = right.sum.toArrayLike(Buffer, 'big', 16)
-    const parentHash = sha3(Buffer.concat([left.hash, leftSum, right.hash, rightSum]))
+    const parentHash = sha3(
+      Buffer.concat([left.hash, leftSum, right.hash, rightSum])
+    )
     return {
       hash: parentHash,
-      sum: left.sum.add(right.sum).toArrayLike(Buffer, 'big', COIN_ID_BYTE_SIZE)
+      sum: left.sum
+        .add(right.sum)
+        .toArrayLike(Buffer, 'big', COIN_ID_BYTE_SIZE),
     }
   }
 
-  async generateLevel (blockNumber, level, height) {
-    log('Starting to generate level:', level, 'for block:', blockNumber.toString('hex'))
+  async generateLevel(blockNumber, level, height) {
+    log(
+      'Starting to generate level:',
+      level,
+      'for block:',
+      blockNumber.toString('hex')
+    )
     const self = this
     const parentLevel = level + 1
     // Check that there is at least one node at this level--if not it might be an empty block
@@ -220,47 +306,65 @@ class LevelDBSumTree {
       // Create readstream for all nodes at the previous level
       const maxEnd = new BN('f'.repeat(INDEX_BYTES_SIZE * 2), 16)
       const readStream = this.db.createReadStream({
-        'gte': this.makeNodeKey(blockNumber, level, new BN(0)),
-        'lte': this.makeNodeKey(blockNumber, level, maxEnd)
+        gte: this.makeNodeKey(blockNumber, level, new BN(0)),
+        lte: this.makeNodeKey(blockNumber, level, maxEnd),
       })
       // Go through every node at this level and build the next level's nodes
       let leftChild = null
       let numChildren = new BN(0)
       let parentIndex = new BN(0)
       let parentNode
-      readStream.on('data', (data) => {
-        log('Processing child:', data.key.toString('hex'))
-        numChildren = numChildren.add(new BN(1))
-        // If this is the left child store it and move on
-        if (leftChild === null) {
-          leftChild = this.parseNodeValue(data.value)
-          return
-        }
-        // Now we have the left and right children. Let's hash and compute the next sum
-        const rightChild = this.parseNodeValue(data.value)
-        parentNode = this.getParent(leftChild, rightChild)
-        self.writeNode(blockNumber, parentLevel, parentIndex, parentNode.hash, parentNode.sum)
-        parentIndex = parentIndex.add(new BN(1))
-        leftChild = null
-      }).on('end', async () => {
-        // If level equals height, we have reached the root node.
-        if (level === height) {
-          log('Returning root hash:', Buffer.from(leftChild.hash).toString('hex'))
-          await self.writeNumLevels(blockNumber, level)
-          resolve(leftChild.hash)
-          return
-        }
-        // Check if we ended on an element that wasn't a right node. If so fill it in with a blank node
-        if (leftChild !== null) {
-          log('Filling in an odd length level with a zero node')
-          const rightChild = this.emptyNode()
-          const parentNode = this.getParent(leftChild, rightChild)
-          self.writeNode(blockNumber, parentLevel, parentIndex, parentNode.hash, parentNode.sum)
-        }
-        resolve(await self.generateLevel(blockNumber, parentLevel, height))
-      }).on('error', (err) => {
-        reject(err)
-      })
+      readStream
+        .on('data', (data) => {
+          log('Processing child:', data.key.toString('hex'))
+          numChildren = numChildren.add(new BN(1))
+          // If this is the left child store it and move on
+          if (leftChild === null) {
+            leftChild = this.parseNodeValue(data.value)
+            return
+          }
+          // Now we have the left and right children. Let's hash and compute the next sum
+          const rightChild = this.parseNodeValue(data.value)
+          parentNode = this.getParent(leftChild, rightChild)
+          self.writeNode(
+            blockNumber,
+            parentLevel,
+            parentIndex,
+            parentNode.hash,
+            parentNode.sum
+          )
+          parentIndex = parentIndex.add(new BN(1))
+          leftChild = null
+        })
+        .on('end', async () => {
+          // If level equals height, we have reached the root node.
+          if (level === height) {
+            log(
+              'Returning root hash:',
+              Buffer.from(leftChild.hash).toString('hex')
+            )
+            await self.writeNumLevels(blockNumber, level)
+            resolve(leftChild.hash)
+            return
+          }
+          // Check if we ended on an element that wasn't a right node. If so fill it in with a blank node
+          if (leftChild !== null) {
+            log('Filling in an odd length level with a zero node')
+            const rightChild = this.emptyNode()
+            const parentNode = this.getParent(leftChild, rightChild)
+            self.writeNode(
+              blockNumber,
+              parentLevel,
+              parentIndex,
+              parentNode.hash,
+              parentNode.sum
+            )
+          }
+          resolve(await self.generateLevel(blockNumber, parentLevel, height))
+        })
+        .on('error', (err) => {
+          reject(err)
+        })
     })
   }
 }

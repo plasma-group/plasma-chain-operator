@@ -24,15 +24,14 @@ const operator = {
   addTransaction: (tx) => {
     const encodedTx = tx.encoded
     return new Promise((resolve, reject) => {
-      chai.request(server.app)
+      chai
+        .request(server.app)
         .post('/api')
         .send({
           method: constants.ADD_TX_METHOD,
           jsonrpc: '2.0',
           id: idCounter++,
-          params: [
-            encodedTx
-          ]
+          params: [encodedTx],
         })
         .end((err, res) => {
           if (err) {
@@ -54,7 +53,8 @@ const operator = {
       totalDeposits = new BN(totalDeposits.add(amount))
       const end = new BN(totalDeposits)
       totalDeposits = totalDeposits.add(amount)
-      chai.request(server.app)
+      chai
+        .request(server.app)
         .post('/api')
         .send({
           method: constants.DEPOSIT_METHOD,
@@ -64,8 +64,8 @@ const operator = {
             recipient: web3.utils.bytesToHex(recipient),
             token: token.toString(16),
             start: start.toString(16),
-            end: end.toString(16)
-          }
+            end: end.toString(16),
+          },
         })
         .end((err, res) => {
           if (err) {
@@ -78,13 +78,14 @@ const operator = {
   },
   startNewBlock: () => {
     return new Promise((resolve, reject) => {
-      chai.request(server.app)
+      chai
+        .request(server.app)
         .post('/api')
         .send({
           method: constants.NEW_BLOCK_METHOD,
           jsonrpc: '2.0',
           id: idCounter++,
-          params: {}
+          params: {},
         })
         .end((err, res) => {
           if (err) {
@@ -97,13 +98,14 @@ const operator = {
   },
   getBlockNumber: () => {
     return new Promise((resolve, reject) => {
-      chai.request(server.app)
+      chai
+        .request(server.app)
         .post('/api')
         .send({
           method: constants.GET_BLOCK_NUMBER_METHOD,
           jsonrpc: '2.0',
           id: idCounter++,
-          params: {}
+          params: {},
         })
         .end((err, res) => {
           if (err) {
@@ -113,10 +115,10 @@ const operator = {
           resolve(new BN(res.body.result, 10))
         })
     })
-  }
+  },
 }
 
-describe('Server api', function () {
+describe('Server api', function() {
   before(async () => {
     // Startup with test config file
     const configFile = path.join(__dirname, 'config-test.json')
@@ -128,9 +130,10 @@ describe('Server api', function () {
     totalDeposits = new BN(0)
   })
 
-  describe('/api', function () {
-    it('responds with status 200 on deposit', function (done) {
-      chai.request(server.app)
+  describe('/api', function() {
+    it('responds with status 200 on deposit', function(done) {
+      chai
+        .request(server.app)
         .post('/api')
         .send({
           method: constants.DEPOSIT_METHOD,
@@ -139,8 +142,8 @@ describe('Server api', function () {
             recipient: accounts[0].address,
             token: new BN(999).toString(16),
             start: new BN(0).toString(16),
-            end: new BN(10).toString(16)
-          }
+            end: new BN(10).toString(16),
+          },
         })
         .end((err, res) => {
           log(err)
@@ -148,21 +151,24 @@ describe('Server api', function () {
           done()
         })
     })
-    it('responds with status 200 for many deposits', function (done) {
+    it('responds with status 200 for many deposits', function(done) {
       const promises = []
       for (let i = 0; i < 100; i++) {
-        promises.push(chai.request(server.app)
-          .post('/api')
-          .send({
-            method: constants.DEPOSIT_METHOD,
-            jsonrpc: '2.0',
-            params: {
-              recipient: accounts[0].address,
-              token: new BN(999).toString(16),
-              start: new BN(i * 10).toString(16),
-              end: new BN((i + 1) * 10).toString(16)
-            }
-          }))
+        promises.push(
+          chai
+            .request(server.app)
+            .post('/api')
+            .send({
+              method: constants.DEPOSIT_METHOD,
+              jsonrpc: '2.0',
+              params: {
+                recipient: accounts[0].address,
+                token: new BN(999).toString(16),
+                start: new BN(i * 10).toString(16),
+                end: new BN((i + 1) * 10).toString(16),
+              },
+            })
+        )
       }
       Promise.all(promises).then((res) => {
         log('Completed: responds with status 200 for many requests')
@@ -183,7 +189,7 @@ describe('Server api', function () {
 })
 
 // Use a function outside of the main test because mocha doens't play as nicely with async functions--the tests don't end consistently
-async function runDepositAndSendTxTest (nodes, operator) {
+async function runDepositAndSendTxTest(nodes, operator) {
   const depositType = new BN(0)
   const depositAmount = new BN(10000)
   // Add deposits from 100 different accounts
@@ -193,16 +199,22 @@ async function runDepositAndSendTxTest (nodes, operator) {
   await mineAndLoopSendRandomTxs(5, operator, nodes)
 }
 
-async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
+async function mineAndLoopSendRandomTxs(numTimes, operator, nodes) {
   for (let i = 0; i < numTimes; i++) {
     let blockNumber = await operator.getBlockNumber()
     try {
       await sendRandomTransactions(operator, nodes, blockNumber)
     } catch (err) {
-      if (err.toString().contains('No affected range found! Must be an invalid subtraction')) {
+      if (
+        err
+          .toString()
+          .contains('No affected range found! Must be an invalid subtraction')
+      ) {
         console.log('ERROR:', err)
       }
-      console.log('Squashing for now... this might be a problem with the range manager which I need to sort out anyway...')
+      console.log(
+        'Squashing for now... this might be a problem with the range manager which I need to sort out anyway...'
+      )
     }
     log('Starting new block...')
     await operator.startNewBlock()
@@ -217,7 +229,7 @@ async function mineAndLoopSendRandomTxs (numTimes, operator, nodes) {
 let randomTxPromises
 let promisesAndTestIds = []
 
-function sendRandomTransactions (operator, nodes, blockNumber, rounds, maxSize) {
+function sendRandomTransactions(operator, nodes, blockNumber, rounds, maxSize) {
   if (rounds === undefined) rounds = 1
   randomTxPromises = []
   for (let i = 0; i < rounds; i++) {
@@ -225,10 +237,12 @@ function sendRandomTransactions (operator, nodes, blockNumber, rounds, maxSize) 
       randomTxPromises.push(node.sendRandomTransaction(blockNumber, maxSize))
       promisesAndTestIds.push({
         promise: randomTxPromises[randomTxPromises.length - 1],
-        id: idCounter
+        id: idCounter,
       })
     }
   }
-  Promise.all(randomTxPromises).then(() => { promisesAndTestIds = [] })
+  Promise.all(randomTxPromises).then(() => {
+    promisesAndTestIds = []
+  })
   return Promise.all(randomTxPromises)
 }
