@@ -231,9 +231,13 @@ async function deployNewPlasmaChain(web3, config) {
   } catch (err) {
     console.log('ERROR DEPLOYING CHAIN\n'.red)
     if (err.toString().includes('gas * price')) {
-      console.log('You do not have enough ETH to pay for the deployment.\nGet some using a faucet (https://faucet.rinkeby.io/)')
+      console.log(
+        'You do not have enough ETH to pay for the deployment.\nGet some using a faucet (https://faucet.rinkeby.io/)'
+      )
     } else {
-      console.log('Your Plasma Chain name may be taken! Try another--they\'re filling up quick!')
+      console.log(
+        "Your Plasma Chain name may be taken! Try another--they're filling up quick!"
+      )
     }
     console.log('\n', err)
     process.exit(1)
