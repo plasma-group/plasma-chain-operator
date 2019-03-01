@@ -34,18 +34,18 @@ app.use(cors())
 const messageQueue = {}
 let messageCounter = 0
 
-function sendMessage (process, message) {
+function sendMessage(process, message) {
   const deferred = defer()
   process.send({
     ipcID: messageCounter,
-    message
+    message,
   })
   messageQueue[messageCounter] = { resolve: deferred.resolve }
   messageCounter++
   return deferred.promise
 }
 
-function resolveMessage (m) {
+function resolveMessage(m) {
   log('Resolving message with ipcID', m.ipcID)
   if (m.ipcID === -1) {
     // If this is a message directly from a child, it must be the root hash from the block-store
@@ -58,14 +58,21 @@ function resolveMessage (m) {
 }
 
 // Handle incoming transactions
-app.post('/api', function (req, res) {
-  log('INCOMING RPC request with method:', req.body.method, 'and rpcID:', req.body.id)
-  if (req.body.method === constants.DEPOSIT_METHOD ||
-      req.body.method === constants.ADD_TX_METHOD ||
-      req.body.method === constants.NEW_BLOCK_METHOD ||
-      req.body.method === constants.GET_BLOCK_NUMBER_METHOD ||
-      req.body.method === constants.GET_TXS_METHOD ||
-      req.body.method === constants.GET_RECENT_TXS_METHOD) {
+app.post('/api', function(req, res) {
+  log(
+    'INCOMING RPC request with method:',
+    req.body.method,
+    'and rpcID:',
+    req.body.id
+  )
+  if (
+    req.body.method === constants.DEPOSIT_METHOD ||
+    req.body.method === constants.ADD_TX_METHOD ||
+    req.body.method === constants.NEW_BLOCK_METHOD ||
+    req.body.method === constants.GET_BLOCK_NUMBER_METHOD ||
+    req.body.method === constants.GET_TXS_METHOD ||
+    req.body.method === constants.GET_RECENT_TXS_METHOD
+  ) {
     if (req.body.method === constants.ADD_TX_METHOD) {
       // For performance, check sigs here
       try {
@@ -76,27 +83,41 @@ app.post('/api', function (req, res) {
       } catch (err) {}
     }
     sendMessage(stateManager, req.body).then((response) => {
-      log('OUTGOING response to RPC request with method:', req.body.method, 'and rpcID:', req.body.id)
+      log(
+        'OUTGOING response to RPC request with method:',
+        req.body.method,
+        'and rpcID:',
+        req.body.id
+      )
       res.send(response.message)
     })
-  } else if (req.body.method === constants.GET_HISTORY_PROOF ||
-             req.body.method === constants.GET_BLOCK_METADATA_METHOD ||
-             req.body.method === constants.GET_TX_FROM_HASH_METHOD ||
-             req.body.method === constants.GET_BLOCK_TXS_METHOD) {
+  } else if (
+    req.body.method === constants.GET_HISTORY_PROOF ||
+    req.body.method === constants.GET_BLOCK_METADATA_METHOD ||
+    req.body.method === constants.GET_TX_FROM_HASH_METHOD ||
+    req.body.method === constants.GET_BLOCK_TXS_METHOD
+  ) {
     sendMessage(blockManager, req.body).then((response) => {
-      log('OUTGOING response to RPC request with method:', req.body.method, 'and rpcID:', req.body.id)
+      log(
+        'OUTGOING response to RPC request with method:',
+        req.body.method,
+        'and rpcID:',
+        req.body.id
+      )
       res.send(response.message)
     })
   } else if (req.body.method === constants.GET_ETH_INFO_METHOD) {
-    res.send({ result: {
-      operatorAddress: EthService.operatorAddress,
-      plasmaRegistryAddress: EthService.ethDB.plasmaRegistryAddress,
-      plasmaChainAddress: EthService.ethDB.plasmaChainAddress
-    }})
+    res.send({
+      result: {
+        operatorAddress: EthService.operatorAddress,
+        plasmaRegistryAddress: EthService.ethDB.plasmaRegistryAddress,
+        plasmaChainAddress: EthService.ethDB.plasmaChainAddress,
+      },
+    })
   }
 })
 
-async function startup (config) {
+async function startup(config) {
   if (started) {
     throw alreadyStartedError
   }
@@ -115,34 +136,46 @@ async function startup (config) {
     stateManager.on('message', resolveMessage)
     blockManager.on('message', resolveMessage)
     // Now send an init message
-    await sendMessage(stateManager, jsonrpc(constants.INIT_METHOD, {
-      stateDBDir: config.stateDBDir,
-      txLogDir: config.txLogDir
-    }))
-    await sendMessage(blockManager, jsonrpc(constants.INIT_METHOD, {
-      blockDBDir: config.blockDBDir,
-      txLogDir: config.txLogDir
-    }))
+    await sendMessage(
+      stateManager,
+      jsonrpc(constants.INIT_METHOD, {
+        stateDBDir: config.stateDBDir,
+        txLogDir: config.txLogDir,
+      })
+    )
+    await sendMessage(
+      blockManager,
+      jsonrpc(constants.INIT_METHOD, {
+        blockDBDir: config.blockDBDir,
+        txLogDir: config.txLogDir,
+      })
+    )
     // Set up the eth event watchers
     log('Registering Ethereum event watcher for `DepositEvent`')
     EthService.eventWatchers['DepositEvent'].subscribe(_submitDeposits)
     // Set up auto new block creator
     if (config.blockTimeInSeconds !== undefined) {
       const blockTimeInMiliseconds = parseInt(config.blockTimeInSeconds) * 1000
-      setTimeout(() => newBlockTrigger(blockTimeInMiliseconds), blockTimeInMiliseconds)
+      setTimeout(
+        () => newBlockTrigger(blockTimeInMiliseconds),
+        blockTimeInMiliseconds
+      )
     }
   } catch (err) {
     throw err
   }
   log('Finished sub process startup')
   app.listen(config.port, '0.0.0.0', () => {
-    console.log('\x1b[36m%s\x1b[0m', `Operator listening on port ${config.port}!`)
+    console.log(
+      '\x1b[36m%s\x1b[0m',
+      `Operator listening on port ${config.port}!`
+    )
   })
   started = true
 }
 
 // Startup that will only run once
-async function safeStartup (config) {
+async function safeStartup(config) {
   try {
     await startup(config)
   } catch (err) {
@@ -154,40 +187,53 @@ async function safeStartup (config) {
   }
 }
 
-async function _submitDeposits (err, depositEvents) {
+async function _submitDeposits(err, depositEvents) {
   if (err) {
     throw err
   }
   for (const e of depositEvents) {
     // Decode the event...
     const depositEvent = e.returnValues
-    log('Detected deposit event with start:', depositEvent.untypedStart, '- & end:', depositEvent.untypedEnd, 'and id:', e.id)
+    log(
+      'Detected deposit event with start:',
+      depositEvent.untypedStart,
+      '- & end:',
+      depositEvent.untypedEnd,
+      'and id:',
+      e.id
+    )
     const recipient = depositEvent.depositer
     const token = new BN(depositEvent.tokenType, 10).toString('hex')
     const start = new BN(depositEvent.untypedStart, 10).toString('hex')
     const end = new BN(depositEvent.untypedEnd, 10).toString('hex')
     // Send the deposit to the state manager
-    await sendMessage(stateManager, jsonrpc(constants.DEPOSIT_METHOD, {
-      id: e.id,
-      recipient,
-      token,
-      start,
-      end
-    }))
+    await sendMessage(
+      stateManager,
+      jsonrpc(constants.DEPOSIT_METHOD, {
+        id: e.id,
+        recipient,
+        token,
+        start,
+        end,
+      })
+    )
     // Send the deposit to the block manager
-    await sendMessage(blockManager, jsonrpc(constants.DEPOSIT_METHOD, {
-      id: e.id,
-      recipient,
-      token,
-      start,
-      end
-    }))
+    await sendMessage(
+      blockManager,
+      jsonrpc(constants.DEPOSIT_METHOD, {
+        id: e.id,
+        recipient,
+        token,
+        start,
+        end,
+      })
+    )
   }
 }
 
-async function newBlockTrigger (blockTime) {
+async function newBlockTrigger(blockTime) {
   const newBlockReq = {
-    method: constants.NEW_BLOCK_METHOD
+    method: constants.NEW_BLOCK_METHOD,
   }
   const response = await sendMessage(stateManager, newBlockReq)
   if (response.error === undefined) {
@@ -201,5 +247,5 @@ async function newBlockTrigger (blockTime) {
 module.exports = {
   app,
   startup,
-  safeStartup
+  safeStartup,
 }
