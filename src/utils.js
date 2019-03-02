@@ -164,10 +164,12 @@ function setConfigDefaults(config, mode) {
   }
   config.dbDir = path.join(appRoot.toString(), config.dbDir)
   // Set db sub directories defaults if they don't exist
-  setIfUndefined(config, 'txLogDir', config.dbDir + '/tx-log/')
-  setIfUndefined(config, 'stateDBDir', config.dbDir + '/state-db/')
-  setIfUndefined(config, 'blockDBDir', config.dbDir + '/block-db/')
-  setIfUndefined(config, 'ethDBDir', config.dbDir + '/eth-db/')
+  Object.assign(config, {
+    txLogDir: config.dbDir + '/tx-log/',
+    stateDBDir: config.dbDir + '/state-db/',
+    blockDBDir: config.dbDir + '/block-db/',
+    ethDBDir: config.dbDir + '/eth-db/',
+  })
 }
 
 function _generateNewDbTestDir() {
