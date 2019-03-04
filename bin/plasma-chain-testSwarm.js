@@ -2,18 +2,19 @@
 const program = require('commander')
 const colors = require('colors') // eslint-disable-line no-unused-vars
 const constants = require('../src/constants.js')
-const UnsignedTransaction = require('plasma-utils').serialization.models.UnsignedTransaction
+const UnsignedTransaction = require('plasma-utils').serialization.models
+  .UnsignedTransaction
 const Web3 = require('web3')
 const BN = require('web3').utils.BN
 const axios = require('axios')
 const accounts = require('../test/mock-accounts.js').accounts
 const MockNode = require('../src/mock-node.js')
 
-const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
+const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 // Get the config
 const http = axios.create({
-  baseURL: 'http://localhost:3000'
+  baseURL: 'http://localhost:3000',
 })
 
 let idCounter
@@ -28,9 +29,7 @@ const operator = {
       method: constants.ADD_TX_METHOD,
       jsonrpc: '2.0',
       id: idCounter++,
-      params: [
-        encodedTx
-      ]
+      params: [encodedTx],
     })
     return txResponse.data
   },
@@ -41,7 +40,9 @@ const operator = {
       totalDeposits[tokenTypeKey] = new BN(0)
     }
     const start = new BN(totalDeposits[tokenTypeKey])
-    totalDeposits[tokenTypeKey] = new BN(totalDeposits[tokenTypeKey].add(amount))
+    totalDeposits[tokenTypeKey] = new BN(
+      totalDeposits[tokenTypeKey].add(amount)
+    )
     const end = new BN(totalDeposits[tokenTypeKey])
     let txResponse
     txResponse = await http.post('/api', {
@@ -52,8 +53,8 @@ const operator = {
         recipient: Web3.utils.bytesToHex(recipient),
         token: token.toString(16),
         start: start.toString(16),
-        end: end.toString(16)
-      }
+        end: end.toString(16),
+      },
     })
     return new UnsignedTransaction(txResponse.data.deposit)
   },
@@ -62,11 +63,14 @@ const operator = {
       method: constants.GET_BLOCK_NUMBER_METHOD,
       jsonrpc: '2.0',
       id: idCounter++,
-      params: []
+      params: [],
     })
-    console.log('Sending transactions for block:', new BN(response.data.result, 10).toString(10).green)
+    console.log(
+      'Sending transactions for block:',
+      new BN(response.data.result, 10).toString(10).green
+    )
     return new BN(response.data.result, 10)
-  }
+  },
 }
 
 program

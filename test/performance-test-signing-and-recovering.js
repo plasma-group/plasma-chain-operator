@@ -1,7 +1,9 @@
-function runTest () { // eslint-disable-line no-unused-vars
+function runTest() {
+  // eslint-disable-line no-unused-vars
   const Web3 = require('web3')
   const web3 = new Web3('ws://localhost:8546')
-  const testPrivateKey = '0x55d5a0faa78131c313390567a8e6efc2a8df714f187549331794f6d805de03db'
+  const testPrivateKey =
+    '0x55d5a0faa78131c313390567a8e6efc2a8df714f187549331794f6d805de03db'
 
   const myAcct = web3.eth.accounts.privateKeyToAccount(testPrivateKey)
 
@@ -28,7 +30,9 @@ function runTest () { // eslint-disable-line no-unused-vars
     web3.eth.accounts.recover(signedMsg)
   }
   const recoveringEndTime = +new Date()
-  console.log('Time to recover 1000 txs: ' + (recoveringEndTime - recoveringStartTime))
+  console.log(
+    'Time to recover 1000 txs: ' + (recoveringEndTime - recoveringStartTime)
+  )
 }
 
 // runTest()
