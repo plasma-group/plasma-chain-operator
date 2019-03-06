@@ -2,7 +2,7 @@
 
 const chai = require('chai')
 const chaiHttp = require('chai-http')
-const server = require('../src/server')
+const Server = require('../src/server').Server
 const constants = require('../src/constants.js')
 const accounts = require('./mock-accounts.js').accounts
 const BN = require('web3').utils.BN
@@ -15,7 +15,8 @@ const UnsignedTransaction = require('plasma-utils').serialization.models
   .UnsignedTransaction
 const DEPOSIT_SENDER = '0x0000000000000000000000000000000000000000'
 
-const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+const server = new Server()
+const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 chai.use(chaiHttp)
 
@@ -121,6 +122,9 @@ describe('Server', function() {
     // Startup with test config file
     const configFile = path.join(__dirname, 'config-test.json')
     const config = readConfigFile(configFile, 'test')
+
+    // Server is already started in Server api test
+    server.started = true
     await server.safeStartup(config)
   })
   it('Nodes are able to deposit and send transactions', (done) => {
