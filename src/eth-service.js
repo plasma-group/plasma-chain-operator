@@ -192,7 +192,7 @@ async function initializeProdEnv(config) {
     // Deploy a new Plasma Chain and save it in a file
     es.ethDB.plasmaChainAddress = await deployNewPlasmaChain(es.web3, config)
     console.log(
-      'No Plasma Chain contract detected! Deploying an new one...'.green
+      'No Plasma Chain contract detected! Deploying a new one...'.green
     )
     log('Deployed Plasma Chain to address:', es.ethDB.plasmaChainAddress)
     writeEthDB(config, es.ethDB)
