@@ -9,7 +9,7 @@
 To deploy a new Plasma Chain, use the following commands:
 ```
 0) $ npm install plasma-chain [-g]  # install the plasma chain operator. Global flag is optional, if you don't
-use global, just replace all of the following commands with `npm run plamsa-chain [command]`. If you can't install
+use global, just replace all of the following commands with `npm run plasma-chain [command]`. If you can't install
 globally without `sudo` then just use local!
 
 1) $ plasma-chain account new  # create a new account
